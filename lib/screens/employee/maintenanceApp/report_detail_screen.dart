@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
 import 'package:masbro_inpower_app/utils/firebase_storage_image.dart';
-import '../../models/report_model.dart';
+import '../../../models/maintenanceApp/report_model.dart';
 
 class ReportDetailScreen extends StatefulWidget {
   final ReportModel report;

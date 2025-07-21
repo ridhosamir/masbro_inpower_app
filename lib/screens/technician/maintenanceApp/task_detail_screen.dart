@@ -1,21 +1,21 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'package:intl/intl.dart';
-import '../../services/auth_service.dart';
-import '../../services/firestore_service.dart';
-import '../../services/user_service.dart';
-import '../../models/task_model.dart';
-import '../../models/user_model.dart';
-import '../../widgets/custom_button.dart';
-import '../../widgets/custom_text_field.dart';
+import '../../../services/auth_service.dart';
+import '../../../services/maintenanceApp/firestore_service.dart';
+import '../../../services/user_service.dart';
+import '../../../models/maintenanceApp/task_model.dart';
+import '../../../models/user_model.dart';
+import '../../../widgets/custom_button.dart';
+import '../../../widgets/custom_text_field.dart';
 
-class TechnicianDashboard extends StatefulWidget {
+class TechnicianTasksScreen extends StatefulWidget {
   @override
-  _TechnicianDashboardState createState() => _TechnicianDashboardState();
+  _TechnicianTasksScreenState createState() => _TechnicianTasksScreenState();
 }
 
-class _TechnicianDashboardState extends State<TechnicianDashboard>
-    with TickerProviderStateMixin {
+class _TechnicianTasksScreenState extends State<TechnicianTasksScreen>
+    with SingleTickerProviderStateMixin {
   final FirestoreService _firestoreService = FirestoreService();
   final _completionNoteController = TextEditingController();
   UserModel? currentUser;
@@ -25,7 +25,7 @@ class _TechnicianDashboardState extends State<TechnicianDashboard>
   @override
   void initState() {
     super.initState();
-    _tabController = TabController(length: 3, vsync: this);
+    _tabController = TabController(length: 2, vsync: this);
     _loadUserData();
   }
 
@@ -282,7 +282,6 @@ class _TechnicianDashboardState extends State<TechnicianDashboard>
                   fontSize: 13,
                 ),
                 tabs: [
-                  Tab(text: 'All Tasks'),
                   Tab(text: 'In Progress'),
                   Tab(text: 'Completed'),
                 ],
@@ -303,7 +302,6 @@ class _TechnicianDashboardState extends State<TechnicianDashboard>
               child: TabBarView(
                 controller: _tabController,
                 children: [
-                  _buildTasksList('all'),
                   _buildTasksList('inProgress'),
                   _buildTasksList('completed'),
                 ],
@@ -316,10 +314,10 @@ class _TechnicianDashboardState extends State<TechnicianDashboard>
   }
 
   Widget _buildStatisticsCards() {
-    final authService = Provider.of<AuthService>(context, listen: false);
-
     return StreamBuilder<List<TaskModel>>(
-      stream: _firestoreService.getTasksByTechnician(authService.user!.uid),
+      stream: _firestoreService.getTasksByTechnician(
+        Provider.of<AuthService>(context, listen: false).user!.uid,
+      ),
       builder: (context, snapshot) {
         final tasks = snapshot.data ?? [];
         // Count tasks with either inProgress or in_progress status
@@ -357,19 +355,19 @@ class _TechnicianDashboardState extends State<TechnicianDashboard>
             SizedBox(width: 8),
             Expanded(
               child: _buildStatCard(
-                title: 'Completed',
-                count: completed,
-                icon: Icons.check_circle,
-                color: Colors.green,
+                title: 'Today',
+                count: todayTasks,
+                icon: Icons.today,
+                color: Colors.purple,
               ),
             ),
             SizedBox(width: 8),
             Expanded(
               child: _buildStatCard(
-                title: 'Today',
-                count: todayTasks,
-                icon: Icons.today,
-                color: Colors.purple,
+                title: 'Completed',
+                count: completed,
+                icon: Icons.check_circle,
+                color: Colors.green,
               ),
             ),
           ],
@@ -423,7 +421,7 @@ class _TechnicianDashboardState extends State<TechnicianDashboard>
   }
 
   Widget _buildTasksList(String tabStatus) {
-    final authService = Provider.of<AuthService>(context, listen: false);
+    final authService = Provider.of<AuthService>(context);
 
     return StreamBuilder<List<TaskModel>>(
       stream: _firestoreService.getTasksByTechnician(authService.user!.uid),
@@ -468,17 +466,16 @@ class _TechnicianDashboardState extends State<TechnicianDashboard>
         List<TaskModel> tasks = snapshot.data ?? [];
 
         // Filter tasks based on status (handle both old and new status formats)
-        if (tabStatus != 'all') {
-          tasks = tasks.where((t) {
-            if (tabStatus == 'inProgress') {
-              return t.status == 'inProgress' || t.status == 'in_progress';
-            } else {
-              return t.status == tabStatus;
-            }
-          }).toList();
+        if (tabStatus == 'inProgress') {
+          tasks = tasks
+              .where(
+                  (t) => t.status == 'inProgress' || t.status == 'in_progress')
+              .toList();
+        } else if (tabStatus == 'completed') {
+          tasks = tasks.where((t) => t.status == 'completed').toList();
         }
 
-        // Sort tasks by assignment date (newest first)
+        // Sort tasks by assignedAt date (newest first)
         tasks.sort((a, b) => b.assignedAt.compareTo(a.assignedAt));
 
         if (tasks.isEmpty) {
@@ -620,7 +617,6 @@ class _TechnicianDashboardState extends State<TechnicianDashboard>
                   style: TextStyle(
                     fontSize: 14,
                     color: Colors.grey[700],
-                    height: 1.4,
                   ),
                   maxLines: 2,
                   overflow: TextOverflow.ellipsis,
@@ -773,8 +769,8 @@ class _TechnicianDashboardState extends State<TechnicianDashboard>
         icon = Icons.check_circle_outline;
         break;
       default:
-        message = 'No Tasks Assigned';
-        description = 'Tasks will appear here when assigned by officers';
+        message = 'No Tasks';
+        description = 'You don\'t have any tasks';
         icon = Icons.assignment_outlined;
     }
 

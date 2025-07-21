@@ -1,10 +1,10 @@
 import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
-import '../../models/report_model.dart';
-import '../../models/user_model.dart';
-import '../../services/firestore_service.dart';
-import '../../services/user_service.dart';
-import '../../widgets/custom_button.dart';
+import '../../../models/maintenanceApp/report_model.dart';
+import '../../../models/user_model.dart';
+import '../../../services/maintenanceApp/firestore_service.dart';
+import '../../../services/user_service.dart';
+import '../../../widgets/custom_button.dart';
 
 class AssignTechnicianScreen extends StatefulWidget {
   final ReportModel report;

@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
-import '../models/report_model.dart';
+import '../models/maintenanceApp/report_model.dart';
 
 class ReportCard extends StatelessWidget {
   final ReportModel report;

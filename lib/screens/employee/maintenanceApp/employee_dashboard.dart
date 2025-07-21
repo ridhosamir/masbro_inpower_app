@@ -3,11 +3,11 @@ import 'package:flutter_cache_manager/flutter_cache_manager.dart';
 import 'package:masbro_inpower_app/utils/firebase_storage_image.dart';
 import 'package:provider/provider.dart';
 import 'package:intl/intl.dart';
-import '../../services/auth_service.dart';
-import '../../services/firestore_service.dart';
-import '../../services/user_service.dart';
-import '../../models/report_model.dart';
-import '../../models/user_model.dart';
+import '../../../services/auth_service.dart';
+import '../../../services/maintenanceApp/firestore_service.dart';
+import '../../../services/user_service.dart';
+import '../../../models/maintenanceApp/report_model.dart';
+import '../../../models/user_model.dart';
 import 'create_report_screen.dart';
 import 'report_detail_screen.dart';
 
