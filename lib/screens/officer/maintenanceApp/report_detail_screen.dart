@@ -1,9 +1,9 @@
 import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
-import '../../models/report_model.dart';
-import '../../services/firestore_service.dart';
-import '../../widgets/custom_button.dart';
-import '../../widgets/custom_text_field.dart';
+import '../../../models/maintenanceApp/report_model.dart';
+import '../../../services/maintenanceApp/firestore_service.dart';
+import '../../../widgets/custom_button.dart';
+import '../../../widgets/custom_text_field.dart';
 import 'assign_technician_screen.dart';
 
 class ReportDetailScreen extends StatefulWidget {

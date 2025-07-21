@@ -5,14 +5,14 @@ import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'package:image_picker/image_picker.dart';
 import 'package:image/image.dart' as img;
-import '../../services/auth_service.dart';
-import '../../services/firestore_service.dart';
-import '../../services/storage_service.dart';
-import '../../services/user_service.dart';
-import '../../models/report_model.dart';
-import '../../models/user_model.dart';
-import '../../widgets/custom_button.dart';
-import '../../widgets/custom_text_field.dart';
+import '../../../services/auth_service.dart';
+import '../../../services/maintenanceApp/firestore_service.dart';
+import '../../../services/maintenanceApp/storage_service.dart';
+import '../../../services/user_service.dart';
+import '../../../models/maintenanceApp/report_model.dart';
+import '../../../models/user_model.dart';
+import '../../../widgets/custom_button.dart';
+import '../../../widgets/custom_text_field.dart';
 
 class CreateReportScreen extends StatefulWidget {
   @override

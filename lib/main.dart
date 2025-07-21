@@ -1,8 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:firebase_core/firebase_core.dart';
-import 'package:masbro_inpower_app/screens/employee/employee_dashboard.dart';
-import 'package:masbro_inpower_app/screens/officer/officer_dashboard.dart';
-import 'package:masbro_inpower_app/screens/technician/technician_dashboard.dart';
+import 'package:masbro_inpower_app/screens/employee/maintenanceApp/employee_dashboard.dart';
+import 'package:masbro_inpower_app/screens/officer/maintenanceApp/officer_dashboard.dart';
+import 'package:masbro_inpower_app/screens/technician/maintenanceApp/technician_dashboard.dart';
 import 'package:masbro_inpower_app/screens/admin/admin_dashboard.dart';
 import 'package:provider/provider.dart';
 import 'services/auth_service.dart';
@@ -11,6 +11,8 @@ import 'screens/auth/login_screen.dart';
 import 'utils/theme.dart';
 import 'firebase_options.dart';
 import 'package:firebase_storage/firebase_storage.dart';
+import 'package:device_preview/device_preview.dart';
+import 'package:flutter/foundation.dart';
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
@@ -26,10 +28,14 @@ void main() async {
   } catch (e) {
     print('[MAIN] Gagal menginisialisasi Firebase: $e');
   }
-  runApp(MyApp());
+  runApp(DevicePreview(
+    enabled: !kReleaseMode,
+    builder: (context) => const MyApp(),
+  ));
 }
 
 class MyApp extends StatelessWidget {
+  const MyApp({super.key});
   @override
   Widget build(BuildContext context) {
     return MultiProvider(
@@ -38,9 +44,9 @@ class MyApp extends StatelessWidget {
         ChangeNotifierProvider(create: (_) => UserService()),
       ],
       child: MaterialApp(
-        title: 'Room Maintenance App',
+        title: 'Masbro App',
         theme: AppTheme.lightTheme,
-        home: AuthWrapper(),
+        home: const AuthWrapper(),
         debugShowCheckedModeBanner: false,
       ),
     );
@@ -48,6 +54,7 @@ class MyApp extends StatelessWidget {
 }
 
 class AuthWrapper extends StatelessWidget {
+  const AuthWrapper({super.key});
   @override
   Widget build(BuildContext context) {
     return Consumer<AuthService>(

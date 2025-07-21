@@ -7,9 +7,9 @@ import '../../services/auth_service.dart';
 import '../../widgets/custom_button.dart';
 import '../../widgets/custom_text_field.dart';
 import 'register_screen.dart';
-import '../employee/employee_dashboard.dart';
-import '../officer/officer_dashboard.dart';
-import '../technician/technician_dashboard.dart';
+import '../employee/maintenanceApp/employee_dashboard.dart';
+import '../officer/maintenanceApp/officer_dashboard.dart';
+import '../technician/maintenanceApp/technician_dashboard.dart';
 
 class LoginScreen extends StatefulWidget {
   @override

@@ -1,12 +1,12 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'package:intl/intl.dart';
-import '../../services/auth_service.dart';
-import '../../services/firestore_service.dart';
-import '../../services/user_service.dart';
-import '../../models/report_model.dart';
-import '../../models/user_model.dart';
-import '../../widgets/custom_text_field.dart';
+import '../../../services/auth_service.dart';
+import '../../../services/maintenanceApp/firestore_service.dart';
+import '../../../services/user_service.dart';
+import '../../../models/maintenanceApp/report_model.dart';
+import '../../../models/user_model.dart';
+import '../../../widgets/custom_text_field.dart';
 import 'report_detail_screen.dart';
 import 'assign_technician_screen.dart';
 
