@@ -59,6 +59,7 @@ class _TechnicianDashboardState extends State<TechnicianDashboard>
             SliverAppBar(
               expandedHeight: 180,
               floating: false,
+              automaticallyImplyLeading: false,
               pinned: true,
               backgroundColor: Theme.of(context).primaryColor,
               flexibleSpace: FlexibleSpaceBar(
@@ -240,8 +241,8 @@ class _TechnicianDashboardState extends State<TechnicianDashboard>
                       case 'profile':
                         _showProfileDialog();
                         break;
-                      case 'logout':
-                        _showLogoutDialog();
+                      case 'back':
+                        Navigator.pop(context);
                         break;
                     }
                   },
@@ -255,11 +256,11 @@ class _TechnicianDashboardState extends State<TechnicianDashboard>
                       ),
                     ),
                     PopupMenuItem(
-                      value: 'logout',
+                      value: 'back',
                       child: ListTile(
-                        leading: Icon(Icons.logout, color: Colors.red),
-                        title:
-                            Text('Logout', style: TextStyle(color: Colors.red)),
+                        leading: Icon(Icons.arrow_back, color: Colors.red),
+                        title: Text('Back to Home',
+                            style: TextStyle(color: Colors.red)),
                         contentPadding: EdgeInsets.zero,
                       ),
                     ),

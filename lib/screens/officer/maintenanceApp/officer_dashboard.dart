@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:masbro_inpower_app/screens/officer/maintenanceApp/facility_manage_screen.dart';
 import 'package:provider/provider.dart';
 import 'package:intl/intl.dart';
 import '../../../services/auth_service.dart';
@@ -68,6 +69,7 @@ class _OfficerDashboardState extends State<OfficerDashboard>
             SliverAppBar(
               expandedHeight: 180,
               floating: false,
+              automaticallyImplyLeading: false,
               pinned: true,
               backgroundColor: Theme.of(context).primaryColor,
               flexibleSpace: FlexibleSpaceBar(
@@ -272,8 +274,8 @@ class _OfficerDashboardState extends State<OfficerDashboard>
                       case 'profile':
                         _showProfileDialog();
                         break;
-                      case 'logout':
-                        _showLogoutDialog();
+                      case 'back':
+                        Navigator.pop(context);
                         break;
                     }
                   },
@@ -287,11 +289,11 @@ class _OfficerDashboardState extends State<OfficerDashboard>
                       ),
                     ),
                     PopupMenuItem(
-                      value: 'logout',
+                      value: 'back',
                       child: ListTile(
-                        leading: Icon(Icons.logout, color: Colors.red),
-                        title:
-                            Text('Logout', style: TextStyle(color: Colors.red)),
+                        leading: Icon(Icons.arrow_back, color: Colors.red),
+                        title: Text('Back to Home',
+                            style: TextStyle(color: Colors.red)),
                         contentPadding: EdgeInsets.zero,
                       ),
                     ),
@@ -330,6 +332,10 @@ class _OfficerDashboardState extends State<OfficerDashboard>
               padding: EdgeInsets.all(16),
               child: _buildStatisticsCards(),
             ),
+
+            // Quick Action Buttons - New section
+            _buildQuickActionButtons(),
+            SizedBox(height: 8),
 
             // Search Results Info
             if (_searchQuery.isNotEmpty)
@@ -425,6 +431,104 @@ class _OfficerDashboardState extends State<OfficerDashboard>
                   _buildReportsList('completed'),
                 ],
               ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  // New method for Quick Action Buttons
+  Widget _buildQuickActionButtons() {
+    return Container(
+      padding: EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Text(
+            'Quick Actions',
+            style: TextStyle(
+              fontSize: 16,
+              fontWeight: FontWeight.bold,
+              color: Colors.grey[700],
+            ),
+          ),
+          SizedBox(height: 12),
+          Row(
+            children: [
+              Expanded(
+                child: _buildActionButton(
+                  icon: Icons.business,
+                  label: 'Facility Management',
+                  color: Colors.purple,
+                  onTap: () {
+                    Navigator.push(
+                      context,
+                      MaterialPageRoute(
+                        builder: (context) => FacilityManagementScreen(),
+                      ),
+                    );
+                  },
+                ),
+              ),
+              SizedBox(width: 12),
+              Expanded(
+                child: _buildActionButton(
+                  icon: Icons.analytics,
+                  label: 'Report Analytics',
+                  color: Colors.blue,
+                  onTap: () {
+                    // Add navigation to analytics screen if available
+                    ScaffoldMessenger.of(context).showSnackBar(
+                      SnackBar(
+                        content: Text('Report Analytics coming soon!'),
+                        behavior: SnackBarBehavior.floating,
+                      ),
+                    );
+                  },
+                ),
+              ),
+            ],
+          ),
+        ],
+      ),
+    );
+  }
+
+  // Helper method for action buttons
+  Widget _buildActionButton({
+    required IconData icon,
+    required String label,
+    required Color color,
+    required VoidCallback onTap,
+  }) {
+    return InkWell(
+      onTap: onTap,
+      borderRadius: BorderRadius.circular(12),
+      child: Container(
+        padding: EdgeInsets.symmetric(vertical: 16),
+        decoration: BoxDecoration(
+          color: color.withOpacity(0.1),
+          borderRadius: BorderRadius.circular(12),
+          border: Border.all(color: color.withOpacity(0.3)),
+        ),
+        child: Column(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            Icon(
+              icon,
+              color: color,
+              size: 28,
+            ),
+            SizedBox(height: 8),
+            Text(
+              label,
+              style: TextStyle(
+                color: color,
+                fontSize: 12,
+                fontWeight: FontWeight.w600,
+              ),
+              textAlign: TextAlign.center,
             ),
           ],
         ),
@@ -591,6 +695,9 @@ class _OfficerDashboardState extends State<OfficerDashboard>
                   r.roomName
                       .toLowerCase()
                       .contains(_searchQuery.toLowerCase()) ||
+                  r.buildingName
+                      .toLowerCase()
+                      .contains(_searchQuery.toLowerCase()) ||
                   r.employeeName
                       .toLowerCase()
                       .contains(_searchQuery.toLowerCase()) ||
@@ -693,6 +800,34 @@ class _OfficerDashboardState extends State<OfficerDashboard>
                                   color: Colors.grey[800],
                                 ),
                               ),
+                              SizedBox(height: 4),
+                              Container(
+                                padding: EdgeInsets.symmetric(
+                                    horizontal: 8, vertical: 2),
+                                decoration: BoxDecoration(
+                                  color: Colors.blue[50],
+                                  borderRadius: BorderRadius.circular(12),
+                                ),
+                                child: Row(
+                                  mainAxisSize: MainAxisSize.min,
+                                  children: [
+                                    Icon(
+                                      Icons.business,
+                                      size: 12,
+                                      color: Colors.blue[700],
+                                    ),
+                                    SizedBox(width: 4),
+                                    Text(
+                                      report.buildingName,
+                                      style: TextStyle(
+                                        fontSize: 12,
+                                        color: Colors.blue[700],
+                                        fontWeight: FontWeight.w500,
+                                      ),
+                                    ),
+                                  ],
+                                ),
+                              ),
                             ],
                           ),
                         ),
@@ -732,7 +867,7 @@ class _OfficerDashboardState extends State<OfficerDashboard>
               SizedBox(height: 12),
 
               // Image preview if available
-              if (report.imageUrl != null) ...[
+              if (report.imageUrl != null && report.hasValidImage()) ...[
                 Container(
                   height: 120,
                   width: double.infinity,
@@ -742,7 +877,7 @@ class _OfficerDashboardState extends State<OfficerDashboard>
                   child: ClipRRect(
                     borderRadius: BorderRadius.circular(8),
                     child: Image.network(
-                      report.imageUrl!,
+                      report.getNormalizedImageUrl()!,
                       fit: BoxFit.cover,
                       loadingBuilder: (context, child, loadingProgress) {
                         if (loadingProgress == null) return child;
@@ -1203,7 +1338,7 @@ class _OfficerDashboardState extends State<OfficerDashboard>
           controller: _searchController,
           decoration: InputDecoration(
             labelText: 'Search',
-            hintText: 'Enter room, employee name...',
+            hintText: 'Enter room, building, employee name...',
             prefixIcon: Icon(Icons.search),
             border: OutlineInputBorder(),
           ),
@@ -1327,29 +1462,6 @@ class _OfficerDashboardState extends State<OfficerDashboard>
             ),
           ),
           Expanded(child: Text(value)),
-        ],
-      ),
-    );
-  }
-
-  void _showLogoutDialog() {
-    showDialog(
-      context: context,
-      builder: (context) => AlertDialog(
-        title: Text('Logout'),
-        content: Text('Are you sure you want to logout?'),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(context),
-            child: Text('Cancel'),
-          ),
-          TextButton(
-            onPressed: () {
-              Navigator.pop(context);
-              Provider.of<AuthService>(context, listen: false).signOut();
-            },
-            child: Text('Logout', style: TextStyle(color: Colors.red)),
-          ),
         ],
       ),
     );

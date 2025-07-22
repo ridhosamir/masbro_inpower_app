@@ -10,6 +10,8 @@ import '../../../services/maintenanceApp/firestore_service.dart';
 import '../../../services/maintenanceApp/storage_service.dart';
 import '../../../services/user_service.dart';
 import '../../../models/maintenanceApp/report_model.dart';
+import '../../../models/maintenanceApp/building_model.dart';
+import '../../../models/maintenanceApp/room_model.dart';
 import '../../../models/user_model.dart';
 import '../../../widgets/custom_button.dart';
 import '../../../widgets/custom_text_field.dart';
@@ -21,7 +23,6 @@ class CreateReportScreen extends StatefulWidget {
 
 class _CreateReportScreenState extends State<CreateReportScreen> {
   final _formKey = GlobalKey<FormState>();
-  final _roomNameController = TextEditingController();
   final _descriptionController = TextEditingController();
   final FirestoreService _firestoreService = FirestoreService();
   final StorageService _storageService = StorageService();
@@ -34,18 +35,11 @@ class _CreateReportScreenState extends State<CreateReportScreen> {
   String? _imageUrl;
   String? _imageError;
 
-  final List<String> _commonRooms = [
-    'Meeting Room A',
-    'Meeting Room B',
-    'Office 101',
-    'Office 102',
-    'Pantry',
-    'Reception',
-    'Server Room',
-    'Storage Room',
-    'Toilet',
-    'Lobby',
-  ];
+  // Building and room selection
+  String? _selectedBuildingId;
+  BuildingModel? _selectedBuilding;
+  String? _selectedRoomId;
+  RoomModel? _selectedRoom;
 
   @override
   void initState() {
@@ -67,7 +61,6 @@ class _CreateReportScreenState extends State<CreateReportScreen> {
 
   @override
   void dispose() {
-    _roomNameController.dispose();
     _descriptionController.dispose();
     super.dispose();
   }
@@ -84,12 +77,12 @@ class _CreateReportScreenState extends State<CreateReportScreen> {
       }
       final decodedImage = img.decodeImage(bytes);
       if (decodedImage == null) {
-        throw Exception('File bukan gambar yang valid');
+        throw Exception('File is not a valid image');
       }
-      print('[CREATE_REPORT] Gambar valid: ${decodedImage.format}');
+      print('[CREATE_REPORT] Valid image: ${decodedImage.format}');
       return true;
     } catch (e) {
-      print('[CREATE_REPORT] Gagal memvalidasi gambar: $e');
+      print('[CREATE_REPORT] Failed to validate image: $e');
       return false;
     }
   }
@@ -113,13 +106,13 @@ class _CreateReportScreenState extends State<CreateReportScreen> {
             });
             ScaffoldMessenger.of(context).showSnackBar(
               SnackBar(
-                content: Text('Gambar berhasil diambil dari kamera web'),
+                content: Text('Image successfully captured from web camera'),
                 backgroundColor: Colors.green,
                 behavior: SnackBarBehavior.floating,
               ),
             );
           } else {
-            throw Exception('File bukan gambar yang valid');
+            throw Exception('File is not a valid image');
           }
         } else {
           final file = File(image.path);
@@ -130,7 +123,7 @@ class _CreateReportScreenState extends State<CreateReportScreen> {
               _imageError = null;
             });
           } else {
-            throw Exception('File bukan gambar yang valid');
+            throw Exception('File is not a valid image');
           }
         }
       }
@@ -167,7 +160,7 @@ class _CreateReportScreenState extends State<CreateReportScreen> {
               _imageError = null;
             });
           } else {
-            throw Exception('File bukan gambar yang valid');
+            throw Exception('File is not a valid image');
           }
         } else {
           final file = File(image.path);
@@ -178,7 +171,7 @@ class _CreateReportScreenState extends State<CreateReportScreen> {
               _imageError = null;
             });
           } else {
-            throw Exception('File bukan gambar yang valid');
+            throw Exception('File is not a valid image');
           }
         }
       }
@@ -199,6 +192,29 @@ class _CreateReportScreenState extends State<CreateReportScreen> {
 
   Future<void> _submitReport() async {
     if (!_formKey.currentState!.validate() || currentUser == null) return;
+
+    // Validate building and room selection
+    if (_selectedBuildingId == null || _selectedBuilding == null) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text('Please select a building'),
+          backgroundColor: Colors.red,
+          behavior: SnackBarBehavior.floating,
+        ),
+      );
+      return;
+    }
+
+    if (_selectedRoomId == null || _selectedRoom == null) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text('Please select a room'),
+          backgroundColor: Colors.red,
+          behavior: SnackBarBehavior.floating,
+        ),
+      );
+      return;
+    }
 
     setState(() => _isLoading = true);
 
@@ -222,7 +238,10 @@ class _CreateReportScreenState extends State<CreateReportScreen> {
         id: '',
         employeeId: authService.user!.uid,
         employeeName: currentUser!.name,
-        roomName: _roomNameController.text.trim(),
+        buildingId: _selectedBuildingId!,
+        buildingName: _selectedBuilding!.name,
+        roomId: _selectedRoomId!,
+        roomName: _selectedRoom!.name,
         itemName: '',
         description: _descriptionController.text.trim(),
         status: 'open',
@@ -400,196 +419,310 @@ class _CreateReportScreenState extends State<CreateReportScreen> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      body: CustomScrollView(
-        slivers: [
-          SliverAppBar(
-            expandedHeight: 100,
-            floating: false,
-            pinned: true,
-            backgroundColor: Theme.of(context).primaryColor,
-            leading: IconButton(
-              icon: Icon(Icons.arrow_back, color: Colors.white),
-              onPressed: () => Navigator.pop(context),
-            ),
-            flexibleSpace: FlexibleSpaceBar(
-              title: Text(
-                'Create Report',
-                style: TextStyle(
-                  color: Colors.white,
-                  fontWeight: FontWeight.bold,
-                ),
-              ),
-              background: Container(
-                decoration: BoxDecoration(
-                  gradient: LinearGradient(
-                    begin: Alignment.topLeft,
-                    end: Alignment.bottomRight,
-                    colors: [
-                      Theme.of(context).primaryColor,
-                      Theme.of(context).primaryColor.withOpacity(0.8),
-                    ],
+      appBar: AppBar(
+        title: Text(
+          'Create Report',
+          style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold),
+        ),
+        backgroundColor: Theme.of(context).primaryColor,
+        iconTheme: IconThemeData(color: Colors.white),
+        leading: IconButton(
+          icon: Icon(Icons.arrow_back),
+          onPressed: () => Navigator.pop(context),
+        ),
+      ),
+      body: SafeArea(
+        child: Padding(
+          padding: EdgeInsets.all(16),
+          child: Form(
+            key: _formKey,
+            child: SingleChildScrollView(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  // Info Card
+                  Container(
+                    width: double.infinity,
+                    padding: EdgeInsets.all(16),
+                    decoration: BoxDecoration(
+                      color: Colors.blue[50],
+                      borderRadius: BorderRadius.circular(12),
+                      border: Border.all(color: Colors.blue[200]!),
+                    ),
+                    child: Column(
+                      children: [
+                        Icon(
+                          Icons.report_problem,
+                          size: 48,
+                          color: Theme.of(context).primaryColor,
+                        ),
+                        SizedBox(height: 12),
+                        Text(
+                          'Report Maintenance Issue',
+                          style: TextStyle(
+                            fontSize: 18,
+                            fontWeight: FontWeight.bold,
+                            color: Theme.of(context).primaryColor,
+                          ),
+                        ),
+                        SizedBox(height: 8),
+                        Text(
+                          'Provide detailed information about the maintenance issue',
+                          style: TextStyle(color: Colors.grey[600]),
+                          textAlign: TextAlign.center,
+                        ),
+                      ],
+                    ),
                   ),
-                ),
+                  SizedBox(height: 24),
+
+                  // Building and Room Selection
+                  _buildBuildingRoomSection(),
+                  SizedBox(height: 24),
+
+                  // Image Upload
+                  _buildImageSection(),
+                  SizedBox(height: 24),
+
+                  // Description
+                  Text(
+                    'Problem Description',
+                    style: TextStyle(
+                      fontSize: 16,
+                      fontWeight: FontWeight.bold,
+                      color: Colors.grey[700],
+                    ),
+                  ),
+                  SizedBox(height: 8),
+                  CustomTextField(
+                    labelText: 'Description',
+                    hintText: 'Describe the problem in detail...',
+                    controller: _descriptionController,
+                    maxLines: 5,
+                    validator: (value) {
+                      if (value == null || value.isEmpty) {
+                        return 'Please describe the problem';
+                      }
+                      if (value.length < 10) {
+                        return 'Please provide more detailed description';
+                      }
+                      return null;
+                    },
+                  ),
+                  SizedBox(height: 32),
+
+                  // Submit Button
+                  CustomButton(
+                    text: 'Submit Report',
+                    onPressed: _submitReport,
+                    isLoading: _isLoading,
+                  ),
+                  SizedBox(height: 16),
+
+                  // Info Note
+                  Container(
+                    width: double.infinity,
+                    padding: EdgeInsets.all(16),
+                    decoration: BoxDecoration(
+                      color: Colors.amber[50],
+                      borderRadius: BorderRadius.circular(8),
+                      border: Border.all(color: Colors.amber[200]!),
+                    ),
+                    child: Row(
+                      children: [
+                        Icon(Icons.info, color: Colors.amber[700]),
+                        SizedBox(width: 12),
+                        Expanded(
+                          child: Text(
+                            'Your report will be reviewed by an officer. You will be notified of the status.',
+                            style: TextStyle(
+                              color: Colors.amber[700],
+                              fontSize: 12,
+                            ),
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                ],
               ),
             ),
           ),
-          SliverToBoxAdapter(
-            child: Padding(
-              padding: EdgeInsets.all(20),
-              child: Form(
-                key: _formKey,
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
+        ),
+      ),
+    );
+  }
+
+Widget _buildBuildingRoomSection() {
+  return Column(
+    crossAxisAlignment: CrossAxisAlignment.start,
+    children: [
+      // Building selection
+      Text(
+        'Building',
+        style: TextStyle(
+          fontSize: 16,
+          fontWeight: FontWeight.bold,
+          color: Colors.grey[700],
+        ),
+      ),
+      SizedBox(height: 8),
+      StreamBuilder<List<BuildingModel>>(
+        stream: _firestoreService.getBuildings(),
+        builder: (context, snapshot) {
+          if (snapshot.connectionState == ConnectionState.waiting) {
+            return Center(child: CircularProgressIndicator());
+          }
+
+          if (snapshot.hasError) {
+            return Text('Error: ${snapshot.error}');
+          }
+
+          final buildings = snapshot.data ?? [];
+
+          if (buildings.isEmpty) {
+            return Container(
+              padding: EdgeInsets.all(12),
+              decoration: BoxDecoration(
+                color: Colors.orange[50],
+                borderRadius: BorderRadius.circular(8),
+                border: Border.all(color: Colors.orange[200]!),
+              ),
+              child: Row(
+                children: [
+                  Icon(Icons.warning, color: Colors.orange[700], size: 20),
+                  SizedBox(width: 8),
+                  Expanded(
+                    child: Text(
+                      'No buildings available. Please contact an officer to add buildings.',
+                      style: TextStyle(color: Colors.orange[700]),
+                    ),
+                  ),
+                ],
+              ),
+            );
+          }
+
+          return Container(
+            padding: EdgeInsets.symmetric(horizontal: 12),
+            decoration: BoxDecoration(
+              color: Colors.white,
+              borderRadius: BorderRadius.circular(8),
+              border: Border.all(color: Colors.grey[300]!),
+            ),
+            child: DropdownButtonHideUnderline(
+              child: DropdownButton<String>(
+                isExpanded: true,
+                value: _selectedBuildingId,
+                hint: Text('Select a building'),
+                items: buildings.map((building) {
+                  return DropdownMenuItem<String>(
+                    value: building.id,
+                    child: Text(building.name),
+                    onTap: () {
+                      setState(() {
+                        _selectedBuilding = building;
+                      });
+                    },
+                  );
+                }).toList(),
+                onChanged: (value) {
+                  setState(() {
+                    _selectedBuildingId = value;
+                    // Reset room selection when building changes
+                    _selectedRoomId = null;
+                    _selectedRoom = null;
+                  });
+                },
+              ),
+            ),
+          );
+        },
+      ),
+      
+      // Room selection (only show if building is selected)
+      if (_selectedBuildingId != null) ...[
+        SizedBox(height: 24),
+        Text(
+          'Room',
+          style: TextStyle(
+            fontSize: 16,
+            fontWeight: FontWeight.bold,
+            color: Colors.grey[700],
+          ),
+        ),
+        SizedBox(height: 8),
+        StreamBuilder<List<RoomModel>>(
+          stream: _firestoreService.getRoomsByBuilding(_selectedBuildingId!),
+          builder: (context, snapshot) {
+            if (snapshot.connectionState == ConnectionState.waiting) {
+              return Center(child: CircularProgressIndicator());
+            }
+
+            if (snapshot.hasError) {
+              return Text('Error: ${snapshot.error}');
+            }
+
+            final rooms = snapshot.data ?? [];
+
+            if (rooms.isEmpty) {
+              return Container(
+                padding: EdgeInsets.all(12),
+                decoration: BoxDecoration(
+                  color: Colors.orange[50],
+                  borderRadius: BorderRadius.circular(8),
+                  border: Border.all(color: Colors.orange[200]!),
+                ),
+                child: Row(
                   children: [
-                    Container(
-                      width: double.infinity,
-                      padding: EdgeInsets.all(20),
-                      decoration: BoxDecoration(
-                        color: Colors.blue[50],
-                        borderRadius: BorderRadius.circular(12),
-                        border: Border.all(color: Colors.blue[200]!),
-                      ),
-                      child: Column(
-                        children: [
-                          Icon(
-                            Icons.report_problem,
-                            size: 48,
-                            color: Theme.of(context).primaryColor,
-                          ),
-                          SizedBox(height: 12),
-                          Text(
-                            'Report Maintenance Issue',
-                            style: Theme.of(context)
-                                .textTheme
-                                .titleLarge
-                                ?.copyWith(
-                                  fontWeight: FontWeight.bold,
-                                  color: Theme.of(context).primaryColor,
-                                ),
-                          ),
-                          SizedBox(height: 8),
-                          Text(
-                            'Provide detailed information about the maintenance issue',
-                            style: TextStyle(color: Colors.grey[600]),
-                            textAlign: TextAlign.center,
-                          ),
-                        ],
-                      ),
-                    ),
-                    SizedBox(height: 24),
-                    Text(
-                      'Room Name',
-                      style: TextStyle(
-                        fontSize: 16,
-                        fontWeight: FontWeight.bold,
-                        color: Colors.grey[700],
-                      ),
-                    ),
-                    SizedBox(height: 8),
-                    CustomTextField(
-                      labelText: 'Room Name',
-                      hintText: 'Select or enter room name',
-                      controller: _roomNameController,
-                      validator: (value) {
-                        if (value == null || value.isEmpty) {
-                          return 'Please enter room name';
-                        }
-                        return null;
-                      },
-                    ),
-                    SizedBox(height: 8),
-                    Wrap(
-                      spacing: 8,
-                      runSpacing: 8,
-                      children: _commonRooms.map((room) {
-                        return GestureDetector(
-                          onTap: () {
-                            _roomNameController.text = room;
-                          },
-                          child: Container(
-                            padding: EdgeInsets.symmetric(
-                                horizontal: 12, vertical: 6),
-                            decoration: BoxDecoration(
-                              color: Colors.grey[100],
-                              borderRadius: BorderRadius.circular(16),
-                              border: Border.all(color: Colors.grey[300]!),
-                            ),
-                            child: Text(
-                              room,
-                              style: TextStyle(
-                                fontSize: 12,
-                                color: Colors.grey[700],
-                              ),
-                            ),
-                          ),
-                        );
-                      }).toList(),
-                    ),
-                    SizedBox(height: 24),
-                    _buildImageSection(),
-                    SizedBox(height: 24),
-                    Text(
-                      'Problem Description',
-                      style: TextStyle(
-                        fontSize: 16,
-                        fontWeight: FontWeight.bold,
-                        color: Colors.grey[700],
-                      ),
-                    ),
-                    SizedBox(height: 8),
-                    CustomTextField(
-                      labelText: 'Description',
-                      hintText: 'Describe the problem in detail...',
-                      controller: _descriptionController,
-                      maxLines: 5,
-                      validator: (value) {
-                        if (value == null || value.isEmpty) {
-                          return 'Please describe the problem';
-                        }
-                        if (value.length < 10) {
-                          return 'Please provide more detailed description';
-                        }
-                        return null;
-                      },
-                    ),
-                    SizedBox(height: 32),
-                    CustomButton(
-                      text: 'Submit Report',
-                      onPressed: _submitReport,
-                      isLoading: _isLoading,
-                    ),
-                    SizedBox(height: 16),
-                    Container(
-                      width: double.infinity,
-                      padding: EdgeInsets.all(16),
-                      decoration: BoxDecoration(
-                        color: Colors.amber[50],
-                        borderRadius: BorderRadius.circular(8),
-                        border: Border.all(color: Colors.amber[200]!),
-                      ),
-                      child: Row(
-                        children: [
-                          Icon(Icons.info, color: Colors.amber[700]),
-                          SizedBox(width: 12),
-                          Expanded(
-                            child: Text(
-                              'Your report will be reviewed by an officer. You will be notified of the status.',
-                              style: TextStyle(
-                                color: Colors.amber[700],
-                                fontSize: 12,
-                              ),
-                            ),
-                          ),
-                        ],
+                    Icon(Icons.warning, color: Colors.orange[700], size: 20),
+                    SizedBox(width: 8),
+                    Expanded(
+                      child: Text(
+                        'No rooms available in this building. Please contact an officer to add rooms.',
+                        style: TextStyle(color: Colors.orange[700]),
                       ),
                     ),
                   ],
                 ),
+              );
+            }
+
+            return Container(
+              padding: EdgeInsets.symmetric(horizontal: 12),
+              decoration: BoxDecoration(
+                color: Colors.white,
+                borderRadius: BorderRadius.circular(8),
+                border: Border.all(color: Colors.grey[300]!),
               ),
-            ),
-          ),
-        ],
-      ),
-    );
-  }
+              child: DropdownButtonHideUnderline(
+                child: DropdownButton<String>(
+                  isExpanded: true,
+                  value: _selectedRoomId,
+                  hint: Text('Select a room'),
+                  items: rooms.map((room) {
+                    return DropdownMenuItem<String>(
+                      value: room.id,
+                      child: Text(room.name),
+                      onTap: () {
+                        setState(() {
+                          _selectedRoom = room;
+                        });
+                      },
+                    );
+                  }).toList(),
+                  onChanged: (value) {
+                    setState(() {
+                      _selectedRoomId = value;
+                    });
+                  },
+                ),
+              ),
+            );
+          },
+        ),
+      ],
+    ],
+  );
+}
 }
