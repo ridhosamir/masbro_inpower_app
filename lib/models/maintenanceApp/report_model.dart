@@ -5,6 +5,9 @@ class ReportModel {
   final String id;
   final String employeeId;
   final String employeeName;
+  final String buildingId;
+  final String buildingName;
+  final String roomId;
   final String roomName;
   final String itemName;
   final String description;
@@ -20,6 +23,9 @@ class ReportModel {
     required this.id,
     required this.employeeId,
     required this.employeeName,
+    required this.buildingId,
+    required this.buildingName,
+    required this.roomId,
     required this.roomName,
     required this.itemName,
     required this.description,
@@ -32,22 +38,25 @@ class ReportModel {
     this.completionDate,
   });
 
-  /// Membuat ReportModel dari Firestore document
+  /// Create ReportModel from Firestore document
   factory ReportModel.fromFirestore(DocumentSnapshot doc) {
     Map<String, dynamic> data = doc.data() as Map<String, dynamic>;
 
     final imageUrl = data['imageUrl'];
     if (imageUrl != null) {
       print(
-          '[ReportModel] Document ID: ${doc.id}, Image URL ditemukan: ${imageUrl.toString().substring(0, min(30, imageUrl.toString().length))}...');
+          '[ReportModel] Document ID: ${doc.id}, Image URL found: ${imageUrl.toString().substring(0, min(30, imageUrl.toString().length))}...');
     } else {
-      print('[ReportModel] Document ID: ${doc.id}, Image URL tidak ada');
+      print('[ReportModel] Document ID: ${doc.id}, Image URL not found');
     }
 
     return ReportModel(
       id: doc.id,
       employeeId: data['employeeId'] ?? '',
       employeeName: data['employeeName'] ?? '',
+      buildingId: data['buildingId'] ?? '',
+      buildingName: data['buildingName'] ?? '',
+      roomId: data['roomId'] ?? '',
       roomName: data['roomName'] ?? '',
       itemName: data['itemName'] ?? '',
       description: data['description'] ?? '',
@@ -63,18 +72,21 @@ class ReportModel {
     );
   }
 
-  /// Mengkonversi ReportModel ke Map untuk disimpan di Firestore
+  /// Convert ReportModel to Map for storing in Firestore
   Map<String, dynamic> toMap() {
     if (imageUrl != null && imageUrl!.isNotEmpty) {
       print(
-          '[ReportModel] Menyimpan image URL: ${imageUrl!.substring(0, min(30, imageUrl!.length))}...');
+          '[ReportModel] Saving image URL: ${imageUrl!.substring(0, min(30, imageUrl!.length))}...');
     } else {
-      print('[ReportModel] Tidak ada image URL untuk disimpan');
+      print('[ReportModel] No image URL to save');
     }
 
     return {
       'employeeId': employeeId,
       'employeeName': employeeName,
+      'buildingId': buildingId,
+      'buildingName': buildingName,
+      'roomId': roomId,
       'roomName': roomName,
       'itemName': itemName,
       'description': description,
@@ -89,7 +101,7 @@ class ReportModel {
     };
   }
 
-  /// Mendapatkan nama status yang ditampilkan
+  /// Get display status name
   String getStatusDisplayName() {
     switch (status) {
       case 'open':
@@ -103,7 +115,7 @@ class ReportModel {
     }
   }
 
-  /// Mendapatkan warna berdasarkan status
+  /// Get status color
   Color getStatusColor() {
     switch (status) {
       case 'open':
@@ -117,7 +129,7 @@ class ReportModel {
     }
   }
 
-  /// Mendapatkan icon berdasarkan status
+  /// Get status icon
   IconData getStatusIcon() {
     switch (status) {
       case 'open':
@@ -131,11 +143,14 @@ class ReportModel {
     }
   }
 
-  /// Membuat salinan ReportModel dengan beberapa field yang diubah
+  /// Create a copy of ReportModel with some fields changed
   ReportModel copyWith({
     String? id,
     String? employeeId,
     String? employeeName,
+    String? buildingId,
+    String? buildingName,
+    String? roomId,
     String? roomName,
     String? itemName,
     String? description,
@@ -151,6 +166,9 @@ class ReportModel {
       id: id ?? this.id,
       employeeId: employeeId ?? this.employeeId,
       employeeName: employeeName ?? this.employeeName,
+      buildingId: buildingId ?? this.buildingId,
+      buildingName: buildingName ?? this.buildingName,
+      roomId: roomId ?? this.roomId,
       roomName: roomName ?? this.roomName,
       itemName: itemName ?? this.itemName,
       description: description ?? this.description,
@@ -164,52 +182,52 @@ class ReportModel {
     );
   }
 
-  /// Memeriksa apakah gambar valid dan dapat ditampilkan
+  /// Check if image is valid and can be displayed
   bool hasValidImage() {
-    // Jika URL kosong atau null, gambar tidak valid
+    // If URL is empty or null, image is not valid
     if (imageUrl == null || imageUrl!.isEmpty) {
-      print('[ReportModel] Gambar tidak valid: URL kosong atau null');
+      print('[ReportModel] Image not valid: URL is empty or null');
       return false;
     }
 
-    // URL harus dimulai dengan http, https, atau gs://
+    // URL must start with http, https, or gs://
     if (!imageUrl!.startsWith('http') &&
         !imageUrl!.startsWith('https') &&
         !imageUrl!.startsWith('gs://')) {
       print(
-          '[ReportModel] Gambar tidak valid: URL tidak dimulai dengan http/https/gs://: $imageUrl');
+          '[ReportModel] Image not valid: URL does not start with http/https/gs://: $imageUrl');
       return false;
     }
 
-    // Tidak boleh mengandung kata "undefined" atau "null"
+    // URL must not contain "undefined" or "null"
     if (imageUrl!.toLowerCase().contains('undefined') ||
         imageUrl!.toLowerCase().contains('null')) {
       print(
-          '[ReportModel] Gambar tidak valid: URL mengandung "undefined" atau "null"');
+          '[ReportModel] Image not valid: URL contains "undefined" or "null"');
       return false;
     }
 
     return true;
   }
 
-  /// Normalisasi URL gambar untuk ditampilkan
+  /// Normalize image URL for display
   String? getNormalizedImageUrl() {
     if (!hasValidImage()) {
       return null;
     }
 
-    // Jika URL sudah dimulai dengan http/https, gunakan langsung
+    // If URL already starts with http/https, use directly
     if (imageUrl!.startsWith('http')) {
       return imageUrl;
     }
 
-    // Jika URL dimulai dengan gs://, ini adalah Firebase Storage URL
-    // URL ini akan ditangani oleh FirebaseStorageImage widget
+    // If URL starts with gs://, this is a Firebase Storage URL
+    // This URL will be handled by FirebaseStorageImage widget
     return imageUrl;
   }
 }
 
-// Helper function untuk menghindari error substring
+// Helper function to avoid substring error
 int min(int a, int b) {
   return a < b ? a : b;
 }

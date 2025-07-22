@@ -67,6 +67,7 @@ class _EmployeeDashboardState extends State<EmployeeDashboard>
             SliverAppBar(
               expandedHeight: 180,
               floating: false,
+              automaticallyImplyLeading: false,
               pinned: true,
               backgroundColor: Theme.of(context).primaryColor,
               flexibleSpace: FlexibleSpaceBar(
@@ -255,8 +256,8 @@ class _EmployeeDashboardState extends State<EmployeeDashboard>
                       case 'profile':
                         _showProfileDialog();
                         break;
-                      case 'logout':
-                        _showLogoutDialog();
+                      case 'back':
+                        Navigator.pop(context);
                         break;
                     }
                   },
@@ -265,16 +266,16 @@ class _EmployeeDashboardState extends State<EmployeeDashboard>
                       value: 'profile',
                       child: ListTile(
                         leading: Icon(Icons.person),
-                        title: Text('Profil'),
+                        title: Text('Profile'),
                         contentPadding: EdgeInsets.zero,
                       ),
                     ),
                     PopupMenuItem(
-                      value: 'logout',
+                      value: 'back',
                       child: ListTile(
-                        leading: Icon(Icons.logout, color: Colors.red),
-                        title:
-                            Text('Keluar', style: TextStyle(color: Colors.red)),
+                        leading: Icon(Icons.arrow_back, color: Colors.red),
+                        title: Text('Back to Home',
+                            style: TextStyle(color: Colors.red)),
                         contentPadding: EdgeInsets.zero,
                       ),
                     ),
@@ -575,6 +576,22 @@ class _EmployeeDashboardState extends State<EmployeeDashboard>
                                     color: Colors.grey[600],
                                   ),
                                 ),
+                              Text(
+                                report.buildingName,
+                                style: TextStyle(
+                                  fontSize: 16,
+                                  fontWeight: FontWeight.bold,
+                                  color: Colors.grey[800],
+                                ),
+                              ),
+                              if (report.itemName.isNotEmpty)
+                                Text(
+                                  report.itemName,
+                                  style: TextStyle(
+                                    fontSize: 13,
+                                    color: Colors.grey[600],
+                                  ),
+                                ),
                               if (report.status == 'inProgress' &&
                                   report.technicianName != null)
                                 Text(
@@ -733,7 +750,7 @@ class _EmployeeDashboardState extends State<EmployeeDashboard>
     final difference = now.difference(date);
 
     if (difference.inDays == 0) {
-      return 'Hari ini, ${DateFormat('HH:mm').format(date)}';
+      return 'Dibuat: ${DateFormat('dd MM yyyy').format(date)}, Pukul: ${DateFormat('HH:mm').format(date)}';
     } else if (difference.inDays == 1) {
       return 'Kemarin, ${DateFormat('HH:mm').format(date)}';
     } else if (difference.inDays < 7) {
