@@ -1,8 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:firebase_core/firebase_core.dart';
-import 'package:masbro_inpower_app/screens/employee/maintenanceApp/employee_dashboard.dart';
-import 'package:masbro_inpower_app/screens/officer/maintenanceApp/officer_dashboard.dart';
-import 'package:masbro_inpower_app/screens/technician/maintenanceApp/technician_dashboard.dart';
+import 'package:masbro_inpower_app/screens/homeDashboard/dashboard_user.dart';
+import 'package:masbro_inpower_app/screens/homeDashboard/dashboard_officer.dart';
+import 'package:masbro_inpower_app/screens/homeDashboard/dashboard_technician.dart';
 import 'package:masbro_inpower_app/screens/admin/admin_dashboard.dart';
 import 'package:provider/provider.dart';
 import 'services/auth_service.dart';
@@ -156,11 +156,11 @@ class AuthWrapper extends StatelessWidget {
             // Navigate based on role
             switch (userData.role) {
               case 'employee':
-                return EmployeeDashboard();
+                return const HomeDashboardUser();
               case 'officer':
-                return OfficerDashboard();
+                return const HomeDashboardOfficer();
               case 'technician':
-                return TechnicianDashboard();
+                return const HomeDashboardTechnician();
               case 'admin':
                 return AdminDashboard();
               default:
