@@ -20,6 +20,9 @@ class EmployeeDashboardResource extends StatefulWidget {
 class _EmployeeDashboardResourceState extends State<EmployeeDashboardResource>
     with SingleTickerProviderStateMixin {
   final FirestoreServiceResource _firestoreService = FirestoreServiceResource();
+  String _searchQuery = '';
+  final _searchController = TextEditingController();
+  String _selectedFilter = 'all';
   UserModel? currentUser;
   late TabController _tabController;
 
@@ -39,6 +42,7 @@ class _EmployeeDashboardResourceState extends State<EmployeeDashboardResource>
   @override
   void dispose() {
     _tabController.dispose();
+    _searchController.dispose();
     super.dispose();
   }
 
@@ -67,6 +71,7 @@ class _EmployeeDashboardResourceState extends State<EmployeeDashboardResource>
             SliverAppBar(
               expandedHeight: 180,
               floating: false,
+              automaticallyImplyLeading: false,
               pinned: true,
               backgroundColor: Theme.of(context).primaryColor,
               flexibleSpace: FlexibleSpaceBar(
@@ -227,17 +232,24 @@ class _EmployeeDashboardResourceState extends State<EmployeeDashboardResource>
                       color: Colors.white.withOpacity(0.2),
                       shape: BoxShape.circle,
                     ),
-                    child: const Icon(Icons.add, color: Colors.white, size: 18),
+                    child:
+                        const Icon(Icons.search, color: Colors.white, size: 18),
                   ),
-                  onPressed: () {
-                    Navigator.push(
-                      context,
-                      MaterialPageRoute(
-                        builder: (context) => CreateRequestScreen(),
-                      ),
-                    );
-                  },
-                  tooltip: 'Buat Permintaan',
+                  onPressed: _showSearchDialog,
+                  tooltip: 'Cari Permintaan',
+                ),
+                IconButton(
+                  icon: Container(
+                    padding: const EdgeInsets.all(4),
+                    decoration: BoxDecoration(
+                      color: Colors.white.withOpacity(0.2),
+                      shape: BoxShape.circle,
+                    ),
+                    child: const Icon(Icons.filter_list,
+                        color: Colors.white, size: 18),
+                  ),
+                  onPressed: _showFilterDialog,
+                  tooltip: 'Filter Permintaan',
                 ),
                 PopupMenuButton<String>(
                   icon: Container(
@@ -254,13 +266,10 @@ class _EmployeeDashboardResourceState extends State<EmployeeDashboardResource>
                     borderRadius: BorderRadius.circular(16),
                   ),
                   onSelected: (value) {
-                    switch (value) {
-                      case 'profile':
-                        _showProfileDialog();
-                        break;
-                      case 'logout':
-                        _showLogoutDialog();
-                        break;
+                    if (value == 'profile') _showProfileDialog();
+                    if (value == 'logout') _showLogoutDialog();
+                    if (value == 'back') {
+                      Navigator.of(context).pop();
                     }
                   },
                   itemBuilder: (context) => [
@@ -269,6 +278,15 @@ class _EmployeeDashboardResourceState extends State<EmployeeDashboardResource>
                       child: ListTile(
                         leading: Icon(Icons.person),
                         title: Text('Profil'),
+                        contentPadding: EdgeInsets.zero,
+                      ),
+                    ),
+                    PopupMenuItem(
+                      value: 'back',
+                      child: ListTile(
+                        leading: Icon(Icons.arrow_back, color: Colors.blueGrey),
+                        title: Text('Back to Home',
+                            style: TextStyle(color: Colors.blueGrey)),
                         contentPadding: EdgeInsets.zero,
                       ),
                     ),
@@ -315,6 +333,42 @@ class _EmployeeDashboardResourceState extends State<EmployeeDashboardResource>
               padding: const EdgeInsets.all(16),
               child: _buildStatisticsCards(),
             ),
+            if (_searchQuery.isNotEmpty)
+              Container(
+                margin: const EdgeInsets.fromLTRB(16, 0, 16, 8),
+                padding: const EdgeInsets.all(12),
+                decoration: BoxDecoration(
+                  color: Colors.blue[50],
+                  borderRadius: BorderRadius.circular(12),
+                  border: Border.all(color: Colors.blue[200]!),
+                ),
+                child: Row(
+                  children: [
+                    Icon(Icons.search, color: Colors.blue[700], size: 16),
+                    const SizedBox(width: 8),
+                    Expanded(
+                      child: Text(
+                        'Mencari: "$_searchQuery"',
+                        style: TextStyle(
+                          color: Colors.blue[700],
+                          fontSize: 12,
+                          fontWeight: FontWeight.w600,
+                        ),
+                      ),
+                    ),
+                    GestureDetector(
+                      onTap: () {
+                        setState(() {
+                          _searchQuery = '';
+                          _searchController.clear();
+                        });
+                      },
+                      child:
+                          Icon(Icons.close, color: Colors.blue[700], size: 16),
+                    ),
+                  ],
+                ),
+              ),
             Expanded(
               child: TabBarView(
                 controller: _tabController,
@@ -451,7 +505,7 @@ class _EmployeeDashboardResourceState extends State<EmployeeDashboardResource>
   }
 
   Widget _buildRequestsList(String status) {
-    final authService = Provider.of<AuthService>(context);
+    final authService = Provider.of<AuthService>(context, listen: false);
 
     return StreamBuilder<List<RequestModel>>(
       stream: _firestoreService.getRequestsByEmployee(authService.user!.uid),
@@ -460,10 +514,10 @@ class _EmployeeDashboardResourceState extends State<EmployeeDashboardResource>
           return Center(
             child: Column(
               mainAxisAlignment: MainAxisAlignment.center,
-              children: [
-                const CircularProgressIndicator(),
-                const SizedBox(height: 16),
-                const Text('Memuat permintaan...'),
+              children: const [
+                CircularProgressIndicator(),
+                SizedBox(height: 16),
+                Text('Memuat permintaan...'),
               ],
             ),
           );
@@ -499,6 +553,39 @@ class _EmployeeDashboardResourceState extends State<EmployeeDashboardResource>
           requests = requests.where((r) => r.status == status).toList();
         }
 
+        if (_searchQuery.isNotEmpty) {
+          requests = requests.where((r) {
+            final query = _searchQuery.toLowerCase();
+            final description = r.description.toLowerCase();
+            final time = r.timeRequired?.toLowerCase() ?? '';
+            final techName = r.technicianName?.toLowerCase() ?? '';
+
+            return description.contains(query) ||
+                time.contains(query) ||
+                techName.contains(query);
+          }).toList();
+        }
+
+        if (_selectedFilter != 'all') {
+          final now = DateTime.now();
+          requests = requests.where((r) {
+            final createdAt = r.createdAt;
+            switch (_selectedFilter) {
+              case 'today':
+                return createdAt.year == now.year &&
+                    createdAt.month == now.month &&
+                    createdAt.day == now.day;
+              case 'week':
+                return now.difference(createdAt).inDays < 7;
+              case 'month':
+                return createdAt.year == now.year &&
+                    createdAt.month == now.month;
+              default:
+                return true;
+            }
+          }).toList();
+        }
+
         requests.sort((a, b) => b.createdAt.compareTo(a.createdAt));
 
         if (requests.isEmpty) {
@@ -507,7 +594,6 @@ class _EmployeeDashboardResourceState extends State<EmployeeDashboardResource>
 
         return RefreshIndicator(
           onRefresh: () async {
-            // Cukup trigger rebuild, StreamBuilder akan fetch data terbaru
             setState(() {});
           },
           child: ListView.builder(
@@ -537,44 +623,45 @@ class _EmployeeDashboardResourceState extends State<EmployeeDashboardResource>
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              Row(
-                mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                children: [
-                  Expanded(
-                    child: Text(
-                      'Permintaan: ${request.description}',
-                      style: TextStyle(
-                        fontSize: 16,
-                        fontWeight: FontWeight.bold,
-                        color: Colors.grey[800],
-                      ),
-                      maxLines: 2,
-                      overflow: TextOverflow.ellipsis,
-                    ),
-                  ),
-                  const SizedBox(width: 8),
-                  _buildStatusChip(request.status),
-                ],
-              ),
-              const SizedBox(height: 12),
               if (request.timeRequired != null &&
                   request.timeRequired!.isNotEmpty) ...[
                 Row(
                   children: [
-                    Icon(Icons.calendar_today,
-                        size: 14, color: Colors.grey[500]),
-                    const SizedBox(width: 6),
-                    Text(
-                      'Waktu: ${request.timeRequired!}',
-                      style: TextStyle(
-                        fontSize: 12,
-                        color: Colors.grey[700],
+                    Expanded(
+                      child: Row(
+                        children: [
+                          Icon(Icons.calendar_today,
+                              size: 14, color: Colors.grey[500]),
+                          const SizedBox(width: 6),
+                          Flexible(
+                            child: Text(
+                              'Waktu: ${request.timeRequired!}',
+                              style: TextStyle(
+                                fontSize: 12,
+                                color: Colors.grey[700],
+                              ),
+                              overflow: TextOverflow.ellipsis,
+                              maxLines: 1,
+                            ),
+                          ),
+                        ],
                       ),
                     ),
+                    const SizedBox(width: 8),
+                    _buildStatusChip(request.status),
                   ],
                 ),
-                const SizedBox(height: 12),
               ],
+              const SizedBox(height: 12),
+              Text(
+                'Permintaan:',
+                style: TextStyle(
+                  fontSize: 13,
+                  fontWeight: FontWeight.w600,
+                  color: Colors.grey[800],
+                ),
+              ),
+              const SizedBox(height: 6),
               Container(
                 width: double.infinity,
                 padding: const EdgeInsets.all(12),
@@ -588,7 +675,7 @@ class _EmployeeDashboardResourceState extends State<EmployeeDashboardResource>
                     fontSize: 14,
                     color: Colors.grey[700],
                   ),
-                  maxLines: 2,
+                  maxLines: 1,
                   overflow: TextOverflow.ellipsis,
                 ),
               ),
@@ -659,7 +746,6 @@ class _EmployeeDashboardResourceState extends State<EmployeeDashboardResource>
   }
 
   Widget _buildStatusChip(String status) {
-    // ... (Fungsi ini tidak perlu diubah, tetap relevan)
     Color color;
     String text;
     IconData icon;
@@ -799,8 +885,97 @@ class _EmployeeDashboardResourceState extends State<EmployeeDashboardResource>
     );
   }
 
+  void _showSearchDialog() {
+    showDialog(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: const Text('Cari Permintaan'),
+        content: TextField(
+          controller: _searchController,
+          decoration: const InputDecoration(
+            labelText: 'Cari',
+            hintText: 'Ketik deskripsi, waktu, nama teknisi...',
+            prefixIcon: Icon(Icons.search),
+            border: OutlineInputBorder(),
+          ),
+          onChanged: (value) {
+            // Pencarian langsung saat mengetik
+            setState(() {
+              _searchQuery = value;
+            });
+          },
+        ),
+        actions: [
+          TextButton(
+            onPressed: () {
+              setState(() {
+                _searchQuery = '';
+                _searchController.clear();
+              });
+              Navigator.pop(context);
+            },
+            child: const Text('Hapus'),
+          ),
+          TextButton(
+            onPressed: () => Navigator.pop(context),
+            child: const Text('Selesai'),
+          ),
+        ],
+      ),
+    );
+  }
+
+  void _showFilterDialog() {
+    showDialog(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: const Text('Filter Berdasarkan Waktu'),
+        content: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            RadioListTile<String>(
+              title: const Text('Semua'),
+              value: 'all',
+              groupValue: _selectedFilter,
+              onChanged: (value) {
+                setState(() => _selectedFilter = value!);
+                Navigator.pop(context);
+              },
+            ),
+            RadioListTile<String>(
+              title: const Text('Hari Ini'),
+              value: 'today',
+              groupValue: _selectedFilter,
+              onChanged: (value) {
+                setState(() => _selectedFilter = value!);
+                Navigator.pop(context);
+              },
+            ),
+            RadioListTile<String>(
+              title: const Text('Minggu Ini'),
+              value: 'week',
+              groupValue: _selectedFilter,
+              onChanged: (value) {
+                setState(() => _selectedFilter = value!);
+                Navigator.pop(context);
+              },
+            ),
+            RadioListTile<String>(
+              title: const Text('Bulan Ini'),
+              value: 'month',
+              groupValue: _selectedFilter,
+              onChanged: (value) {
+                setState(() => _selectedFilter = value!);
+                Navigator.pop(context);
+              },
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
   void _showProfileDialog() {
-    // ... (Fungsi ini tidak perlu diubah)
     if (currentUser == null) return;
 
     showDialog(
@@ -831,7 +1006,6 @@ class _EmployeeDashboardResourceState extends State<EmployeeDashboardResource>
   }
 
   Widget _buildProfileItem(String label, String value) {
-    // ... (Fungsi ini tidak perlu diubah)
     return Padding(
       padding: const EdgeInsets.symmetric(vertical: 4),
       child: Row(
@@ -851,7 +1025,6 @@ class _EmployeeDashboardResourceState extends State<EmployeeDashboardResource>
   }
 
   void _showLogoutDialog() {
-    // ... (Fungsi ini tidak perlu diubah)
     showDialog(
       context: context,
       builder: (context) => AlertDialog(
@@ -864,8 +1037,8 @@ class _EmployeeDashboardResourceState extends State<EmployeeDashboardResource>
           ),
           TextButton(
             onPressed: () {
-              Navigator.pop(context);
               Provider.of<AuthService>(context, listen: false).signOut();
+              Navigator.of(context).popUntil((route) => route.isFirst);
             },
             child: const Text('Keluar', style: TextStyle(color: Colors.red)),
           ),

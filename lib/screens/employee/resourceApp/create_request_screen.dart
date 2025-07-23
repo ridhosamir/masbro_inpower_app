@@ -64,6 +64,7 @@ class _CreateRequestScreenState extends State<CreateRequestScreen> {
       final TimeOfDay? pickedTime = await showTimePicker(
         context: context,
         initialTime: TimeOfDay.fromDateTime(DateTime.now()),
+        initialEntryMode: TimePickerEntryMode.input,
       );
 
       if (pickedTime != null) {
