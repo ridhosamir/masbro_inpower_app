@@ -557,7 +557,7 @@ class _OfficerDashboardState extends State<OfficerDashboard>
           children: [
             Expanded(
               child: _buildStatCard(
-                title: 'Total Reports',
+                title: 'All Reports',
                 count: reports.length,
                 icon: Icons.assignment,
                 color: Colors.blue,

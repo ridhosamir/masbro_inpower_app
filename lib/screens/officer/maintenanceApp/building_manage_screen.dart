@@ -13,14 +13,36 @@ class BuildingManagementScreen extends StatefulWidget {
 class _BuildingManagementScreenState extends State<BuildingManagementScreen> {
   final FirestoreService _firestoreService = FirestoreService();
   final _buildingNameController = TextEditingController();
+  final _searchController = TextEditingController(); // Controller for search
   bool _isAddingBuilding = false;
   bool _isLoading = false;
   BuildingModel? _selectedBuilding;
+  String _searchQuery = ''; // Track search query
+
+  @override
+  void initState() {
+    super.initState();
+    // Add listener to search controller
+    _searchController.addListener(_onSearchChanged);
+  }
 
   @override
   void dispose() {
     _buildingNameController.dispose();
+    _searchController.dispose(); // Dispose search controller
     super.dispose();
+  }
+
+  // Search listener
+  void _onSearchChanged() {
+    setState(() {
+      _searchQuery = _searchController.text.toLowerCase();
+    });
+  }
+
+  // Clear search
+  void _clearSearch() {
+    _searchController.clear();
   }
 
   @override
@@ -100,6 +122,10 @@ class _BuildingManagementScreenState extends State<BuildingManagementScreen> {
                   ),
             SizedBox(height: 24),
 
+            // Search field
+            _buildSearchField(),
+            SizedBox(height: 16),
+
             // Buildings list title
             Text(
               'All Buildings',
@@ -118,6 +144,39 @@ class _BuildingManagementScreenState extends State<BuildingManagementScreen> {
               child: _buildBuildingsList(),
             ),
           ],
+        ),
+      ),
+    );
+  }
+
+  // Search field widget
+  Widget _buildSearchField() {
+    return Container(
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(8),
+        border: Border.all(color: Colors.grey[300]!),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withOpacity(0.05),
+            blurRadius: 4,
+            offset: Offset(0, 2),
+          ),
+        ],
+      ),
+      child: TextField(
+        controller: _searchController,
+        decoration: InputDecoration(
+          hintText: 'Search buildings...',
+          prefixIcon: Icon(Icons.search, color: Colors.grey[600]),
+          suffixIcon: _searchQuery.isNotEmpty
+              ? IconButton(
+                  icon: Icon(Icons.clear, color: Colors.grey[600]),
+                  onPressed: _clearSearch,
+                )
+              : null,
+          border: InputBorder.none,
+          contentPadding: EdgeInsets.symmetric(vertical: 12, horizontal: 16),
         ),
       ),
     );
@@ -220,9 +279,17 @@ class _BuildingManagementScreenState extends State<BuildingManagementScreen> {
           );
         }
 
-        final buildings = snapshot.data ?? [];
+        final allBuildings = snapshot.data ?? [];
 
-        if (buildings.isEmpty) {
+        // Filter buildings based on search query
+        final buildings = _searchQuery.isEmpty
+            ? allBuildings
+            : allBuildings
+                .where((building) =>
+                    building.name.toLowerCase().contains(_searchQuery))
+                .toList();
+
+        if (allBuildings.isEmpty) {
           return Center(
             child: Column(
               mainAxisAlignment: MainAxisAlignment.center,
@@ -254,6 +321,45 @@ class _BuildingManagementScreenState extends State<BuildingManagementScreen> {
           );
         }
 
+        if (buildings.isEmpty) {
+          return Center(
+            child: Column(
+              mainAxisAlignment: MainAxisAlignment.center,
+              children: [
+                Icon(
+                  Icons.search_off,
+                  size: 64,
+                  color: Colors.grey[400],
+                ),
+                SizedBox(height: 16),
+                Text(
+                  'No buildings match your search',
+                  style: TextStyle(
+                    fontSize: 18,
+                    color: Colors.grey[600],
+                  ),
+                ),
+                SizedBox(height: 8),
+                Text(
+                  'Try a different search term or clear the search',
+                  style: TextStyle(
+                    fontSize: 14,
+                    color: Colors.grey[500],
+                  ),
+                  textAlign: TextAlign.center,
+                ),
+                SizedBox(height: 16),
+                TextButton.icon(
+                  onPressed: _clearSearch,
+                  icon: Icon(Icons.clear, color: Colors.blue),
+                  label: Text('Clear Search',
+                      style: TextStyle(color: Colors.blue)),
+                ),
+              ],
+            ),
+          );
+        }
+
         return ListView.builder(
           itemCount: buildings.length,
           itemBuilder: (context, index) {
@@ -278,13 +384,15 @@ class _BuildingManagementScreenState extends State<BuildingManagementScreen> {
                     color: Colors.blue[700],
                   ),
                 ),
-                title: Text(
-                  building.name,
-                  style: TextStyle(
-                    fontWeight: FontWeight.bold,
-                    fontSize: 16,
-                  ),
-                ),
+                title: _searchQuery.isEmpty
+                    ? Text(
+                        building.name,
+                        style: TextStyle(
+                          fontWeight: FontWeight.bold,
+                          fontSize: 16,
+                        ),
+                      )
+                    : _highlightSearchText(building.name, _searchQuery),
                 subtitle: Text(
                   'Added on ${_formatDate(building.createdAt)}',
                   style: TextStyle(
@@ -319,6 +427,77 @@ class _BuildingManagementScreenState extends State<BuildingManagementScreen> {
         );
       },
     );
+  }
+
+  // Helper to highlight search text
+  Widget _highlightSearchText(String text, String searchQuery) {
+    if (searchQuery.isEmpty) {
+      return Text(
+        text,
+        style: TextStyle(
+          fontWeight: FontWeight.bold,
+          fontSize: 16,
+        ),
+      );
+    }
+
+    final matches = <Match>[];
+    final pattern = RegExp(searchQuery, caseSensitive: false);
+    pattern.allMatches(text).forEach((match) {
+      matches.add(match);
+    });
+
+    if (matches.isEmpty) {
+      return Text(
+        text,
+        style: TextStyle(
+          fontWeight: FontWeight.bold,
+          fontSize: 16,
+        ),
+      );
+    }
+
+    final List<TextSpan> children = [];
+    int lastMatchEnd = 0;
+
+    for (final match in matches) {
+      // Add text before the match
+      if (match.start > lastMatchEnd) {
+        children.add(TextSpan(
+          text: text.substring(lastMatchEnd, match.start),
+          style: TextStyle(
+            fontWeight: FontWeight.bold,
+            fontSize: 16,
+          ),
+        ));
+      }
+
+      // Add highlighted match
+      children.add(TextSpan(
+        text: text.substring(match.start, match.end),
+        style: TextStyle(
+          fontWeight: FontWeight.bold,
+          fontSize: 16,
+          backgroundColor: Colors.yellow[200],
+          color: Colors.black,
+        ),
+      ));
+
+      lastMatchEnd = match.end;
+    }
+
+    // Add text after the last match
+    if (lastMatchEnd < text.length) {
+      children.add(TextSpan(
+        text: text.substring(lastMatchEnd),
+        style: TextStyle(
+          fontWeight: FontWeight.bold,
+          fontSize: 16,
+        ),
+      ));
+    }
+
+    return RichText(text: TextSpan(children: children));
   }
 
   Future<void> _saveBuilding() async {

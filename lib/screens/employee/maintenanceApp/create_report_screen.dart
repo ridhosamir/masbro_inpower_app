@@ -230,7 +230,8 @@ class _CreateReportScreenState extends State<CreateReportScreen> {
       } else if (_webImageBytes != null && kIsWeb) {
         final timestamp = DateTime.now().millisecondsSinceEpoch;
         final fileName = 'reports/${authService.user!.uid}_$timestamp.jpg';
-        _imageUrl = await _storageService.uploadWebFile(_webImageBytes!, fileName);
+        _imageUrl =
+            await _storageService.uploadWebFile(_webImageBytes!, fileName);
         print('[CREATE_REPORT] Web image URL: $_imageUrl');
       }
 
@@ -249,7 +250,8 @@ class _CreateReportScreenState extends State<CreateReportScreen> {
         imageUrl: _imageUrl,
       );
 
-      print('[CREATE_REPORT] Final image URL saved to report: ${report.imageUrl}');
+      print(
+          '[CREATE_REPORT] Final image URL saved to report: ${report.imageUrl}');
       await _firestoreService.createReport(report);
 
       setState(() => _isLoading = false);
@@ -416,6 +418,332 @@ class _CreateReportScreenState extends State<CreateReportScreen> {
     }
   }
 
+  // Building and Room section with searchable dropdowns
+  Widget _buildBuildingRoomSection() {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        // Building selection
+        Text(
+          'Building',
+          style: TextStyle(
+            fontSize: 16,
+            fontWeight: FontWeight.bold,
+            color: Colors.grey[700],
+          ),
+        ),
+        SizedBox(height: 8),
+        StreamBuilder<List<BuildingModel>>(
+          stream: _firestoreService.getBuildings(),
+          builder: (context, snapshot) {
+            if (snapshot.connectionState == ConnectionState.waiting) {
+              return Center(child: CircularProgressIndicator());
+            }
+
+            if (snapshot.hasError) {
+              return Text('Error: ${snapshot.error}');
+            }
+
+            final buildings = snapshot.data ?? [];
+
+            if (buildings.isEmpty) {
+              return Container(
+                padding: EdgeInsets.all(12),
+                decoration: BoxDecoration(
+                  color: Colors.orange[50],
+                  borderRadius: BorderRadius.circular(8),
+                  border: Border.all(color: Colors.orange[200]!),
+                ),
+                child: Row(
+                  children: [
+                    Icon(Icons.warning, color: Colors.orange[700], size: 20),
+                    SizedBox(width: 8),
+                    Expanded(
+                      child: Text(
+                        'No buildings available. Please contact an officer to add buildings.',
+                        style: TextStyle(color: Colors.orange[700]),
+                      ),
+                    ),
+                  ],
+                ),
+              );
+            }
+
+            return _buildSearchableDropdown(
+              items: buildings,
+              selectedValue: _selectedBuildingId,
+              displayProperty: (building) => building.name,
+              valueProperty: (building) => building.id,
+              hintText: 'Search for a building...',
+              onChanged: (value, item) {
+                setState(() {
+                  _selectedBuildingId = value;
+                  _selectedBuilding = item;
+                  // Reset room selection when building changes
+                  _selectedRoomId = null;
+                  _selectedRoom = null;
+                });
+              },
+            );
+          },
+        ),
+
+        // Room selection (only show if building is selected)
+        if (_selectedBuildingId != null) ...[
+          SizedBox(height: 24),
+          Text(
+            'Room',
+            style: TextStyle(
+              fontSize: 16,
+              fontWeight: FontWeight.bold,
+              color: Colors.grey[700],
+            ),
+          ),
+          SizedBox(height: 8),
+          StreamBuilder<List<RoomModel>>(
+            stream: _firestoreService.getRoomsByBuilding(_selectedBuildingId!),
+            builder: (context, snapshot) {
+              if (snapshot.connectionState == ConnectionState.waiting) {
+                return Center(child: CircularProgressIndicator());
+              }
+
+              if (snapshot.hasError) {
+                return Text('Error: ${snapshot.error}');
+              }
+
+              final rooms = snapshot.data ?? [];
+
+              if (rooms.isEmpty) {
+                return Container(
+                  padding: EdgeInsets.all(12),
+                  decoration: BoxDecoration(
+                    color: Colors.orange[50],
+                    borderRadius: BorderRadius.circular(8),
+                    border: Border.all(color: Colors.orange[200]!),
+                  ),
+                  child: Row(
+                    children: [
+                      Icon(Icons.warning, color: Colors.orange[700], size: 20),
+                      SizedBox(width: 8),
+                      Expanded(
+                        child: Text(
+                          'No rooms available in this building. Please contact an officer to add rooms.',
+                          style: TextStyle(color: Colors.orange[700]),
+                        ),
+                      ),
+                    ],
+                  ),
+                );
+              }
+
+              return _buildSearchableDropdown(
+                items: rooms,
+                selectedValue: _selectedRoomId,
+                displayProperty: (room) => room.name,
+                valueProperty: (room) => room.id,
+                hintText: 'Search for a room...',
+                onChanged: (value, item) {
+                  setState(() {
+                    _selectedRoomId = value;
+                    _selectedRoom = item;
+                  });
+                },
+              );
+            },
+          ),
+        ],
+      ],
+    );
+  }
+
+  // Generic searchable dropdown widget
+  Widget _buildSearchableDropdown<T>({
+    required List<T> items,
+    required String? selectedValue,
+    required String Function(T) displayProperty,
+    required String Function(T) valueProperty,
+    required String hintText,
+    required void Function(String?, T?) onChanged,
+  }) {
+    return GestureDetector(
+      onTap: () {
+        showModalBottomSheet(
+          context: context,
+          isScrollControlled: true,
+          backgroundColor: Colors.transparent,
+          builder: (context) => _buildSearchableDropdownModal(
+            items: items,
+            selectedValue: selectedValue,
+            displayProperty: displayProperty,
+            valueProperty: valueProperty,
+            hintText: hintText,
+            onChanged: onChanged,
+          ),
+        );
+      },
+      child: Container(
+        padding: EdgeInsets.symmetric(horizontal: 12, vertical: 13),
+        decoration: BoxDecoration(
+          color: Colors.white,
+          borderRadius: BorderRadius.circular(8),
+          border: Border.all(color: Colors.grey[300]!),
+        ),
+        child: Row(
+          children: [
+            Expanded(
+              child: Text(
+                selectedValue != null
+                    ? items
+                        .firstWhere(
+                          (item) => valueProperty(item) == selectedValue,
+                          orElse: () => items.first,
+                        )
+                        .let((item) => displayProperty(item))
+                    : hintText,
+                style: TextStyle(
+                  color:
+                      selectedValue != null ? Colors.black : Colors.grey[600],
+                ),
+                overflow: TextOverflow.ellipsis,
+              ),
+            ),
+            Icon(Icons.search, color: Colors.grey[600]),
+          ],
+        ),
+      ),
+    );
+  }
+
+  // Modal for searchable dropdown
+  Widget _buildSearchableDropdownModal<T>({
+    required List<T> items,
+    required String? selectedValue,
+    required String Function(T) displayProperty,
+    required String Function(T) valueProperty,
+    required String hintText,
+    required void Function(String?, T?) onChanged,
+  }) {
+    // Create a filtered list
+    List<T> filteredItems = List.from(items);
+    String searchQuery = '';
+
+    return StatefulBuilder(
+      builder: (context, setState) {
+        // Update filtered items when search query changes
+        void updateSearch(String query) {
+          setState(() {
+            searchQuery = query.toLowerCase();
+            filteredItems = items
+                .where((item) =>
+                    displayProperty(item).toLowerCase().contains(searchQuery))
+                .toList();
+          });
+        }
+
+        return Container(
+          height: MediaQuery.of(context).size.height * 0.7,
+          decoration: BoxDecoration(
+            color: Colors.white,
+            borderRadius: BorderRadius.only(
+              topLeft: Radius.circular(16),
+              topRight: Radius.circular(16),
+            ),
+          ),
+          child: Column(
+            children: [
+              // Handle bar
+              Container(
+                margin: EdgeInsets.only(top: 8),
+                height: 4,
+                width: 40,
+                decoration: BoxDecoration(
+                  color: Colors.grey[300],
+                  borderRadius: BorderRadius.circular(2),
+                ),
+              ),
+              // Title
+              Padding(
+                padding: EdgeInsets.all(16),
+                child: Text(
+                  'Select an item',
+                  style: TextStyle(
+                    fontSize: 18,
+                    fontWeight: FontWeight.bold,
+                  ),
+                ),
+              ),
+              // Search field
+              Padding(
+                padding: EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+                child: TextField(
+                  onChanged: updateSearch,
+                  decoration: InputDecoration(
+                    hintText: hintText,
+                    prefixIcon: Icon(Icons.search),
+                    border: OutlineInputBorder(
+                      borderRadius: BorderRadius.circular(8),
+                    ),
+                    contentPadding:
+                        EdgeInsets.symmetric(vertical: 0, horizontal: 16),
+                  ),
+                  autofocus: true,
+                ),
+              ),
+              // Items list
+              Expanded(
+                child: filteredItems.isEmpty
+                    ? Center(
+                        child: Column(
+                          mainAxisSize: MainAxisSize.min,
+                          children: [
+                            Icon(
+                              Icons.search_off,
+                              size: 48,
+                              color: Colors.grey[400],
+                            ),
+                            SizedBox(height: 16),
+                            Text(
+                              'No items found',
+                              style: TextStyle(
+                                color: Colors.grey[600],
+                                fontSize: 16,
+                              ),
+                            ),
+                          ],
+                        ),
+                      )
+                    : ListView.builder(
+                        itemCount: filteredItems.length,
+                        itemBuilder: (context, index) {
+                          final item = filteredItems[index];
+                          final value = valueProperty(item);
+                          final display = displayProperty(item);
+                          final isSelected = value == selectedValue;
+
+                          return ListTile(
+                            title: Text(display),
+                            tileColor: isSelected
+                                ? Colors.blue.withOpacity(0.1)
+                                : null,
+                            leading: isSelected
+                                ? Icon(Icons.check_circle, color: Colors.blue)
+                                : Icon(Icons.circle_outlined,
+                                    color: Colors.grey),
+                            onTap: () {
+                              onChanged(value, item);
+                              Navigator.pop(context);
+                            },
+                          );
+                        },
+                      ),
+              ),
+            ],
+          ),
+        );
+      },
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
@@ -552,177 +880,9 @@ class _CreateReportScreenState extends State<CreateReportScreen> {
       ),
     );
   }
-
-Widget _buildBuildingRoomSection() {
-  return Column(
-    crossAxisAlignment: CrossAxisAlignment.start,
-    children: [
-      // Building selection
-      Text(
-        'Building',
-        style: TextStyle(
-          fontSize: 16,
-          fontWeight: FontWeight.bold,
-          color: Colors.grey[700],
-        ),
-      ),
-      SizedBox(height: 8),
-      StreamBuilder<List<BuildingModel>>(
-        stream: _firestoreService.getBuildings(),
-        builder: (context, snapshot) {
-          if (snapshot.connectionState == ConnectionState.waiting) {
-            return Center(child: CircularProgressIndicator());
-          }
-
-          if (snapshot.hasError) {
-            return Text('Error: ${snapshot.error}');
-          }
-
-          final buildings = snapshot.data ?? [];
-
-          if (buildings.isEmpty) {
-            return Container(
-              padding: EdgeInsets.all(12),
-              decoration: BoxDecoration(
-                color: Colors.orange[50],
-                borderRadius: BorderRadius.circular(8),
-                border: Border.all(color: Colors.orange[200]!),
-              ),
-              child: Row(
-                children: [
-                  Icon(Icons.warning, color: Colors.orange[700], size: 20),
-                  SizedBox(width: 8),
-                  Expanded(
-                    child: Text(
-                      'No buildings available. Please contact an officer to add buildings.',
-                      style: TextStyle(color: Colors.orange[700]),
-                    ),
-                  ),
-                ],
-              ),
-            );
-          }
-
-          return Container(
-            padding: EdgeInsets.symmetric(horizontal: 12),
-            decoration: BoxDecoration(
-              color: Colors.white,
-              borderRadius: BorderRadius.circular(8),
-              border: Border.all(color: Colors.grey[300]!),
-            ),
-            child: DropdownButtonHideUnderline(
-              child: DropdownButton<String>(
-                isExpanded: true,
-                value: _selectedBuildingId,
-                hint: Text('Select a building'),
-                items: buildings.map((building) {
-                  return DropdownMenuItem<String>(
-                    value: building.id,
-                    child: Text(building.name),
-                    onTap: () {
-                      setState(() {
-                        _selectedBuilding = building;
-                      });
-                    },
-                  );
-                }).toList(),
-                onChanged: (value) {
-                  setState(() {
-                    _selectedBuildingId = value;
-                    // Reset room selection when building changes
-                    _selectedRoomId = null;
-                    _selectedRoom = null;
-                  });
-                },
-              ),
-            ),
-          );
-        },
-      ),
-      
-      // Room selection (only show if building is selected)
-      if (_selectedBuildingId != null) ...[
-        SizedBox(height: 24),
-        Text(
-          'Room',
-          style: TextStyle(
-            fontSize: 16,
-            fontWeight: FontWeight.bold,
-            color: Colors.grey[700],
-          ),
-        ),
-        SizedBox(height: 8),
-        StreamBuilder<List<RoomModel>>(
-          stream: _firestoreService.getRoomsByBuilding(_selectedBuildingId!),
-          builder: (context, snapshot) {
-            if (snapshot.connectionState == ConnectionState.waiting) {
-              return Center(child: CircularProgressIndicator());
-            }
-
-            if (snapshot.hasError) {
-              return Text('Error: ${snapshot.error}');
-            }
-
-            final rooms = snapshot.data ?? [];
-
-            if (rooms.isEmpty) {
-              return Container(
-                padding: EdgeInsets.all(12),
-                decoration: BoxDecoration(
-                  color: Colors.orange[50],
-                  borderRadius: BorderRadius.circular(8),
-                  border: Border.all(color: Colors.orange[200]!),
-                ),
-                child: Row(
-                  children: [
-                    Icon(Icons.warning, color: Colors.orange[700], size: 20),
-                    SizedBox(width: 8),
-                    Expanded(
-                      child: Text(
-                        'No rooms available in this building. Please contact an officer to add rooms.',
-                        style: TextStyle(color: Colors.orange[700]),
-                      ),
-                    ),
-                  ],
-                ),
-              );
-            }
-
-            return Container(
-              padding: EdgeInsets.symmetric(horizontal: 12),
-              decoration: BoxDecoration(
-                color: Colors.white,
-                borderRadius: BorderRadius.circular(8),
-                border: Border.all(color: Colors.grey[300]!),
-              ),
-              child: DropdownButtonHideUnderline(
-                child: DropdownButton<String>(
-                  isExpanded: true,
-                  value: _selectedRoomId,
-                  hint: Text('Select a room'),
-                  items: rooms.map((room) {
-                    return DropdownMenuItem<String>(
-                      value: room.id,
-                      child: Text(room.name),
-                      onTap: () {
-                        setState(() {
-                          _selectedRoom = room;
-                        });
-                      },
-                    );
-                  }).toList(),
-                  onChanged: (value) {
-                    setState(() {
-                      _selectedRoomId = value;
-                    });
-                  },
-                ),
-              ),
-            );
-          },
-        ),
-      ],
-    ],
-  );
 }
+
+// Extension method to simplify accessing properties
+extension Let<T> on T {
+  R let<R>(R Function(T) block) => block(this);
 }
