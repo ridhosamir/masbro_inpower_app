@@ -263,6 +263,7 @@ class _OfficerDashboardResourceState extends State<OfficerDashboardResource>
                   ),
                   onSelected: (value) {
                     if (value == 'profile') _showProfileDialog();
+                    if (value == 'logout') _showLogoutDialog();
                     if (value == 'back') {
                       Navigator.of(context).pop();
                     }
@@ -279,9 +280,18 @@ class _OfficerDashboardResourceState extends State<OfficerDashboardResource>
                     PopupMenuItem(
                       value: 'back',
                       child: ListTile(
-                        leading: Icon(Icons.arrow_back, color: Colors.red),
+                        leading: Icon(Icons.arrow_back, color: Colors.blueGrey),
                         title: Text('Back to Home',
-                            style: TextStyle(color: Colors.red)),
+                            style: TextStyle(color: Colors.blueGrey)),
+                        contentPadding: EdgeInsets.zero,
+                      ),
+                    ),
+                    const PopupMenuItem(
+                      value: 'logout',
+                      child: ListTile(
+                        leading: Icon(Icons.logout, color: Colors.red),
+                        title:
+                            Text('Keluar', style: TextStyle(color: Colors.red)),
                         contentPadding: EdgeInsets.zero,
                       ),
                     ),
@@ -494,6 +504,27 @@ class _OfficerDashboardResourceState extends State<OfficerDashboardResource>
               .toList();
         }
 
+        if (_selectedFilter != 'all') {
+          final now = DateTime.now();
+          requests = requests.where((r) {
+            final createdAt = r.createdAt;
+            switch (_selectedFilter) {
+              case 'today':
+                return createdAt.year == now.year &&
+                    createdAt.month == now.month &&
+                    createdAt.day == now.day;
+              case 'week':
+                // Filter untuk 7 hari terakhir
+                return now.difference(createdAt).inDays < 7;
+              case 'month':
+                return createdAt.year == now.year &&
+                    createdAt.month == now.month;
+              default:
+                return true;
+            }
+          }).toList();
+        }
+
         requests.sort((a, b) => b.createdAt.compareTo(a.createdAt));
 
         if (requests.isEmpty) {
@@ -535,16 +566,34 @@ class _OfficerDashboardResourceState extends State<OfficerDashboardResource>
                 children: [
                   Expanded(
                     child: Text(
-                      request.description,
+                      'Permintaan:',
                       style: TextStyle(
-                        fontSize: 16,
-                        fontWeight: FontWeight.bold,
+                        fontSize: 13,
+                        fontWeight: FontWeight.w600,
                         color: Colors.grey[800],
                       ),
                     ),
                   ),
                   _buildStatusChip(request.status),
                 ],
+              ),
+              const SizedBox(height: 12),
+              Container(
+                width: double.infinity,
+                padding: const EdgeInsets.all(12),
+                decoration: BoxDecoration(
+                  color: Colors.grey[50],
+                  borderRadius: BorderRadius.circular(8),
+                ),
+                child: Text(
+                  request.description,
+                  style: TextStyle(
+                    fontSize: 14,
+                    color: Colors.grey[700],
+                  ),
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                ),
               ),
               const SizedBox(height: 12),
               Row(
@@ -779,19 +828,6 @@ class _OfficerDashboardResourceState extends State<OfficerDashboardResource>
   }
 
   void _navigateToAssignTechnician(RequestModel request) {
-    // Check if request already has an assigned technician
-    if (request.assignedTechnicianId != null) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: Text(
-              'This request already has an assigned technician: ${request.technicianName}'),
-          backgroundColor: Colors.orange,
-          behavior: SnackBarBehavior.floating,
-        ),
-      );
-      return;
-    }
-
     Navigator.push(
       context,
       MaterialPageRoute(
@@ -840,7 +876,7 @@ class _OfficerDashboardResourceState extends State<OfficerDashboardResource>
   Future<void> _completeRequest(RequestModel request) async {
     if (_completionReasonController.text.trim().isEmpty) {
       ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
+        const SnackBar(
           content: Text('Please provide completion notes'),
           backgroundColor: Colors.red,
           behavior: SnackBarBehavior.floating,
@@ -849,39 +885,41 @@ class _OfficerDashboardResourceState extends State<OfficerDashboardResource>
       return;
     }
 
+    if (currentUser == null) return;
+
     setState(() => _isCompleting = true);
 
     try {
       await _firestoreService.completeRequest(
-        request.id,
+        request,
         _completionReasonController.text.trim(),
-        technicianId: request.assignedTechnicianId ?? 'officer',
-        technicianName: request.technicianName ?? 'Office Management',
+        officerId: currentUser!.uid,
+        officerName: currentUser!.name,
       );
 
-      Navigator.pop(context);
-
-      setState(() => _isCompleting = false);
-
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: Text('Request marked as completed'),
-          backgroundColor: Colors.green,
-          behavior: SnackBarBehavior.floating,
-        ),
-      );
+      if (mounted) {
+        Navigator.pop(context);
+        setState(() => _isCompleting = false);
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text('Request marked as completed'),
+            backgroundColor: Colors.green,
+            behavior: SnackBarBehavior.floating,
+          ),
+        );
+      }
     } catch (e) {
-      setState(() => _isCompleting = false);
-
-      Navigator.pop(context);
-
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: Text('Error completing request: $e'),
-          backgroundColor: Colors.red,
-          behavior: SnackBarBehavior.floating,
-        ),
-      );
+      if (mounted) {
+        Navigator.pop(context);
+        setState(() => _isCompleting = false);
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('Error completing request: $e'),
+            backgroundColor: Colors.red,
+            behavior: SnackBarBehavior.floating,
+          ),
+        );
+      }
     }
   }
 
@@ -1018,6 +1056,29 @@ class _OfficerDashboardResourceState extends State<OfficerDashboardResource>
             ),
           ),
           Expanded(child: Text(value)),
+        ],
+      ),
+    );
+  }
+
+  void _showLogoutDialog() {
+    showDialog(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: const Text('Keluar'),
+        content: const Text('Apakah Anda yakin ingin keluar?'),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context),
+            child: const Text('Batal'),
+          ),
+          TextButton(
+            onPressed: () {
+              Provider.of<AuthService>(context, listen: false).signOut();
+              Navigator.of(context).popUntil((route) => route.isFirst);
+            },
+            child: const Text('Keluar', style: TextStyle(color: Colors.red)),
+          ),
         ],
       ),
     );

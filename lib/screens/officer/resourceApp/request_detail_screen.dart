@@ -1,6 +1,10 @@
 import 'package:flutter/material.dart';
+import 'package:provider/provider.dart';
 import 'package:intl/intl.dart';
 import '../../../models/resourceApp/request_model.dart';
+import '../../../services/auth_service.dart';
+import '../../../services/user_service.dart';
+import '../../../models/user_model.dart';
 import '../../../services/resourceApp/firestore_service.dart';
 import '../../../widgets/custom_button.dart';
 import '../../../widgets/custom_text_field.dart';
@@ -21,6 +25,14 @@ class _RequestDetailScreenResourceState
   final FirestoreServiceResource _firestoreService = FirestoreServiceResource();
   final _completionReasonController = TextEditingController();
   bool _isLoading = false;
+  bool _isCompleting = false;
+  UserModel? currentUser;
+
+  @override
+  void initState() {
+    super.initState();
+    _loadUserData();
+  }
 
   @override
   void dispose() {
@@ -75,6 +87,20 @@ class _RequestDetailScreenResourceState
     );
   }
 
+  Future<void> _loadUserData() async {
+    final authService = Provider.of<AuthService>(context, listen: false);
+    final userService = Provider.of<UserService>(context, listen: false);
+
+    if (authService.user != null) {
+      final userData = await userService.getUserData(authService.user!.uid);
+      if (mounted) {
+        setState(() {
+          currentUser = userData;
+        });
+      }
+    }
+  }
+
   Future<void> _completeRequest() async {
     if (_completionReasonController.text.trim().isEmpty) {
       ScaffoldMessenger.of(context).showSnackBar(
@@ -86,38 +112,50 @@ class _RequestDetailScreenResourceState
       return;
     }
 
-    setState(() => _isLoading = true);
+    if (currentUser == null) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+            content: Text('Data officer belum termuat, silakan coba lagi.')),
+      );
+      return;
+    }
+
+    setState(() => _isCompleting = true);
 
     try {
       await _firestoreService.completeRequest(
-        widget.request.id,
+        widget.request,
         _completionReasonController.text.trim(),
-        technicianId: widget.request.assignedTechnicianId ?? 'officer',
-        technicianName: widget.request.technicianName ?? 'Manajemen Kantor',
+        officerId: currentUser!.uid,
+        officerName: currentUser!.name,
       );
 
       if (mounted) {
-        Navigator.pop(context); // Close dialog
-        Navigator.pop(context); // Go back to dashboard
+        Navigator.of(context).pop();
+        Navigator.of(context).pop();
+
         ScaffoldMessenger.of(context).showSnackBar(
           const SnackBar(
-            content: Text('Permintaan ditandai sebagai selesai'),
+            content: Text('Permintaan berhasil diselesaikan'),
             backgroundColor: Colors.green,
+            behavior: SnackBarBehavior.floating,
           ),
         );
       }
     } catch (e) {
       if (mounted) {
+        Navigator.of(context).pop();
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
             content: Text('Error: $e'),
             backgroundColor: Colors.red,
+            behavior: SnackBarBehavior.floating,
           ),
         );
       }
     } finally {
       if (mounted) {
-        setState(() => _isLoading = false);
+        setState(() => _isCompleting = false);
       }
     }
   }
@@ -196,7 +234,8 @@ class _RequestDetailScreenResourceState
                     fontSize: 16, height: 1.5, color: Colors.grey[800]),
               ),
             ),
-            if (widget.request.assignedTechnicianId != null) ...[
+            if (widget.request.technicianName != null &&
+                widget.request.technicianName!.isNotEmpty) ...[
               const SizedBox(height: 24),
               _buildSectionTitle('Resource yang Ditugaskan'),
               const SizedBox(height: 12),
@@ -217,7 +256,7 @@ class _RequestDetailScreenResourceState
                     const SizedBox(width: 12),
                     Expanded(
                       child: Text(
-                        widget.request.technicianName ?? 'Tidak diketahui',
+                        widget.request.technicianName!,
                         style: TextStyle(
                           fontSize: 16,
                           fontWeight: FontWeight.bold,
