@@ -178,8 +178,8 @@ class RequestDetailScreen extends StatelessWidget {
             ),
 
             // --- Teknisi yang Ditugaskan ---
-            if (request.status == 'inProgress' &&
-                request.assignedTechnicianId != null) ...[
+            if (request.technicianName != null &&
+                request.technicianName!.isNotEmpty) ...[
               const SizedBox(height: 24),
               _buildSectionTitle('Resource yang Ditugaskan'),
               const SizedBox(height: 12),
@@ -212,7 +212,7 @@ class RequestDetailScreen extends StatelessWidget {
                         crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
                           Text(
-                            request.technicianName ?? 'Tidak diketahui',
+                            request.technicianName!,
                             style: TextStyle(
                               fontSize: 16,
                               fontWeight: FontWeight.bold,
@@ -221,7 +221,9 @@ class RequestDetailScreen extends StatelessWidget {
                           ),
                           const SizedBox(height: 4),
                           Text(
-                            'Sedang menangani permintaan Anda.',
+                            request.status == 'inProgress'
+                                ? 'Sedang menangani permintaan Anda.'
+                                : 'Menyelesaikan permintaan ini.',
                             style: TextStyle(
                               fontSize: 14,
                               color: Colors.blue[700],
@@ -276,6 +278,7 @@ class RequestDetailScreen extends StatelessWidget {
                 ),
               ),
             ],
+            const SizedBox(height: 24),
           ],
         ),
       ),

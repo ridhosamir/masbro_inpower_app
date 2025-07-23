@@ -66,83 +66,101 @@ class FirestoreServiceResource {
       RequestModel request, String technicianId, String technicianName) async {
     try {
       final batch = _firestore.batch();
+      final requestRef = _requestsCollection.doc(request.id);
 
-      // Update laporan
-      batch.update(_requestsCollection.doc(request.id), {
+      batch.update(requestRef, {
         'status': 'inProgress',
         'assignedTechnicianId': technicianId,
         'technicianName': technicianName,
       });
 
-      // Buat task baru
-      final taskRef = _tasksCollection.doc();
-      final task = TaskModel(
-        id: taskRef.id,
-        requestId: request.id,
-        assignedTo: technicianId,
-        technicianName: technicianName,
-        requesterName: request.employeeName,
-        description: request.description,
-        status: 'inProgress',
-        assignedAt: DateTime.now(),
-        timeRequired: request.timeRequired,
-      );
-      batch.set(taskRef, task.toMap());
+      final taskQuery = await _tasksCollection
+          .where('requestId', isEqualTo: request.id)
+          .limit(1)
+          .get();
+
+      if (taskQuery.docs.isNotEmpty) {
+        final existingTaskRef = taskQuery.docs.first.reference;
+        batch.update(existingTaskRef, {
+          'assignedTo': technicianId,
+          'technicianName': technicianName,
+          'assignedAt': Timestamp.now(),
+        });
+      } else {
+        final taskRef = _tasksCollection.doc();
+        final task = TaskModel(
+          id: taskRef.id,
+          requestId: request.id,
+          assignedTo: technicianId,
+          technicianName: technicianName,
+          requesterName: request.employeeName,
+          description: request.description,
+          status: 'inProgress',
+          assignedAt: DateTime.now(),
+          timeRequired: request.timeRequired,
+        );
+        batch.set(taskRef, task.toMap());
+      }
 
       await batch.commit();
     } catch (e) {
-      print('Error assigning technician for resource: $e');
+      print('Error assigning/re-assigning technician for resource: $e');
       rethrow;
     }
   }
 
   // Menandai laporan resource sebagai selesai
-  Future<void> completeRequest(String requestId, String reason,
-      {String? technicianId, String? technicianName}) async {
+  Future<void> completeRequest(RequestModel request, String reason,
+      {required String officerId, required String officerName}) async {
     try {
       final batch = _firestore.batch();
+      final requestRef = _requestsCollection.doc(request.id);
 
-      // Update laporan
-      batch.update(_requestsCollection.doc(requestId), {
+      // 1. Update dokumen request utama
+      // Sesuai permintaan: assignedTechnicianId diisi ID officer, technicianName dikosongkan
+      batch.update(requestRef, {
         'status': 'completed',
         'completionReason': reason,
+        'assignedTechnicianId': officerId,
+        'technicianName': null, // Mengosongkan nama teknisi
       });
 
-      // Jika diselesaikan langsung oleh officer, buat task baru yang sudah selesai
-      if (technicianId != null && technicianName != null) {
-        final requestDoc = await _requestsCollection.doc(requestId).get();
-        final request = RequestModel.fromFirestore(requestDoc);
+      // 2. Cari task yang mungkin sudah ada untuk request ini
+      final taskQuery = await _tasksCollection
+          .where('requestId', isEqualTo: request.id)
+          .limit(1)
+          .get();
 
+      if (taskQuery.docs.isNotEmpty) {
+        // JIKA TASK ADA: Update task tersebut untuk mencatat bahwa officer yang menyelesaikan
+        final taskRef = taskQuery.docs.first.reference;
+        batch.update(taskRef, {
+          'status': 'completed',
+          'completedAt': Timestamp.now(),
+          'completionNote': reason,
+          // Tetap catat di task siapa yang menyelesaikan (yaitu officer)
+          'assignedTo': officerId,
+          'technicianName': officerName,
+        });
+      } else {
+        // JIKA TASK TIDAK ADA (misal dari status 'open'): Buat task baru yang sudah selesai atas nama officer
         final taskRef = _tasksCollection.doc();
         final task = TaskModel(
           id: taskRef.id,
-          requestId: requestId,
-          assignedTo: technicianId,
-          technicianName: technicianName,
+          requestId: request.id,
+          assignedTo: officerId,
+          technicianName: officerName,
           requesterName: request.employeeName,
           description: request.description,
           status: 'completed',
-          assignedAt: DateTime.now(),
+          assignedAt: request.createdAt,
           completedAt: DateTime.now(),
           completionNote: reason,
           timeRequired: request.timeRequired,
         );
         batch.set(taskRef, task.toMap());
-      } else {
-        // Jika task sudah ada, update statusnya
-        final taskQuery = await _tasksCollection
-            .where('requestId', isEqualTo: requestId)
-            .limit(1)
-            .get();
-
-        if (taskQuery.docs.isNotEmpty) {
-          batch.update(taskQuery.docs.first.reference, {
-            'status': 'completed',
-            'completedAt': FieldValue.serverTimestamp(),
-            'completionNote': reason,
-          });
-        }
       }
+
       await batch.commit();
     } catch (e) {
       print('Error completing resource request: $e');
