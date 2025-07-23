@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
 import 'package:masbro_inpower_app/models/user_model.dart';
 import 'package:masbro_inpower_app/screens/technician/maintenanceApp/technician_dashboard.dart';
+import 'package:masbro_inpower_app/screens/technician/resourceApp/technician_dashboard.dart';
 import 'package:masbro_inpower_app/services/auth_service.dart';
 import 'package:masbro_inpower_app/services/user_service.dart';
 import 'package:provider/provider.dart';
@@ -237,14 +238,21 @@ class _HomeDashboardTechnicianState extends State<HomeDashboardTechnician> {
           icon: Icons.groups,
           color: Colors.blue,
           onTap: () {
-            // Aksi untuk aplikasi yang belum tersedia
-            ScaffoldMessenger.of(context).showSnackBar(
-              const SnackBar(
-                content: Text('Aplikasi Resource akan segera tersedia!'),
-                backgroundColor: Colors.blue,
-              ),
+            Navigator.push(
+              context,
+              MaterialPageRoute(
+                  builder: (context) => TechnicianDashboardResource()),
             );
           },
+          // onTap: () {
+          //   // Aksi untuk aplikasi yang belum tersedia
+          //   ScaffoldMessenger.of(context).showSnackBar(
+          //     const SnackBar(
+          //       content: Text('Aplikasi Resource akan segera tersedia!'),
+          //       backgroundColor: Colors.blue,
+          //     ),
+          //   );
+          // },
         ),
       ],
     );

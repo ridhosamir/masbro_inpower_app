@@ -1,10 +1,12 @@
 import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:flutter/material.dart';
 
 class TaskModel {
   final String id;
   final String requestId;
   final String assignedTo;
   final String technicianName;
+  final String requesterName;
   final String description;
   final String status; // inProgress, completed
   final DateTime assignedAt;
@@ -17,6 +19,7 @@ class TaskModel {
     required this.requestId,
     required this.assignedTo,
     required this.technicianName,
+    required this.requesterName,
     required this.description,
     required this.status,
     required this.assignedAt,
@@ -32,6 +35,7 @@ class TaskModel {
       requestId: data['requestId'] ?? '',
       assignedTo: data['assignedTo'] ?? '',
       technicianName: data['technicianName'] ?? '',
+      requesterName: data['requesterName'] ?? '',
       description: data['description'] ?? '',
       status: data['status'] ?? 'inProgress',
       assignedAt: (data['assignedAt'] as Timestamp).toDate(),
@@ -48,6 +52,7 @@ class TaskModel {
       'requestId': requestId,
       'assignedTo': assignedTo,
       'technicianName': technicianName,
+      'requesterName': requesterName,
       'description': description,
       'status': status,
       'assignedAt': Timestamp.fromDate(assignedAt),
@@ -56,5 +61,41 @@ class TaskModel {
           completedAt != null ? Timestamp.fromDate(completedAt!) : null,
       'completionNote': completionNote,
     };
+  }
+
+  /// Mendapatkan nama status yang ditampilkan
+  String getStatusDisplayName() {
+    switch (status) {
+      case 'inProgress':
+        return 'In Progress';
+      case 'completed':
+        return 'Completed';
+      default:
+        return status.toUpperCase();
+    }
+  }
+
+  /// Mendapatkan warna berdasarkan status
+  Color getStatusColor() {
+    switch (status) {
+      case 'inProgress':
+        return Colors.blue;
+      case 'completed':
+        return Colors.green;
+      default:
+        return Colors.grey;
+    }
+  }
+
+  /// Mendapatkan icon berdasarkan status
+  IconData getStatusIcon() {
+    switch (status) {
+      case 'inProgress':
+        return Icons.engineering;
+      case 'completed':
+        return Icons.check_circle;
+      default:
+        return Icons.help;
+    }
   }
 }

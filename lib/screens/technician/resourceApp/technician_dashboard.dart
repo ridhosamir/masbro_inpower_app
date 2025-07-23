@@ -1,0 +1,939 @@
+import 'package:flutter/material.dart';
+import 'package:provider/provider.dart';
+import 'package:intl/intl.dart';
+import '../../../services/resourceApp/firestore_service.dart';
+import '../../../models/resourceApp/task_model.dart';
+import '../../../services/auth_service.dart';
+import '../../../services/user_service.dart';
+import '../../../models/user_model.dart';
+import '../../../widgets/custom_button.dart';
+import '../../../widgets/custom_text_field.dart';
+
+class TechnicianDashboardResource extends StatefulWidget {
+  const TechnicianDashboardResource({super.key});
+
+  @override
+  State<TechnicianDashboardResource> createState() =>
+      _TechnicianDashboardResourceState();
+}
+
+class _TechnicianDashboardResourceState
+    extends State<TechnicianDashboardResource> with TickerProviderStateMixin {
+  final FirestoreServiceResource _firestoreService = FirestoreServiceResource();
+  final _completionNoteController = TextEditingController();
+  UserModel? currentUser;
+  late TabController _tabController;
+  bool _isLoading = false;
+
+  @override
+  void initState() {
+    super.initState();
+    _tabController = TabController(length: 3, vsync: this);
+    _loadUserData();
+  }
+
+  @override
+  void dispose() {
+    _tabController.dispose();
+    _completionNoteController.dispose();
+    super.dispose();
+  }
+
+  Future<void> _loadUserData() async {
+    final authService = Provider.of<AuthService>(context, listen: false);
+    final userService = Provider.of<UserService>(context, listen: false);
+
+    if (authService.user != null) {
+      final userData = await userService.getUserData(authService.user!.uid);
+      if (mounted) {
+        setState(() {
+          currentUser = userData;
+        });
+      }
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final authService = Provider.of<AuthService>(context);
+
+    return Scaffold(
+      body: NestedScrollView(
+        headerSliverBuilder: (context, innerBoxIsScrolled) {
+          return [
+            SliverAppBar(
+              expandedHeight: 180,
+              floating: false,
+              automaticallyImplyLeading: false,
+              pinned: true,
+              backgroundColor: Theme.of(context).primaryColor,
+              flexibleSpace: FlexibleSpaceBar(
+                background: Stack(
+                  children: [
+                    Container(
+                      decoration: BoxDecoration(
+                        gradient: LinearGradient(
+                          begin: Alignment.topLeft,
+                          end: Alignment.bottomRight,
+                          colors: [
+                            Theme.of(context).primaryColor,
+                            Theme.of(context).primaryColor.withOpacity(0.7),
+                          ],
+                        ),
+                      ),
+                    ),
+                    Positioned(
+                      right: -30,
+                      top: -20,
+                      child: Container(
+                        width: 180,
+                        height: 180,
+                        decoration: BoxDecoration(
+                          color: Colors.white.withOpacity(0.05),
+                          shape: BoxShape.circle,
+                        ),
+                      ),
+                    ),
+                    Positioned(
+                      left: -60,
+                      bottom: -40,
+                      child: Container(
+                        width: 150,
+                        height: 150,
+                        decoration: BoxDecoration(
+                          color: Colors.white.withOpacity(0.05),
+                          shape: BoxShape.circle,
+                        ),
+                      ),
+                    ),
+                    SafeArea(
+                      child: Padding(
+                        padding: const EdgeInsets.fromLTRB(20, 10, 20, 50),
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            if (currentUser != null) ...[
+                              Row(
+                                children: [
+                                  CircleAvatar(
+                                    backgroundColor:
+                                        Colors.white.withOpacity(0.2),
+                                    radius: 24,
+                                    child: const Icon(
+                                      Icons.engineering,
+                                      color: Colors.white,
+                                      size: 26,
+                                    ),
+                                  ),
+                                  const SizedBox(width: 14),
+                                  Expanded(
+                                    child: Column(
+                                      crossAxisAlignment:
+                                          CrossAxisAlignment.start,
+                                      children: [
+                                        Text(
+                                          'Welcome back,',
+                                          style: TextStyle(
+                                            color:
+                                                Colors.white.withOpacity(0.9),
+                                            fontSize: 14,
+                                            fontWeight: FontWeight.w500,
+                                          ),
+                                        ),
+                                        const SizedBox(height: 2),
+                                        Text(
+                                          currentUser!.name,
+                                          style: const TextStyle(
+                                            color: Colors.white,
+                                            fontSize: 20,
+                                            fontWeight: FontWeight.bold,
+                                            letterSpacing: 0.5,
+                                          ),
+                                          maxLines: 1,
+                                          overflow: TextOverflow.ellipsis,
+                                        ),
+                                      ],
+                                    ),
+                                  ),
+                                ],
+                              ),
+                              Padding(
+                                padding:
+                                    const EdgeInsets.only(top: 16, left: 4),
+                                child: Text(
+                                  'Kelola tugas resource Anda',
+                                  style: TextStyle(
+                                    color: Colors.white.withOpacity(0.85),
+                                    fontSize: 14,
+                                    fontWeight: FontWeight.w500,
+                                  ),
+                                ),
+                              ),
+                              const SizedBox(height: 8),
+                              StreamBuilder<List<TaskModel>>(
+                                stream: _firestoreService.getTasksByTechnician(
+                                  authService.user!.uid,
+                                ),
+                                builder: (context, snapshot) {
+                                  final tasks = snapshot.data ?? [];
+                                  final inProgress = tasks
+                                      .where((t) => t.status == 'inProgress')
+                                      .length;
+                                  if (tasks.isEmpty) {
+                                    return Text(
+                                      'Belum ada tugas yang ditugaskan',
+                                      style: TextStyle(
+                                        color: Colors.white.withOpacity(0.7),
+                                        fontSize: 12,
+                                      ),
+                                    );
+                                  }
+                                  return Text(
+                                    '${tasks.length} total tugas · $inProgress sedang dikerjakan',
+                                    style: TextStyle(
+                                      color: Colors.white.withOpacity(0.7),
+                                      fontSize: 12,
+                                    ),
+                                  );
+                                },
+                              ),
+                            ],
+                          ],
+                        ),
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+              actions: [
+                PopupMenuButton<String>(
+                  icon: Container(
+                    padding: const EdgeInsets.all(4),
+                    decoration: BoxDecoration(
+                      color: Colors.white.withOpacity(0.2),
+                      shape: BoxShape.circle,
+                    ),
+                    child: const Icon(Icons.more_vert,
+                        color: Colors.white, size: 18),
+                  ),
+                  onSelected: (value) {
+                    if (value == 'profile') _showProfileDialog();
+                    if (value == 'logout') _showLogoutDialog();
+                    if (value == 'back') {
+                      Navigator.of(context).pop();
+                    }
+                  },
+                  itemBuilder: (context) => [
+                    const PopupMenuItem(
+                      value: 'profile',
+                      child: ListTile(
+                        leading: Icon(Icons.person),
+                        title: Text('Profil'),
+                        contentPadding: EdgeInsets.zero,
+                      ),
+                    ),
+                    PopupMenuItem(
+                      value: 'back',
+                      child: ListTile(
+                        leading: Icon(Icons.arrow_back, color: Colors.blueGrey),
+                        title: Text('Back to Home',
+                            style: TextStyle(color: Colors.blueGrey)),
+                        contentPadding: EdgeInsets.zero,
+                      ),
+                    ),
+                    const PopupMenuItem(
+                      value: 'logout',
+                      child: ListTile(
+                        leading: Icon(Icons.logout, color: Colors.red),
+                        title:
+                            Text('Keluar', style: TextStyle(color: Colors.red)),
+                        contentPadding: EdgeInsets.zero,
+                      ),
+                    ),
+                  ],
+                ),
+                const SizedBox(width: 8),
+              ],
+              bottom: TabBar(
+                controller: _tabController,
+                indicatorColor: Colors.white,
+                labelColor: Colors.white,
+                unselectedLabelColor: Colors.white.withOpacity(0.7),
+                tabs: const [
+                  Tab(text: 'All Task'),
+                  Tab(text: 'In Progress'),
+                  Tab(text: 'Completed'),
+                ],
+              ),
+            ),
+          ];
+        },
+        body: Column(
+          children: [
+            Container(
+              padding: const EdgeInsets.all(16),
+              child: _buildStatisticsCards(),
+            ),
+            Expanded(
+              child: TabBarView(
+                controller: _tabController,
+                children: [
+                  _buildTasksList('all'),
+                  _buildTasksList('inProgress'),
+                  _buildTasksList('completed'),
+                ],
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  // --- WIDGET STATISTIK ---
+  Widget _buildStatisticsCards() {
+    final authService = Provider.of<AuthService>(context, listen: false);
+    return StreamBuilder<List<TaskModel>>(
+      stream: _firestoreService.getTasksByTechnician(authService.user!.uid),
+      builder: (context, snapshot) {
+        final tasks = snapshot.data ?? [];
+        final inProgress = tasks.where((t) => t.status == 'inProgress').length;
+        final completed = tasks.where((t) => t.status == 'completed').length;
+        final todayTasks = tasks.where((t) {
+          final today = DateTime.now();
+          return t.assignedAt.year == today.year &&
+              t.assignedAt.month == today.month &&
+              t.assignedAt.day == today.day;
+        }).length;
+        return Row(
+          children: [
+            Expanded(
+                child: _buildStatCard(
+              title: 'All Task',
+              count: tasks.length,
+              icon: Icons.assignment,
+              color: Colors.blue,
+            )),
+            const SizedBox(width: 8),
+            Expanded(
+                child: _buildStatCard(
+              title: 'In Progress',
+              count: inProgress,
+              icon: Icons.engineering,
+              color: Colors.purple,
+            )),
+            const SizedBox(width: 8),
+            Expanded(
+                child: _buildStatCard(
+              title: 'Completed',
+              count: completed,
+              icon: Icons.check_circle,
+              color: Colors.green,
+            )),
+            const SizedBox(width: 8),
+            Expanded(
+                child: _buildStatCard(
+              title: 'Today',
+              count: todayTasks,
+              icon: Icons.today,
+              color: Colors.orange,
+            )),
+          ],
+        );
+      },
+    );
+  }
+
+  // --- WIDGET DAFTAR TUGAS ---
+  Widget _buildTasksList(String tabStatus) {
+    final authService = Provider.of<AuthService>(context, listen: false);
+    return StreamBuilder<List<TaskModel>>(
+      stream: _firestoreService.getTasksByTechnician(authService.user!.uid),
+      builder: (context, snapshot) {
+        if (snapshot.connectionState == ConnectionState.waiting)
+          return const Center(child: CircularProgressIndicator());
+        if (snapshot.hasError)
+          return Center(child: Text('Error: ${snapshot.error}'));
+
+        List<TaskModel> tasks = snapshot.data ?? [];
+        if (tabStatus != 'all') {
+          tasks = tasks.where((t) => t.status == tabStatus).toList();
+        }
+        tasks.sort((a, b) => b.assignedAt.compareTo(a.assignedAt));
+
+        if (tasks.isEmpty) return _buildEmptyState(tabStatus);
+
+        return RefreshIndicator(
+          onRefresh: () async => setState(() {}),
+          child: ListView.builder(
+            padding: const EdgeInsets.all(16),
+            itemCount: tasks.length,
+            itemBuilder: (context, index) {
+              return _buildTaskCard(tasks[index]);
+            },
+          ),
+        );
+      },
+    );
+  }
+
+  void _showTaskDetail(TaskModel task) {
+    showModalBottomSheet(
+      context: context,
+      isScrollControlled: true,
+      backgroundColor: Colors.transparent,
+      builder: (context) => Container(
+        height: MediaQuery.of(context).size.height * 0.75,
+        decoration: const BoxDecoration(
+          color: Colors.white,
+          borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
+        ),
+        child: Column(
+          children: [
+            Container(
+              width: 40,
+              height: 4,
+              margin: const EdgeInsets.symmetric(vertical: 12),
+              decoration: BoxDecoration(
+                color: Colors.grey[300],
+                borderRadius: BorderRadius.circular(2),
+              ),
+            ),
+            Padding(
+              padding: const EdgeInsets.symmetric(horizontal: 20),
+              child: Row(
+                mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                children: [
+                  const Text(
+                    'Detail Tugas',
+                    style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold),
+                  ),
+                  _buildStatusChip(task.status),
+                ],
+              ),
+            ),
+            const Divider(height: 24),
+            Expanded(
+              child: SingleChildScrollView(
+                padding: const EdgeInsets.fromLTRB(20, 0, 20, 20),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Container(
+                      padding: const EdgeInsets.all(16),
+                      decoration: BoxDecoration(
+                        color: Colors.blue[50],
+                        borderRadius: BorderRadius.circular(12),
+                        border: Border.all(color: Colors.blue[200]!),
+                      ),
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          _buildDetailItem(
+                              'Pemohon', task.requesterName, Icons.person),
+                          if (task.timeRequired != null &&
+                              task.timeRequired!.isNotEmpty)
+                            _buildDetailItem('Waktu Pelaksanaan',
+                                task.timeRequired!, Icons.calendar_today),
+                          _buildDetailItem(
+                            'Ditugaskan',
+                            DateFormat('dd MMM yyyy, HH:mm', 'id_ID')
+                                .format(task.assignedAt),
+                            Icons.access_time,
+                          ),
+                          if (task.status == 'completed' &&
+                              task.completedAt != null)
+                            _buildDetailItem(
+                              'Selesai',
+                              DateFormat('EEEE, d MMM yyyy, HH:mm', 'id_ID')
+                                  .format(task.completedAt!),
+                              Icons.check_circle,
+                            ),
+                        ],
+                      ),
+                    ),
+                    const SizedBox(height: 20),
+                    const Text(
+                      'Deskripsi Tugas',
+                      style: TextStyle(
+                        fontWeight: FontWeight.bold,
+                        fontSize: 16,
+                      ),
+                    ),
+                    const SizedBox(height: 8),
+                    Container(
+                      width: double.infinity,
+                      padding: const EdgeInsets.all(16),
+                      decoration: BoxDecoration(
+                        color: Colors.grey[50],
+                        borderRadius: BorderRadius.circular(12),
+                        border: Border.all(color: Colors.grey[200]!),
+                      ),
+                      child: Text(
+                        task.description,
+                        style: TextStyle(
+                          height: 1.5,
+                          color: Colors.grey[800],
+                        ),
+                      ),
+                    ),
+                    if (task.status == 'completed' &&
+                        task.completionNote != null) ...[
+                      const SizedBox(height: 20),
+                      Text(
+                        'Catatan Penyelesaian Anda',
+                        style: TextStyle(
+                          fontWeight: FontWeight.bold,
+                          fontSize: 16,
+                          color: Colors.green[700],
+                        ),
+                      ),
+                      const SizedBox(height: 8),
+                      Container(
+                        width: double.infinity,
+                        padding: const EdgeInsets.all(16),
+                        decoration: BoxDecoration(
+                          color: Colors.green[50],
+                          borderRadius: BorderRadius.circular(12),
+                          border: Border.all(color: Colors.green[200]!),
+                        ),
+                        child: Text(
+                          task.completionNote!,
+                          style: TextStyle(
+                            height: 1.5,
+                            color: Colors.green[700],
+                          ),
+                        ),
+                      ),
+                    ],
+                  ],
+                ),
+              ),
+            ),
+            if (task.status == 'inProgress')
+              Padding(
+                padding: const EdgeInsets.all(16),
+                child: CustomButton(
+                  text: 'Tandai Selesai',
+                  onPressed: () => _showCompleteDialog(task),
+                  backgroundColor: Colors.green,
+                  icon: Icons.check_circle,
+                ),
+              ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  // -- Helper Widgets  --
+  Widget _buildTaskCard(TaskModel task) {
+    return Card(
+      color: Colors.white,
+      margin: const EdgeInsets.only(bottom: 16),
+      elevation: 2,
+      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+      child: InkWell(
+        onTap: () => _showTaskDetail(task),
+        borderRadius: BorderRadius.circular(16),
+        child: Padding(
+          padding: const EdgeInsets.all(16.0),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              // Text(
+              //   task.description,
+              //   style:
+              //       const TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
+              //   maxLines: 2,
+              //   overflow: TextOverflow.ellipsis,
+              // ),
+              const SizedBox(height: 12),
+              _buildInfoRow(Icons.person_pin_circle_outlined, 'Pemohon',
+                  task.requesterName),
+              if (task.timeRequired != null && task.timeRequired!.isNotEmpty)
+                _buildInfoRow(
+                    Icons.calendar_today, 'Waktu', task.timeRequired!),
+              const Divider(height: 24),
+              Row(
+                crossAxisAlignment: CrossAxisAlignment.center,
+                children: [
+                  if (task.status == 'completed' && task.completedAt != null)
+                    Icon(Icons.check_circle,
+                        size: 14, color: Colors.green[700]),
+                  if (task.status != 'completed')
+                    Icon(Icons.access_time, size: 14, color: Colors.grey[600]),
+                  const SizedBox(width: 8),
+                  Text(
+                    task.status == 'completed' && task.completedAt != null
+                        ? 'Selesai: ${_getTimeAgo(task.completedAt!)}'
+                        : 'Ditugaskan: ${_getTimeAgo(task.assignedAt)}',
+                    style: TextStyle(
+                      color: task.status == 'completed'
+                          ? Colors.green[700]
+                          : Colors.grey[600],
+                      fontSize: 12,
+                      fontWeight: task.status == 'completed'
+                          ? FontWeight.w500
+                          : FontWeight.normal,
+                    ),
+                  ),
+                  const Spacer(),
+                  _buildStatusChip(task.status),
+                ],
+              ),
+              if (task.status == 'inProgress') ...[
+                const SizedBox(height: 16),
+                CustomButton(
+                  text: 'Tandai Selesai',
+                  onPressed: () => _showCompleteDialog(task),
+                  backgroundColor: Colors.green,
+                  icon: Icons.check_circle,
+                ),
+              ],
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+
+  Widget _buildStatCard({
+    required String title,
+    required int count,
+    required IconData icon,
+    required Color color,
+  }) {
+    return Container(
+      padding: const EdgeInsets.all(12),
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(12),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withOpacity(0.05),
+            blurRadius: 10,
+            offset: const Offset(0, 2),
+          ),
+        ],
+      ),
+      child: Column(
+        children: [
+          Icon(icon, color: color, size: 24),
+          const SizedBox(height: 8),
+          Text(
+            count.toString(),
+            style: TextStyle(
+              fontSize: 18,
+              fontWeight: FontWeight.bold,
+              color: color,
+            ),
+          ),
+          Text(
+            title,
+            style: TextStyle(
+              fontSize: 10,
+              color: Colors.grey[600],
+            ),
+            textAlign: TextAlign.center,
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildInfoRow(IconData icon, String label, String value) {
+    return Padding(
+      padding: const EdgeInsets.only(bottom: 8.0),
+      child: Row(
+        children: [
+          Icon(icon, size: 16, color: Colors.grey[600]),
+          const SizedBox(width: 8),
+          Text('$label: ',
+              style: TextStyle(
+                  fontWeight: FontWeight.w500, color: Colors.grey[800])),
+          Expanded(
+              child: Text(value, style: TextStyle(color: Colors.grey[700]))),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildDetailItem(String label, String value, IconData icon) {
+    return Padding(
+      padding: const EdgeInsets.symmetric(vertical: 8),
+      child: Row(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Icon(icon, size: 18, color: Colors.blue[700]),
+          const SizedBox(width: 12),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  label,
+                  style: TextStyle(
+                      fontWeight: FontWeight.w600,
+                      color: Colors.blue[700],
+                      fontSize: 12),
+                ),
+                const SizedBox(height: 2),
+                Text(
+                  value,
+                  style: TextStyle(color: Colors.blue[800], fontSize: 14),
+                ),
+              ],
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildStatusChip(String status) {
+    Color color;
+    String text;
+    if (status == 'inProgress') {
+      color = Colors.blue;
+      text = 'IN PROGRESS';
+    } else if (status == 'completed') {
+      color = Colors.green;
+      text = 'COMPLETED';
+    } else {
+      color = Colors.grey;
+      text = status.toUpperCase();
+    }
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+      decoration: BoxDecoration(
+        color: color.withOpacity(0.1),
+        borderRadius: BorderRadius.circular(16),
+      ),
+      child: Text(text,
+          style: TextStyle(
+              color: color, fontSize: 10, fontWeight: FontWeight.bold)),
+    );
+  }
+
+  Widget _buildEmptyState(String status) {
+    String message;
+    String description;
+    IconData icon;
+
+    switch (status) {
+      case 'inProgress':
+        message = 'No Tasks In Progress';
+        description = 'You don\'t have any tasks currently in progress';
+        icon = Icons.engineering;
+        break;
+      case 'completed':
+        message = 'No Completed Tasks';
+        description = 'You haven\'t completed any tasks yet';
+        icon = Icons.check_circle_outline;
+        break;
+      default:
+        message = 'No Tasks Assigned';
+        description = 'Tasks will appear here when assigned by officers';
+        icon = Icons.assignment_outlined;
+    }
+
+    return Center(
+      child: Column(
+        mainAxisAlignment: MainAxisAlignment.center,
+        children: [
+          Container(
+            padding: EdgeInsets.all(32),
+            decoration: BoxDecoration(
+              color: Colors.grey[100],
+              borderRadius: BorderRadius.circular(50),
+            ),
+            child: Icon(
+              icon,
+              size: 64,
+              color: Colors.grey[400],
+            ),
+          ),
+          SizedBox(height: 24),
+          Text(
+            message,
+            style: TextStyle(
+              fontSize: 20,
+              fontWeight: FontWeight.bold,
+              color: Colors.grey[600],
+            ),
+          ),
+          SizedBox(height: 8),
+          Text(
+            description,
+            style: TextStyle(
+              color: Colors.grey[500],
+              fontSize: 14,
+            ),
+            textAlign: TextAlign.center,
+          ),
+        ],
+      ),
+    );
+  }
+
+  String _getTimeAgo(DateTime dateTime) {
+    final difference = DateTime.now().difference(dateTime);
+    if (difference.inDays > 0) return '${difference.inDays} hari yang lalu';
+    if (difference.inHours > 0) return '${difference.inHours} jam yang lalu';
+    if (difference.inMinutes > 0)
+      return '${difference.inMinutes} menit yang lalu';
+    return 'Baru saja';
+  }
+
+  void _showCompleteDialog(TaskModel task) {
+    _completionNoteController.clear();
+    String? dialogErrorText; // Variabel untuk menyimpan pesan error
+
+    showDialog(
+      context: context,
+      builder: (context) {
+        // Menggunakan StatefulBuilder agar konten dialog bisa di-update
+        return StatefulBuilder(
+          builder: (context, setStateDialog) {
+            return AlertDialog(
+              title: const Text('Selesaikan Tugas'),
+              content: Column(
+                mainAxisSize: MainAxisSize.min,
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  CustomTextField(
+                    labelText: 'Catatan Penyelesaian',
+                    hintText: 'Masukkan catatan pekerjaan...',
+                    controller: _completionNoteController,
+                    maxLines: 3,
+                  ),
+                  // --- TAMBAHAN: Bagian untuk menampilkan error ---
+                  if (dialogErrorText != null) ...[
+                    const SizedBox(height: 8),
+                    Text(
+                      dialogErrorText!,
+                      style: const TextStyle(color: Colors.red, fontSize: 12),
+                    ),
+                  ]
+                ],
+              ),
+              actions: [
+                TextButton(
+                  onPressed: () => Navigator.pop(context),
+                  child: const Text('Batal'),
+                ),
+                TextButton(
+                  // PERBAIKAN: Logika validasi dipindah ke sini
+                  onPressed: () {
+                    if (_completionNoteController.text.trim().isEmpty) {
+                      // Update state dialog untuk menampilkan pesan error
+                      setStateDialog(() {
+                        dialogErrorText = 'Harap berikan catatan penyelesaian';
+                      });
+                    } else {
+                      // Jika valid, baru panggil _completeTask
+                      _completeTask(task);
+                    }
+                  },
+                  child: _isLoading
+                      ? const CircularProgressIndicator(strokeWidth: 2)
+                      : const Text('Selesaikan',
+                          style: TextStyle(color: Colors.green)),
+                ),
+              ],
+            );
+          },
+        );
+      },
+    );
+  }
+
+  Future<void> _completeTask(TaskModel task) async {
+    setState(() => _isLoading = true);
+    try {
+      await _firestoreService.updateTaskStatus(
+        task.id,
+        'completed',
+        completionNote: _completionNoteController.text.trim(),
+      );
+      if (mounted) Navigator.pop(context);
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('Error: $e'), backgroundColor: Colors.red),
+        );
+      }
+    } finally {
+      if (mounted) setState(() => _isLoading = false);
+    }
+  }
+
+  void _showProfileDialog() {
+    if (currentUser == null) return;
+    showDialog(
+        context: context,
+        builder: (context) => AlertDialog(
+              title: const Text('Informasi Profil'),
+              content: Column(
+                mainAxisSize: MainAxisSize.min,
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  _buildProfileItem('Nama', currentUser!.name),
+                  _buildProfileItem('Email', currentUser!.email),
+                  _buildProfileItem('Peran', currentUser!.role.toUpperCase()),
+                  _buildProfileItem(
+                    'Anggota Sejak',
+                    DateFormat('dd MMM yyyy').format(currentUser!.createdAt),
+                  ),
+                ],
+              ),
+              actions: [
+                TextButton(
+                  onPressed: () => Navigator.pop(context),
+                  child: const Text('Tutup'),
+                ),
+              ],
+            ));
+  }
+
+  Widget _buildProfileItem(String label, String value) {
+    return Padding(
+      padding: const EdgeInsets.symmetric(vertical: 4),
+      child: Row(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          SizedBox(
+            width: 80,
+            child: Text('$label:',
+                style: const TextStyle(fontWeight: FontWeight.w600)),
+          ),
+          Expanded(child: Text(value)),
+        ],
+      ),
+    );
+  }
+
+  void _showLogoutDialog() {
+    showDialog(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: const Text('Keluar'),
+        content: const Text('Apakah Anda yakin ingin keluar?'),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context),
+            child: const Text('Batal'),
+          ),
+          TextButton(
+            onPressed: () {
+              Provider.of<AuthService>(context, listen: false).signOut();
+              Navigator.of(context).popUntil((route) => route.isFirst);
+            },
+            child: const Text('Keluar', style: TextStyle(color: Colors.red)),
+          ),
+        ],
+      ),
+    );
+  }
+}
