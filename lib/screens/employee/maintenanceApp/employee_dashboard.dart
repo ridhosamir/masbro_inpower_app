@@ -22,12 +22,16 @@ class _EmployeeDashboardState extends State<EmployeeDashboard>
   UserModel? currentUser;
   late TabController _tabController;
   final DefaultCacheManager _cacheManager = DefaultCacheManager();
+  TextEditingController _searchController =
+      TextEditingController(); // Add search controller
+  String _searchQuery = ''; // Track search query
 
   @override
   void initState() {
     super.initState();
     _tabController = TabController(length: 4, vsync: this);
     _loadUserData();
+    _searchController.addListener(_onSearchChanged); // Add listener for search
 
     _tabController.addListener(() {
       if (!_tabController.indexIsChanging) {
@@ -36,9 +40,22 @@ class _EmployeeDashboardState extends State<EmployeeDashboard>
     });
   }
 
+  // Search listener
+  void _onSearchChanged() {
+    setState(() {
+      _searchQuery = _searchController.text.toLowerCase();
+    });
+  }
+
+  // Clear search
+  void _clearSearch() {
+    _searchController.clear();
+  }
+
   @override
   void dispose() {
     _tabController.dispose();
+    _searchController.dispose(); // Dispose search controller
     super.dispose();
   }
 
@@ -313,6 +330,41 @@ class _EmployeeDashboardState extends State<EmployeeDashboard>
               padding: EdgeInsets.all(16),
               child: _buildStatisticsCards(),
             ),
+            // Add search field
+            Padding(
+              padding: EdgeInsets.symmetric(horizontal: 16),
+              child: Container(
+                decoration: BoxDecoration(
+                  color: Colors.white,
+                  borderRadius: BorderRadius.circular(8),
+                  border: Border.all(color: Colors.grey[300]!),
+                  boxShadow: [
+                    BoxShadow(
+                      color: Colors.black.withOpacity(0.05),
+                      blurRadius: 4,
+                      offset: Offset(0, 2),
+                    ),
+                  ],
+                ),
+                child: TextField(
+                  controller: _searchController,
+                  decoration: InputDecoration(
+                    hintText: 'Cari laporan...',
+                    prefixIcon: Icon(Icons.search, color: Colors.grey[600]),
+                    suffixIcon: _searchQuery.isNotEmpty
+                        ? IconButton(
+                            icon: Icon(Icons.clear, color: Colors.grey[600]),
+                            onPressed: _clearSearch,
+                          )
+                        : null,
+                    border: InputBorder.none,
+                    contentPadding:
+                        EdgeInsets.symmetric(vertical: 12, horizontal: 16),
+                  ),
+                ),
+              ),
+            ),
+            SizedBox(height: 16),
             Expanded(
               child: TabBarView(
                 controller: _tabController,
@@ -489,15 +541,36 @@ class _EmployeeDashboardState extends State<EmployeeDashboard>
           );
         }
 
-        List<ReportModel> reports = snapshot.data ?? [];
+        List<ReportModel> allReports = snapshot.data ?? [];
 
-        if (status != 'all') {
-          reports = reports.where((r) => r.status == status).toList();
+        // Filter by status
+        List<ReportModel> reports = status != 'all'
+            ? allReports.where((r) => r.status == status).toList()
+            : allReports;
+
+        // Filter by search query
+        if (_searchQuery.isNotEmpty) {
+          reports = reports
+              .where((report) =>
+                  report.roomName.toLowerCase().contains(_searchQuery) ||
+                  report.buildingName.toLowerCase().contains(_searchQuery) ||
+                  report.description.toLowerCase().contains(_searchQuery) ||
+                  (report.itemName.isNotEmpty &&
+                      report.itemName.toLowerCase().contains(_searchQuery)) ||
+                  (report.technicianName != null &&
+                      report.technicianName!
+                          .toLowerCase()
+                          .contains(_searchQuery)))
+              .toList();
         }
 
+        // Sort by creation date (newest first)
         reports.sort((a, b) => b.createdAt.compareTo(a.createdAt));
 
         if (reports.isEmpty) {
+          if (_searchQuery.isNotEmpty) {
+            return _buildEmptySearchState();
+          }
           return _buildEmptyState(status);
         }
 
@@ -521,6 +594,47 @@ class _EmployeeDashboardState extends State<EmployeeDashboard>
           ),
         );
       },
+    );
+  }
+
+  // Empty state when no search results found
+  Widget _buildEmptySearchState() {
+    return Center(
+      child: Column(
+        mainAxisAlignment: MainAxisAlignment.center,
+        children: [
+          Icon(
+            Icons.search_off,
+            size: 64,
+            color: Colors.grey[400],
+          ),
+          SizedBox(height: 16),
+          Text(
+            'Tidak ada laporan yang cocok',
+            style: TextStyle(
+              fontSize: 18,
+              color: Colors.grey[600],
+              fontWeight: FontWeight.bold,
+            ),
+          ),
+          SizedBox(height: 8),
+          Text(
+            'Coba dengan kata kunci lain atau hapus filter pencarian',
+            style: TextStyle(
+              color: Colors.grey[500],
+              fontSize: 14,
+            ),
+            textAlign: TextAlign.center,
+          ),
+          SizedBox(height: 16),
+          TextButton.icon(
+            onPressed: _clearSearch,
+            icon: Icon(Icons.clear, color: Colors.blue),
+            label:
+                Text('Hapus Pencarian', style: TextStyle(color: Colors.blue)),
+          ),
+        ],
+      ),
     );
   }
 
@@ -659,12 +773,14 @@ class _EmployeeDashboardState extends State<EmployeeDashboard>
                 ),
               ),
               SizedBox(height: 12),
+
+              // Date information - Creation date always shown
               Row(
                 children: [
                   Icon(Icons.access_time, size: 14, color: Colors.grey[500]),
                   SizedBox(width: 6),
                   Text(
-                    _getFormattedDate(report.createdAt),
+                    _getFormattedDate(report.createdAt, 'Dibuat'),
                     style: TextStyle(
                       fontSize: 12,
                       color: Colors.grey[600],
@@ -672,6 +788,28 @@ class _EmployeeDashboardState extends State<EmployeeDashboard>
                   ),
                 ],
               ),
+
+              // Completion date shown below creation date when available
+              if (report.status == 'completed' &&
+                  report.completionDate != null) ...[
+                SizedBox(height: 4),
+                Row(
+                  children: [
+                    Icon(Icons.check_circle,
+                        size: 14, color: Colors.green[500]),
+                    SizedBox(width: 6),
+                    Text(
+                      _getFormattedDate(report.completionDate!, 'Selesai'),
+                      style: TextStyle(
+                        fontSize: 12,
+                        color: Colors.green[600],
+                        fontWeight: FontWeight.w500,
+                      ),
+                    ),
+                  ],
+                ),
+              ],
+
               if (report.status == 'completed' &&
                   report.completionReason != null) ...[
                 SizedBox(height: 12),
@@ -745,18 +883,18 @@ class _EmployeeDashboardState extends State<EmployeeDashboard>
     );
   }
 
-  String _getFormattedDate(DateTime date) {
+  String _getFormattedDate(DateTime date, String prefix) {
     final now = DateTime.now();
     final difference = now.difference(date);
 
     if (difference.inDays == 0) {
-      return 'Dibuat: ${DateFormat('dd MM yyyy').format(date)}, Pukul: ${DateFormat('HH:mm').format(date)}';
+      return '$prefix: ${DateFormat('dd MMM yyyy').format(date)}, ${DateFormat('HH:mm').format(date)}';
     } else if (difference.inDays == 1) {
-      return 'Kemarin, ${DateFormat('HH:mm').format(date)}';
+      return '$prefix: Kemarin, ${DateFormat('HH:mm').format(date)}';
     } else if (difference.inDays < 7) {
-      return '${difference.inDays} hari yang lalu';
+      return '$prefix: ${difference.inDays} hari yang lalu';
     } else {
-      return DateFormat('dd MMM yyyy').format(date);
+      return '$prefix: ${DateFormat('dd MMM yyyy').format(date)}';
     }
   }
 
