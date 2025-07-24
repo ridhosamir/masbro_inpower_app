@@ -124,10 +124,10 @@ class _RequestDetailScreenResourceState
 
     try {
       await _firestoreService.completeRequest(
-        widget.request,
+        widget.request.id,
         _completionReasonController.text.trim(),
-        officerId: currentUser!.uid,
-        officerName: currentUser!.name,
+        technicianId: currentUser!.uid,
+        technicianName: currentUser!.name,
       );
 
       if (mounted) {
@@ -162,6 +162,7 @@ class _RequestDetailScreenResourceState
 
   @override
   Widget build(BuildContext context) {
+    final bool isResourceRequest = widget.request.request == 'resource';
     return Scaffold(
       appBar: AppBar(
         title: const Text('Detail Permintaan'),
@@ -206,6 +207,11 @@ class _RequestDetailScreenResourceState
             _buildInfoCard([
               _buildInfoRow(
                   Icons.person, 'Pemohon', widget.request.employeeName),
+              _buildInfoRow(
+                isResourceRequest ? Icons.supervisor_account : Icons.inventory,
+                'Kebutuhan',
+                '${widget.request.request[0].toUpperCase()}${widget.request.request.substring(1)}',
+              ),
               if (widget.request.timeRequired != null &&
                   widget.request.timeRequired!.isNotEmpty)
                 _buildInfoRow(Icons.calendar_today, 'Waktu',

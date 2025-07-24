@@ -548,6 +548,8 @@ class _OfficerDashboardResourceState extends State<OfficerDashboardResource>
   }
 
   Widget _buildRequestCard(RequestModel request) {
+    final bool isResourceRequest = request.request == 'resource';
+
     return Card(
       margin: const EdgeInsets.symmetric(horizontal: 8, vertical: 6),
       elevation: 3,
@@ -565,19 +567,43 @@ class _OfficerDashboardResourceState extends State<OfficerDashboardResource>
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
                   Expanded(
-                    child: Text(
-                      'Permintaan:',
-                      style: TextStyle(
-                        fontSize: 13,
-                        fontWeight: FontWeight.w600,
-                        color: Colors.grey[800],
-                      ),
+                    child: Row(
+                      children: [
+                        Icon(
+                          isResourceRequest
+                              ? Icons.supervisor_account
+                              : Icons.inventory,
+                          size: 16,
+                          color: Colors.grey[600],
+                        ),
+                        const SizedBox(width: 6),
+                        Flexible(
+                          child: Text(
+                            'Kebutuhan: ${request.request[0].toUpperCase()}${request.request.substring(1)}',
+                            style: TextStyle(
+                              fontSize: 13,
+                              color: Colors.grey[800],
+                              fontWeight: FontWeight.w500,
+                            ),
+                            overflow: TextOverflow.ellipsis,
+                          ),
+                        ),
+                      ],
                     ),
                   ),
                   _buildStatusChip(request.status),
                 ],
               ),
               const SizedBox(height: 12),
+              Text(
+                'Permintaan:',
+                style: TextStyle(
+                  fontSize: 13,
+                  fontWeight: FontWeight.w600,
+                  color: Colors.grey[800],
+                ),
+              ),
+              const SizedBox(height: 6),
               Container(
                 width: double.infinity,
                 padding: const EdgeInsets.all(12),
@@ -891,10 +917,10 @@ class _OfficerDashboardResourceState extends State<OfficerDashboardResource>
 
     try {
       await _firestoreService.completeRequest(
-        request,
+        request.id,
         _completionReasonController.text.trim(),
-        officerId: currentUser!.uid,
-        officerName: currentUser!.name,
+        technicianId: currentUser!.uid,
+        technicianName: currentUser!.name,
       );
 
       if (mounted) {

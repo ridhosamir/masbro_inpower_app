@@ -438,10 +438,10 @@ class _EmployeeDashboardResourceState extends State<EmployeeDashboardResource>
             const SizedBox(width: 8),
             Expanded(
               child: _buildStatCard(
-                title: 'InProgress',
+                title: 'In Progress',
                 count: inProgress,
                 icon: Icons.engineering,
-                color: Colors.blue,
+                color: Colors.purple,
               ),
             ),
             const SizedBox(width: 8),
@@ -459,7 +459,7 @@ class _EmployeeDashboardResourceState extends State<EmployeeDashboardResource>
     );
   }
 
-  // --- WIDGET BARU: TEMPLATE UNTUK SETIAP KARTU STATISTIK ---
+  // --- WIDGET ---
   Widget _buildStatCard({
     required String title,
     required int count,
@@ -626,7 +626,6 @@ class _EmployeeDashboardResourceState extends State<EmployeeDashboardResource>
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              // --- BARIS ATAS: KEBUTUHAN & STATUS ---
               Row(
                 children: [
                   Expanded(
@@ -641,7 +640,6 @@ class _EmployeeDashboardResourceState extends State<EmployeeDashboardResource>
                         ),
                         const SizedBox(width: 6),
                         Text(
-                          // Menampilkan 'Resource' atau 'Item' dengan huruf kapital di awal
                           'Kebutuhan: ${request.request[0].toUpperCase()}${request.request.substring(1)}',
                           style: TextStyle(
                             fontSize: 13,
@@ -657,8 +655,6 @@ class _EmployeeDashboardResourceState extends State<EmployeeDashboardResource>
                 ],
               ),
               const SizedBox(height: 12),
-
-              // --- DESKRIPSI PERMINTAAN ---
               Text(
                 'Permintaan:',
                 style: TextStyle(
@@ -686,9 +682,6 @@ class _EmployeeDashboardResourceState extends State<EmployeeDashboardResource>
                 ),
               ),
               const SizedBox(height: 12),
-
-              // --- WAKTU DIBUTUHKAN (HANYA UNTUK RESOURCE) & WAKTU PEMBUATAN ---
-              // Menampilkan 'Waktu Dibutuhkan' hanya jika tipenya 'resource'
               if (isResourceRequest &&
                   request.timeRequired != null &&
                   request.timeRequired!.isNotEmpty) ...[
