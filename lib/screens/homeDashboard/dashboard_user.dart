@@ -233,7 +233,7 @@ class _HomeDashboardUserState extends State<HomeDashboardUser> {
         ),
         _buildAppCard(
           context: context,
-          title: 'Resource',
+          title: 'Resource/Item',
           icon: Icons.groups,
           color: Colors.blue,
           onTap: () {
@@ -241,6 +241,34 @@ class _HomeDashboardUserState extends State<HomeDashboardUser> {
               context,
               MaterialPageRoute(
                   builder: (context) => EmployeeDashboardResource()),
+            );
+          },
+        ),
+        _buildAppCard(
+          context: context,
+          title: 'Operational',
+          icon: Icons.directions_car,
+          color: Colors.red,
+          onTap: () {
+            ScaffoldMessenger.of(context).showSnackBar(
+              const SnackBar(
+                content: Text('Aplikasi Operasional akan segera tersedia!'),
+                backgroundColor: Colors.blue,
+              ),
+            );
+          },
+        ),
+        _buildAppCard(
+          context: context,
+          title: 'Booking Room',
+          icon: Icons.meeting_room,
+          color: Colors.teal,
+          onTap: () {
+            ScaffoldMessenger.of(context).showSnackBar(
+              const SnackBar(
+                content: Text('Aplikasi Booking Room akan segera tersedia!'),
+                backgroundColor: Colors.blue,
+              ),
             );
           },
         ),
