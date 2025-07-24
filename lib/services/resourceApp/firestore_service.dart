@@ -86,6 +86,7 @@ class FirestoreServiceResource {
         status: 'inProgress',
         assignedAt: DateTime.now(),
         timeRequired: request.timeRequired,
+        request: request.request,
       );
       batch.set(taskRef, task.toMap());
 
@@ -122,10 +123,11 @@ class FirestoreServiceResource {
           requesterName: request.employeeName,
           description: request.description,
           status: 'completed',
-          assignedAt: DateTime.now(),
+          assignedAt: request.createdAt,
           completedAt: DateTime.now(),
           completionNote: reason,
           timeRequired: request.timeRequired,
+          request: request.request,
         );
         batch.set(taskRef, task.toMap());
       } else {

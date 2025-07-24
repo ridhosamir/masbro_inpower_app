@@ -8,6 +8,7 @@ class RequestModel {
   final String description;
   final String status;
   final DateTime createdAt;
+  final String request;
   final String? timeRequired;
   final String? completionReason;
   final String? assignedTechnicianId;
@@ -21,6 +22,7 @@ class RequestModel {
     required this.description,
     required this.status,
     required this.createdAt,
+    required this.request,
     this.timeRequired,
     this.completionReason,
     this.assignedTechnicianId,
@@ -39,6 +41,7 @@ class RequestModel {
       description: data['description'] ?? '',
       status: data['status'] ?? 'open',
       createdAt: (data['createdAt'] as Timestamp).toDate(),
+      request: data['request'] ?? 'resource',
       timeRequired: data['timeRequired'],
       completionReason: data['completionReason'],
       assignedTechnicianId: data['assignedTechnicianId'],
@@ -57,6 +60,7 @@ class RequestModel {
       'description': description,
       'status': status,
       'createdAt': Timestamp.fromDate(createdAt),
+      'request': request,
       'timeRequired': timeRequired,
       'completionReason': completionReason,
       'assignedTechnicianId': assignedTechnicianId,
@@ -116,6 +120,7 @@ class RequestModel {
     String? description,
     String? status,
     DateTime? createdAt,
+    String? request,
     String? timeRequired,
     String? completionReason,
     String? assignedTechnicianId,
@@ -129,6 +134,7 @@ class RequestModel {
       description: description ?? this.description,
       status: status ?? this.status,
       createdAt: createdAt ?? this.createdAt,
+      request: request ?? this.request,
       timeRequired: timeRequired ?? this.timeRequired,
       completionReason: completionReason ?? this.completionReason,
       assignedTechnicianId: assignedTechnicianId ?? this.assignedTechnicianId,
