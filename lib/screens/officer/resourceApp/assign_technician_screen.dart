@@ -119,32 +119,18 @@ class _AssignTechnicianScreenResourceState
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  Text(
-                    'Ringkasan Permintaan',
-                    style: TextStyle(
-                      fontSize: 18,
-                      fontWeight: FontWeight.bold,
-                      color: Colors.blue[800],
-                    ),
+                  _buildSummaryItem('Pemohon', widget.request.employeeName),
+                  _buildSummaryItem(
+                    'Kebutuhan',
+                    '${widget.request.request[0].toUpperCase()}${widget.request.request.substring(1)}',
                   ),
-                  const SizedBox(height: 12),
-                  _buildSummaryRow('Pemohon', widget.request.employeeName),
-                  if (widget.request.timeRequired != null)
-                    _buildSummaryRow(
+                  if (widget.request.timeRequired != null &&
+                      widget.request.timeRequired!.isNotEmpty)
+                    _buildSummaryItem(
                       'Waktu Dibutuhkan',
                       widget.request.timeRequired!,
                     ),
-                  const SizedBox(height: 8),
-                  Text(
-                    'Deskripsi:',
-                    style: TextStyle(
-                        fontWeight: FontWeight.w600, color: Colors.blue[800]),
-                  ),
-                  const SizedBox(height: 4),
-                  Text(
-                    widget.request.description,
-                    style: TextStyle(color: Colors.blue[700]),
-                  ),
+                  _buildSummaryItem('Deskripsi', widget.request.description),
                 ],
               ),
             ),
@@ -221,7 +207,6 @@ class _AssignTechnicianScreenResourceState
                 ),
               ),
 
-            // --- Tombol Tugaskan ---
             if (_technicians.isNotEmpty) ...[
               const SizedBox(height: 16),
               CustomButton(
@@ -236,26 +221,26 @@ class _AssignTechnicianScreenResourceState
     );
   }
 
-  Widget _buildSummaryRow(String label, String value) {
+  Widget _buildSummaryItem(String label, String value) {
     return Padding(
-      padding: const EdgeInsets.symmetric(vertical: 4),
-      child: Row(
+      padding: const EdgeInsets.only(bottom: 12.0),
+      child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          SizedBox(
-            width: 120, // Lebar disesuaikan
-            child: Text(
-              '$label:',
-              style: TextStyle(
-                fontWeight: FontWeight.w600,
-                color: Colors.blue[800],
-              ),
+          Text(
+            '$label:',
+            style: TextStyle(
+              fontSize: 16,
+              fontWeight: FontWeight.bold,
+              color: Colors.blue[800],
             ),
           ),
-          Expanded(
-            child: Text(
-              value,
-              style: TextStyle(color: Colors.blue[700]),
+          const SizedBox(height: 4),
+          Text(
+            value,
+            style: TextStyle(
+              fontSize: 15,
+              color: Colors.blue[700],
             ),
           ),
         ],
