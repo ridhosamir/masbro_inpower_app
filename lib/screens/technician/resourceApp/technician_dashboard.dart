@@ -430,6 +430,13 @@ class _TechnicianDashboardResourceState
                         crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
                           _buildDetailItem(
+                            'Kebutuhan',
+                            '${task.request[0].toUpperCase()}${task.request.substring(1)}',
+                            task.request == 'resource'
+                                ? Icons.supervisor_account
+                                : Icons.inventory,
+                          ),
+                          _buildDetailItem(
                               'Pemohon', task.requesterName, Icons.person),
                           if (task.timeRequired != null &&
                               task.timeRequired!.isNotEmpty)
@@ -528,6 +535,7 @@ class _TechnicianDashboardResourceState
 
   // -- Helper Widgets  --
   Widget _buildTaskCard(TaskModel task) {
+    final bool isResourceRequest = task.request == 'resource';
     return Card(
       color: Colors.white,
       margin: const EdgeInsets.only(bottom: 16),
@@ -548,6 +556,11 @@ class _TechnicianDashboardResourceState
               //   maxLines: 2,
               //   overflow: TextOverflow.ellipsis,
               // ),
+              _buildInfoRow(
+                isResourceRequest ? Icons.supervisor_account : Icons.inventory,
+                'Kebutuhan',
+                '${task.request[0].toUpperCase()}${task.request.substring(1)}',
+              ),
               const SizedBox(height: 12),
               _buildInfoRow(Icons.person_pin_circle_outlined, 'Pemohon',
                   task.requesterName),
