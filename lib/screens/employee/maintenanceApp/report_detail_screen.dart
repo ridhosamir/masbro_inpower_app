@@ -58,6 +58,19 @@ class _ReportDetailScreenState extends State<ReportDetailScreen> {
                       fontSize: 14,
                     ),
                   ),
+                  // Show completion date when status is completed
+                  if (widget.report.status == 'completed' &&
+                      widget.report.completionDate != null) ...[
+                    SizedBox(height: 8),
+                    Text(
+                      'Diselesaikan pada ${DateFormat('dd MMM yyyy, HH:mm').format(widget.report.completionDate!)}',
+                      style: TextStyle(
+                        color: Colors.green[600],
+                        fontSize: 14,
+                        fontWeight: FontWeight.w500,
+                      ),
+                    ),
+                  ],
                 ],
               ),
             ),
@@ -79,6 +92,15 @@ class _ReportDetailScreenState extends State<ReportDetailScreen> {
                 'Pelapor',
                 widget.report.employeeName,
               ),
+              // Add completion date in the information card as well
+              if (widget.report.status == 'completed' &&
+                  widget.report.completionDate != null)
+                _buildInfoRow(
+                  Icons.check_circle,
+                  'Selesai',
+                  DateFormat('dd MMM yyyy, HH:mm')
+                      .format(widget.report.completionDate!),
+                ),
             ]),
             SizedBox(height: 20),
             if (widget.report.hasValidImage()) ...[
@@ -221,13 +243,22 @@ class _ReportDetailScreenState extends State<ReportDetailScreen> {
                     if (widget.report.completionDate != null)
                       Padding(
                         padding: const EdgeInsets.only(bottom: 8.0),
-                        child: Text(
-                          'Diselesaikan pada: ${DateFormat('dd MMM yyyy, HH:mm').format(widget.report.completionDate!)}',
-                          style: TextStyle(
-                            fontSize: 14,
-                            color: Colors.green[600],
-                            fontWeight: FontWeight.w500,
-                          ),
+                        child: Row(
+                          children: [
+                            Icon(Icons.check_circle,
+                                size: 16, color: Colors.green[600]),
+                            SizedBox(width: 8),
+                            Expanded(
+                              child: Text(
+                                'Diselesaikan pada: ${DateFormat('dd MMM yyyy, HH:mm').format(widget.report.completionDate!)}',
+                                style: TextStyle(
+                                  fontSize: 14,
+                                  color: Colors.green[600],
+                                  fontWeight: FontWeight.w500,
+                                ),
+                              ),
+                            ),
+                          ],
                         ),
                       ),
                     Text(
