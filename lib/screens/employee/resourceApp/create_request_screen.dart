@@ -16,19 +16,34 @@ class CreateRequestScreen extends StatefulWidget {
   State<CreateRequestScreen> createState() => _CreateRequestScreenState();
 }
 
-class _CreateRequestScreenState extends State<CreateRequestScreen> {
+class _CreateRequestScreenState extends State<CreateRequestScreen>
+    with SingleTickerProviderStateMixin {
   final _formKey = GlobalKey<FormState>();
   final _descriptionController = TextEditingController();
   final _timeRequiredController = TextEditingController();
   final FirestoreServiceResource _firestoreService = FirestoreServiceResource();
 
+  late TabController _tabController;
   bool _isLoading = false;
   UserModel? currentUser;
 
   @override
   void initState() {
     super.initState();
+    _tabController = TabController(length: 2, vsync: this);
+    _tabController.addListener(_handleTabSelection);
     _loadUserData();
+  }
+
+  void _handleTabSelection() {
+    if (_tabController.indexIsChanging) {
+      // Membersihkan input field saat tab diganti untuk UX yang lebih baik
+      _formKey.currentState?.reset();
+      _descriptionController.clear();
+      _timeRequiredController.clear();
+      // Memaksa rebuild untuk menampilkan/menyembunyikan field yang sesuai
+      setState(() {});
+    }
   }
 
   Future<void> _loadUserData() async {
@@ -47,6 +62,8 @@ class _CreateRequestScreenState extends State<CreateRequestScreen> {
 
   @override
   void dispose() {
+    _tabController.removeListener(_handleTabSelection);
+    _tabController.dispose();
     _descriptionController.dispose();
     _timeRequiredController.dispose();
     super.dispose();
@@ -75,7 +92,6 @@ class _CreateRequestScreenState extends State<CreateRequestScreen> {
           pickedTime.hour,
           pickedTime.minute,
         );
-        // Format tanggal dan waktu agar mudah dibaca
         String formattedDateTime =
             DateFormat('EEEE, d MMMM yyyy, HH:mm', 'id_ID')
                 .format(finalDateTime);
@@ -93,6 +109,7 @@ class _CreateRequestScreenState extends State<CreateRequestScreen> {
 
     try {
       final authService = Provider.of<AuthService>(context, listen: false);
+      final requestType = _tabController.index == 0 ? 'resource' : 'item';
 
       final request = RequestModel(
         id: '',
@@ -101,7 +118,10 @@ class _CreateRequestScreenState extends State<CreateRequestScreen> {
         description: _descriptionController.text.trim(),
         status: 'open',
         createdAt: DateTime.now(),
-        timeRequired: _timeRequiredController.text.trim(),
+        request: requestType, // Mengisi atribut 'request' baru
+        timeRequired: requestType == 'resource'
+            ? _timeRequiredController.text.trim()
+            : null,
       );
 
       await _firestoreService.createRequest(request);
@@ -133,38 +153,46 @@ class _CreateRequestScreenState extends State<CreateRequestScreen> {
 
   @override
   Widget build(BuildContext context) {
+    final bool isResourceRequest = _tabController.index == 0;
+    final primaryColor = Theme.of(context).primaryColor;
+
     return Scaffold(
       body: CustomScrollView(
         slivers: [
           SliverAppBar(
-            expandedHeight: 100,
-            floating: false,
             pinned: true,
-            backgroundColor: Theme.of(context).primaryColor,
+            expandedHeight: 90.0,
+            backgroundColor: primaryColor,
             leading: IconButton(
               icon: const Icon(Icons.arrow_back, color: Colors.white),
               onPressed: () => Navigator.pop(context),
             ),
-            flexibleSpace: FlexibleSpaceBar(
-              title: const Text(
-                'Create Resource',
-                style: TextStyle(
-                  color: Colors.white,
-                  fontWeight: FontWeight.bold,
-                ),
-              ),
-              background: Container(
-                decoration: BoxDecoration(
-                  gradient: LinearGradient(
-                    begin: Alignment.topLeft,
-                    end: Alignment.bottomRight,
-                    colors: [
-                      Theme.of(context).primaryColor,
-                      Theme.of(context).primaryColor.withOpacity(0.8),
-                    ],
-                  ),
-                ),
-              ),
+            title: const Text('Buat Permintaan Baru'),
+            bottom: TabBar(
+              controller: _tabController,
+              indicatorColor: Colors.white,
+              indicatorWeight: 3,
+              labelColor: Colors.white,
+              unselectedLabelColor: Colors.white.withOpacity(0.7),
+              labelStyle: const TextStyle(fontWeight: FontWeight.bold),
+              tabs: const [
+                Tab(
+                    child: Row(
+                        mainAxisAlignment: MainAxisAlignment.center,
+                        children: [
+                      Icon(Icons.supervisor_account),
+                      SizedBox(width: 8),
+                      Text('Resource')
+                    ])),
+                Tab(
+                    child: Row(
+                        mainAxisAlignment: MainAxisAlignment.center,
+                        children: [
+                      Icon(Icons.inventory),
+                      SizedBox(width: 8),
+                      Text('Item')
+                    ])),
+              ],
             ),
           ),
           SliverToBoxAdapter(
@@ -175,79 +203,43 @@ class _CreateRequestScreenState extends State<CreateRequestScreen> {
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    Container(
-                      width: double.infinity,
-                      padding: const EdgeInsets.all(20),
-                      decoration: BoxDecoration(
-                        color: Colors.blue[50],
-                        borderRadius: BorderRadius.circular(12),
-                        border: Border.all(color: Colors.blue[200]!),
-                      ),
-                      child: Column(
-                        children: [
-                          Icon(
-                            Icons.support_agent,
-                            size: 48,
-                            color: Theme.of(context).primaryColor,
-                          ),
-                          const SizedBox(height: 12),
-                          Text(
-                            'Permintaan Bantuan Resource',
-                            style: Theme.of(context)
-                                .textTheme
-                                .titleLarge
-                                ?.copyWith(
-                                  fontWeight: FontWeight.bold,
-                                  color: Theme.of(context).primaryColor,
-                                ),
-                          ),
-                          const SizedBox(height: 8),
-                          Text(
-                            'Jelaskan kebutuhan sumber daya manusia yang Anda perlukan.',
-                            style: TextStyle(color: Colors.grey[600]),
-                            textAlign: TextAlign.center,
-                          ),
-                        ],
-                      ),
-                    ),
+                    // --- Header Dinamis ---
+                    _buildDynamicHeader(isResourceRequest, primaryColor),
                     const SizedBox(height: 24),
-                    Text(
-                      'Waktu Dibutuhkan',
-                      style: TextStyle(
-                        fontSize: 16,
-                        fontWeight: FontWeight.bold,
-                        color: Colors.grey[700],
+
+                    // --- Form Field Dinamis ---
+                    if (isResourceRequest) ...[
+                      _buildLabel('Waktu Dibutuhkan'),
+                      CustomTextField(
+                        labelText: 'Pilih Tanggal & Jam',
+                        hintText: 'Contoh: 23 Juli 2025, 14:00',
+                        controller: _timeRequiredController,
+                        readOnly: true,
+                        onTap: _selectDateTime,
+                        prefixIcon: Icons.calendar_today,
+                        validator: (value) {
+                          if (isResourceRequest &&
+                              (value == null || value.isEmpty)) {
+                            return 'Harap tentukan waktu yang dibutuhkan';
+                          }
+                          return null;
+                        },
                       ),
-                    ),
-                    const SizedBox(height: 8),
-                    CustomTextField(
-                      labelText: 'Pilih Tanggal & Jam',
-                      hintText: 'Contoh: 23 Juli 2025, 14:00',
-                      controller: _timeRequiredController,
-                      readOnly: true,
-                      onTap: _selectDateTime,
-                      validator: (value) {
-                        if (value == null || value.isEmpty) {
-                          return 'Harap tentukan waktu yang dibutuhkan';
-                        }
-                        return null;
-                      },
-                    ),
-                    const SizedBox(height: 24),
-                    Text(
-                      'Deskripsi Kebutuhan',
-                      style: TextStyle(
-                        fontSize: 16,
-                        fontWeight: FontWeight.bold,
-                        color: Colors.grey[700],
-                      ),
-                    ),
-                    const SizedBox(height: 8),
+                      const SizedBox(height: 24),
+                    ],
+                    _buildLabel(isResourceRequest
+                        ? 'Deskripsi Kebutuhan'
+                        : 'Deskripsi Item'),
                     CustomTextField(
                       labelText: 'Deskripsi',
-                      hintText: 'Jelaskan kebutuhan Anda secara detail...',
+                      hintText: isResourceRequest
+                          ? 'Jelaskan kebutuhan Anda secara detail...'
+                          : 'Contoh: Saya membutuhkan peralatan kantor, elektronik, ATK, dll',
                       controller: _descriptionController,
                       maxLines: 5,
+                      prefixIcon: isResourceRequest
+                          ? Icons.description_outlined
+                          : Icons.inventory_2_outlined,
                       validator: (value) {
                         if (value == null || value.isEmpty) {
                           return 'Harap jelaskan kebutuhan Anda';
@@ -263,11 +255,67 @@ class _CreateRequestScreenState extends State<CreateRequestScreen> {
                       text: 'Kirim Permintaan',
                       onPressed: _submitRequest,
                       isLoading: _isLoading,
+                      icon: Icons.send,
                     ),
                   ],
                 ),
               ),
             ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildLabel(String text) {
+    return Column(
+      children: [
+        Text(
+          text,
+          style: TextStyle(
+            fontSize: 16,
+            fontWeight: FontWeight.bold,
+            color: Colors.grey[700],
+          ),
+        ),
+        const SizedBox(height: 8),
+      ],
+    );
+  }
+
+  Widget _buildDynamicHeader(bool isResourceRequest, Color primaryColor) {
+    return Container(
+      width: double.infinity,
+      padding: const EdgeInsets.all(20),
+      decoration: BoxDecoration(
+        color: primaryColor.withOpacity(0.1),
+        borderRadius: BorderRadius.circular(12),
+        border: Border.all(color: primaryColor.withOpacity(0.3)),
+      ),
+      child: Column(
+        children: [
+          Icon(
+            isResourceRequest ? Icons.supervisor_account : Icons.inventory,
+            size: 48,
+            color: primaryColor,
+          ),
+          const SizedBox(height: 12),
+          Text(
+            isResourceRequest
+                ? 'Permintaan Bantuan Resource'
+                : 'Permintaan Pengadaan Item',
+            style: Theme.of(context).textTheme.titleLarge?.copyWith(
+                  fontWeight: FontWeight.bold,
+                  color: primaryColor,
+                ),
+          ),
+          const SizedBox(height: 8),
+          Text(
+            isResourceRequest
+                ? 'Jelaskan kebutuhan sumber daya manusia yang Anda perlukan.'
+                : 'Jelaskan item atau barang yang Anda butuhkan untuk pekerjaan.',
+            style: TextStyle(color: Colors.grey[600]),
+            textAlign: TextAlign.center,
           ),
         ],
       ),

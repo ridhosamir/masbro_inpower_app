@@ -609,6 +609,9 @@ class _EmployeeDashboardResourceState extends State<EmployeeDashboardResource>
   }
 
   Widget _buildRequestCard(RequestModel request) {
+    // Helper untuk membedakan tipe permintaan
+    final bool isResourceRequest = request.request == 'resource';
+
     return Card(
       margin: const EdgeInsets.symmetric(vertical: 8),
       elevation: 2,
@@ -623,36 +626,39 @@ class _EmployeeDashboardResourceState extends State<EmployeeDashboardResource>
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              if (request.timeRequired != null &&
-                  request.timeRequired!.isNotEmpty) ...[
-                Row(
-                  children: [
-                    Expanded(
-                      child: Row(
-                        children: [
-                          Icon(Icons.calendar_today,
-                              size: 14, color: Colors.grey[500]),
-                          const SizedBox(width: 6),
-                          Flexible(
-                            child: Text(
-                              'Waktu: ${request.timeRequired!}',
-                              style: TextStyle(
-                                fontSize: 12,
-                                color: Colors.grey[700],
-                              ),
-                              overflow: TextOverflow.ellipsis,
-                              maxLines: 1,
-                            ),
+              // --- BARIS ATAS: KEBUTUHAN & STATUS ---
+              Row(
+                children: [
+                  Expanded(
+                    child: Row(
+                      children: [
+                        Icon(
+                          isResourceRequest
+                              ? Icons.supervisor_account
+                              : Icons.inventory,
+                          size: 16,
+                          color: Colors.grey[600],
+                        ),
+                        const SizedBox(width: 6),
+                        Text(
+                          // Menampilkan 'Resource' atau 'Item' dengan huruf kapital di awal
+                          'Kebutuhan: ${request.request[0].toUpperCase()}${request.request.substring(1)}',
+                          style: TextStyle(
+                            fontSize: 13,
+                            color: Colors.grey[800],
+                            fontWeight: FontWeight.w500,
                           ),
-                        ],
-                      ),
+                        ),
+                      ],
                     ),
-                    const SizedBox(width: 8),
-                    _buildStatusChip(request.status),
-                  ],
-                ),
-              ],
+                  ),
+                  const SizedBox(width: 8),
+                  _buildStatusChip(request.status),
+                ],
+              ),
               const SizedBox(height: 12),
+
+              // --- DESKRIPSI PERMINTAAN ---
               Text(
                 'Permintaan:',
                 style: TextStyle(
@@ -680,6 +686,33 @@ class _EmployeeDashboardResourceState extends State<EmployeeDashboardResource>
                 ),
               ),
               const SizedBox(height: 12),
+
+              // --- WAKTU DIBUTUHKAN (HANYA UNTUK RESOURCE) & WAKTU PEMBUATAN ---
+              // Menampilkan 'Waktu Dibutuhkan' hanya jika tipenya 'resource'
+              if (isResourceRequest &&
+                  request.timeRequired != null &&
+                  request.timeRequired!.isNotEmpty) ...[
+                Row(
+                  children: [
+                    Icon(Icons.calendar_today,
+                        size: 14, color: Colors.grey[500]),
+                    const SizedBox(width: 6),
+                    Expanded(
+                      child: Text(
+                        'Waktu: ${request.timeRequired!}',
+                        style: TextStyle(
+                          fontSize: 12,
+                          color: Colors.grey[700],
+                        ),
+                        overflow: TextOverflow.ellipsis,
+                      ),
+                    ),
+                  ],
+                ),
+                const SizedBox(height: 8), // Spasi tambahan
+              ],
+
+              // Waktu pembuatan permintaan
               Row(
                 children: [
                   Icon(Icons.access_time, size: 14, color: Colors.grey[500]),
@@ -693,6 +726,8 @@ class _EmployeeDashboardResourceState extends State<EmployeeDashboardResource>
                   ),
                 ],
               ),
+
+              // --- INFO TEKNISI (JIKA ADA) ---
               if (request.status == 'inProgress' &&
                   request.technicianName != null) ...[
                 const SizedBox(height: 12),

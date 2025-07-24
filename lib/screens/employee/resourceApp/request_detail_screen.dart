@@ -88,6 +88,7 @@ class RequestDetailScreen extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final bool isResourceRequest = request.request == 'resource';
     return Scaffold(
       appBar: AppBar(
         title: const Text('Detail Permintaan'),
@@ -145,6 +146,11 @@ class RequestDetailScreen extends StatelessWidget {
                 Icons.person,
                 'Pemohon',
                 request.employeeName,
+              ),
+              _buildInfoRow(
+                isResourceRequest ? Icons.supervisor_account : Icons.inventory,
+                'Kebutuhan',
+                '${request.request[0].toUpperCase()}${request.request.substring(1)}',
               ),
               if (request.timeRequired != null &&
                   request.timeRequired!.isNotEmpty)

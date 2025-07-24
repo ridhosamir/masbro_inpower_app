@@ -10,6 +10,7 @@ class TaskModel {
   final String description;
   final String status; // inProgress, completed
   final DateTime assignedAt;
+  final String request;
   final String? timeRequired;
   final DateTime? completedAt;
   final String? completionNote;
@@ -23,6 +24,7 @@ class TaskModel {
     required this.description,
     required this.status,
     required this.assignedAt,
+    required this.request,
     this.timeRequired,
     this.completedAt,
     this.completionNote,
@@ -39,6 +41,7 @@ class TaskModel {
       description: data['description'] ?? '',
       status: data['status'] ?? 'inProgress',
       assignedAt: (data['assignedAt'] as Timestamp).toDate(),
+      request: data['request'] ?? 'resource',
       timeRequired: data['timeRequired'],
       completedAt: data['completedAt'] != null
           ? (data['completedAt'] as Timestamp).toDate()
@@ -56,6 +59,7 @@ class TaskModel {
       'description': description,
       'status': status,
       'assignedAt': Timestamp.fromDate(assignedAt),
+      'request': request,
       'timeRequired': timeRequired,
       'completedAt':
           completedAt != null ? Timestamp.fromDate(completedAt!) : null,
