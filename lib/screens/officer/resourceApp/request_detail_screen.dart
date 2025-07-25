@@ -198,6 +198,26 @@ class _RequestDetailScreenResourceState
                       color: widget.request.getStatusColor(),
                     ),
                   ),
+                  const SizedBox(height: 8),
+                  Text(
+                    'Dibuat pada ${DateFormat('d MMMM yyyy, HH:mm').format(widget.request.createdAt)}',
+                    style: TextStyle(
+                      color: Colors.grey[600],
+                      fontSize: 14,
+                    ),
+                  ),
+                  if (widget.request.status == 'completed' &&
+                      widget.request.completionDate != null) ...[
+                    const SizedBox(height: 8),
+                    Text(
+                      'Diselesaikan pada ${DateFormat('dd MMM yyyy, HH:mm').format(widget.request.completionDate!)}',
+                      style: TextStyle(
+                        color: Colors.green[700],
+                        fontSize: 14,
+                        fontWeight: FontWeight.w500,
+                      ),
+                    ),
+                  ],
                 ],
               ),
             ),
@@ -214,7 +234,7 @@ class _RequestDetailScreenResourceState
               ),
               if (widget.request.timeRequired != null &&
                   widget.request.timeRequired!.isNotEmpty)
-                _buildInfoRow(Icons.calendar_today, 'Waktu',
+                _buildInfoRow(Icons.calendar_today, 'Waktu\nDibutuhkan',
                     widget.request.timeRequired!),
               _buildInfoRow(
                 Icons.access_time,
@@ -287,10 +307,30 @@ class _RequestDetailScreenResourceState
                   borderRadius: BorderRadius.circular(8),
                   border: Border.all(color: Colors.green[200]!),
                 ),
-                child: Text(
-                  widget.request.completionReason!,
-                  style: TextStyle(
-                      fontSize: 16, height: 1.5, color: Colors.green[800]),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    if (widget.request.completionDate != null)
+                      Padding(
+                        padding: const EdgeInsets.only(bottom: 8.0),
+                        child: Text(
+                          'Diselesaikan pada: ${DateFormat('d MMMM yyyy, HH:mm').format(widget.request.completionDate!)}',
+                          style: TextStyle(
+                            fontSize: 14,
+                            color: Colors.green[700],
+                            fontWeight: FontWeight.w500,
+                          ),
+                        ),
+                      ),
+                    Text(
+                      widget.request.completionReason!,
+                      style: TextStyle(
+                        fontSize: 16,
+                        height: 1.5,
+                        color: Colors.green[800],
+                      ),
+                    ),
+                  ],
                 ),
               ),
             ],
@@ -314,6 +354,7 @@ class _RequestDetailScreenResourceState
                 icon: Icons.check_circle,
               ),
             ],
+            const SizedBox(height: 32),
           ],
         ),
       ),

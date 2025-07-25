@@ -23,6 +23,9 @@ class _TechnicianDashboardResourceState
   final _completionNoteController = TextEditingController();
   UserModel? currentUser;
   late TabController _tabController;
+  String _selectedFilter = 'all';
+  String _searchQuery = '';
+  final _searchController = TextEditingController();
   bool _isLoading = false;
 
   @override
@@ -30,6 +33,17 @@ class _TechnicianDashboardResourceState
     super.initState();
     _tabController = TabController(length: 3, vsync: this);
     _loadUserData();
+    _searchController.addListener(_onSearchChanged);
+  }
+
+  void _clearSearch() {
+    _searchController.clear();
+  }
+
+  void _onSearchChanged() {
+    setState(() {
+      _searchQuery = _searchController.text;
+    });
   }
 
   @override
@@ -270,9 +284,75 @@ class _TechnicianDashboardResourceState
         },
         body: Column(
           children: [
+            const SizedBox(height: 20),
             Container(
               padding: const EdgeInsets.all(16),
               child: _buildStatisticsCards(),
+            ),
+            Padding(
+              padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+              child: Row(
+                children: [
+                  // Kolom Pencarian
+                  Expanded(
+                    child: Container(
+                      decoration: BoxDecoration(
+                        color: Colors.white,
+                        borderRadius: BorderRadius.circular(12),
+                        border: Border.all(color: Colors.grey[300]!),
+                        boxShadow: [
+                          BoxShadow(
+                            color: Colors.black.withOpacity(0.05),
+                            blurRadius: 4,
+                            offset: const Offset(0, 2),
+                          ),
+                        ],
+                      ),
+                      child: TextField(
+                        controller: _searchController,
+                        decoration: InputDecoration(
+                          hintText: 'Cari permintaan...',
+                          prefixIcon:
+                              Icon(Icons.search, color: Colors.grey[600]),
+                          suffixIcon: _searchQuery.isNotEmpty
+                              ? IconButton(
+                                  icon: Icon(Icons.clear,
+                                      color: Colors.grey[600]),
+                                  onPressed: _clearSearch,
+                                )
+                              : null,
+                          border: InputBorder.none,
+                          contentPadding: const EdgeInsets.symmetric(
+                              vertical: 12, horizontal: 16),
+                        ),
+                      ),
+                    ),
+                  ),
+                  const SizedBox(width: 8),
+                  Container(
+                    decoration: BoxDecoration(
+                      color: Colors.white,
+                      borderRadius: BorderRadius.circular(12),
+                      border: Border.all(color: Colors.grey[300]!),
+                      boxShadow: [
+                        BoxShadow(
+                          color: Colors.black.withOpacity(0.05),
+                          blurRadius: 4,
+                          offset: const Offset(0, 2),
+                        ),
+                      ],
+                    ),
+                    child: IconButton(
+                      onPressed: _showFilterDialog,
+                      icon: Icon(
+                        Icons.filter_list,
+                        color: Theme.of(context).primaryColor,
+                      ),
+                      tooltip: 'Filter Permintaan',
+                    ),
+                  ),
+                ],
+              ),
             ),
             Expanded(
               child: TabBarView(
@@ -359,9 +439,52 @@ class _TechnicianDashboardResourceState
         if (tabStatus != 'all') {
           tasks = tasks.where((t) => t.status == tabStatus).toList();
         }
+
+        if (_searchQuery.isNotEmpty) {
+          tasks = tasks
+              .where((r) =>
+                  r.requesterName
+                      .toLowerCase()
+                      .contains(_searchQuery.toLowerCase()) ||
+                  r.description
+                      .toLowerCase()
+                      .contains(_searchQuery.toLowerCase()) ||
+                  (r.timeRequired
+                          ?.toLowerCase()
+                          .contains(_searchQuery.toLowerCase()) ??
+                      false))
+              .toList();
+        }
+
+        if (_selectedFilter != 'all') {
+          final now = DateTime.now();
+          tasks = tasks.where((r) {
+            final assignedAt = r.assignedAt;
+            switch (_selectedFilter) {
+              case 'today':
+                return assignedAt.year == now.year &&
+                    assignedAt.month == now.month &&
+                    assignedAt.day == now.day;
+              case 'week':
+                // Filter untuk 7 hari terakhir
+                return now.difference(assignedAt).inDays < 7;
+              case 'month':
+                return assignedAt.year == now.year &&
+                    assignedAt.month == now.month;
+              default:
+                return true;
+            }
+          }).toList();
+        }
+
         tasks.sort((a, b) => b.assignedAt.compareTo(a.assignedAt));
 
-        if (tasks.isEmpty) return _buildEmptyState(tabStatus);
+        if (tasks.isEmpty) {
+          if (_searchQuery.isNotEmpty) {
+            return _buildEmptySearchState();
+          }
+          return _buildEmptyState(tabStatus);
+        }
 
         return RefreshIndicator(
           onRefresh: () async => setState(() {}),
@@ -374,6 +497,46 @@ class _TechnicianDashboardResourceState
           ),
         );
       },
+    );
+  }
+
+  Widget _buildEmptySearchState() {
+    return Center(
+      child: Column(
+        mainAxisAlignment: MainAxisAlignment.center,
+        children: [
+          Icon(
+            Icons.search_off,
+            size: 64,
+            color: Colors.grey[400],
+          ),
+          SizedBox(height: 16),
+          Text(
+            'Tidak ada laporan yang cocok',
+            style: TextStyle(
+              fontSize: 18,
+              color: Colors.grey[600],
+              fontWeight: FontWeight.bold,
+            ),
+          ),
+          SizedBox(height: 8),
+          Text(
+            'Coba dengan kata kunci lain atau hapus filter pencarian',
+            style: TextStyle(
+              color: Colors.grey[500],
+              fontSize: 14,
+            ),
+            textAlign: TextAlign.center,
+          ),
+          SizedBox(height: 16),
+          TextButton.icon(
+            onPressed: _clearSearch,
+            icon: Icon(Icons.clear, color: Colors.blue),
+            label:
+                Text('Hapus Pencarian', style: TextStyle(color: Colors.blue)),
+          ),
+        ],
+      ),
     );
   }
 
@@ -440,7 +603,7 @@ class _TechnicianDashboardResourceState
                               'Pemohon', task.requesterName, Icons.person),
                           if (task.timeRequired != null &&
                               task.timeRequired!.isNotEmpty)
-                            _buildDetailItem('Waktu Pelaksanaan',
+                            _buildDetailItem('Waktu Dibutuhkan',
                                 task.timeRequired!, Icons.calendar_today),
                           _buildDetailItem(
                             'Ditugaskan',
@@ -567,7 +730,25 @@ class _TechnicianDashboardResourceState
               if (task.timeRequired != null && task.timeRequired!.isNotEmpty)
                 _buildInfoRow(
                     Icons.calendar_today, 'Waktu', task.timeRequired!),
-              const Divider(height: 24),
+              const SizedBox(height: 6),
+              Container(
+                width: double.infinity,
+                padding: const EdgeInsets.all(12),
+                decoration: BoxDecoration(
+                  color: Colors.grey[50],
+                  borderRadius: BorderRadius.circular(8),
+                ),
+                child: Text(
+                  task.description,
+                  style: TextStyle(
+                    fontSize: 14,
+                    color: Colors.grey[700],
+                  ),
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                ),
+              ),
+              const SizedBox(height: 24),
               Row(
                 crossAxisAlignment: CrossAxisAlignment.center,
                 children: [
@@ -785,6 +966,19 @@ class _TechnicianDashboardResourceState
             ),
             textAlign: TextAlign.center,
           ),
+          if (_searchQuery.isNotEmpty || _selectedFilter != 'all') ...[
+            SizedBox(height: 16),
+            ElevatedButton(
+              onPressed: () {
+                setState(() {
+                  _searchQuery = '';
+                  _selectedFilter = 'all';
+                  _searchController.clear();
+                });
+              },
+              child: Text('Clear Filters'),
+            ),
+          ],
         ],
       ),
     );
@@ -908,6 +1102,61 @@ class _TechnicianDashboardResourceState
                 ),
               ],
             ));
+  }
+
+  void _showFilterDialog() {
+    showDialog(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: const Text(
+          'Filter Berdasarkan Waktu',
+          style: TextStyle(
+            fontSize: 16,
+          ),
+        ),
+        content: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            RadioListTile<String>(
+              title: Text('All Requests'),
+              value: 'all',
+              groupValue: _selectedFilter,
+              onChanged: (value) {
+                setState(() => _selectedFilter = value!);
+                Navigator.pop(context);
+              },
+            ),
+            RadioListTile<String>(
+              title: Text('Today Only'),
+              value: 'today',
+              groupValue: _selectedFilter,
+              onChanged: (value) {
+                setState(() => _selectedFilter = value!);
+                Navigator.pop(context);
+              },
+            ),
+            RadioListTile<String>(
+              title: Text('This Week'),
+              value: 'week',
+              groupValue: _selectedFilter,
+              onChanged: (value) {
+                setState(() => _selectedFilter = value!);
+                Navigator.pop(context);
+              },
+            ),
+            RadioListTile<String>(
+              title: Text('This Month'),
+              value: 'month',
+              groupValue: _selectedFilter,
+              onChanged: (value) {
+                setState(() => _selectedFilter = value!);
+                Navigator.pop(context);
+              },
+            ),
+          ],
+        ),
+      ),
+    );
   }
 
   Widget _buildProfileItem(String label, String value) {

@@ -22,6 +22,8 @@ class _CreateRequestScreenState extends State<CreateRequestScreen>
   final _descriptionController = TextEditingController();
   final _timeRequiredController = TextEditingController();
   final FirestoreServiceResource _firestoreService = FirestoreServiceResource();
+  final _descriptionFocusNode = FocusNode();
+  bool _isDescriptionFocused = false;
 
   late TabController _tabController;
   bool _isLoading = false;
@@ -33,6 +35,12 @@ class _CreateRequestScreenState extends State<CreateRequestScreen>
     _tabController = TabController(length: 2, vsync: this);
     _tabController.addListener(_handleTabSelection);
     _loadUserData();
+
+    _descriptionFocusNode.addListener(() {
+      setState(() {
+        _isDescriptionFocused = _descriptionFocusNode.hasFocus;
+      });
+    });
   }
 
   void _handleTabSelection() {
@@ -66,6 +74,7 @@ class _CreateRequestScreenState extends State<CreateRequestScreen>
     _tabController.dispose();
     _descriptionController.dispose();
     _timeRequiredController.dispose();
+    _descriptionFocusNode.dispose();
     super.dispose();
   }
 
@@ -231,10 +240,12 @@ class _CreateRequestScreenState extends State<CreateRequestScreen>
                         ? 'Deskripsi Kebutuhan'
                         : 'Deskripsi Item'),
                     CustomTextField(
-                      labelText: 'Deskripsi',
-                      hintText: isResourceRequest
-                          ? 'Jelaskan kebutuhan Anda secara detail...'
-                          : 'Contoh: Saya membutuhkan peralatan kantor, elektronik, ATK, dll',
+                      focusNode: _descriptionFocusNode,
+                      labelText: _isDescriptionFocused
+                          ? 'Deskripsi Kebutuhan Anda'
+                          : (isResourceRequest
+                              ? 'Jelaskan kebutuhan resource anda...'
+                              : 'Jelaskan barang yang anda perlukan...'),
                       controller: _descriptionController,
                       maxLines: 5,
                       prefixIcon: isResourceRequest
