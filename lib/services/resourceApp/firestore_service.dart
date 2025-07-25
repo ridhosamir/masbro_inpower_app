@@ -107,6 +107,7 @@ class FirestoreServiceResource {
       batch.update(_requestsCollection.doc(requestId), {
         'status': 'completed',
         'completionReason': reason,
+        'completionDate': FieldValue.serverTimestamp(),
       });
 
       // Jika diselesaikan langsung oleh officer, buat task baru yang sudah selesai
@@ -183,6 +184,7 @@ class FirestoreServiceResource {
         await _requestsCollection.doc(task.requestId).update({
           'status': 'completed',
           'completionReason': completionNote ?? 'Completed by technician',
+          'completionDate': FieldValue.serverTimestamp(),
         });
       }
     } catch (e) {

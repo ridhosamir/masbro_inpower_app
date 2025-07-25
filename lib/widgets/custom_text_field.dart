@@ -11,6 +11,7 @@ class CustomTextField extends StatelessWidget {
   final VoidCallback? onTap;
   final String? Function(String?)? validator;
   final IconData? prefixIcon;
+  final FocusNode? focusNode;
 
   const CustomTextField({
     Key? key,
@@ -24,6 +25,7 @@ class CustomTextField extends StatelessWidget {
     this.onTap,
     this.validator,
     this.prefixIcon,
+    this.focusNode,
   }) : super(key: key);
 
   @override
@@ -33,6 +35,7 @@ class CustomTextField extends StatelessWidget {
       obscureText: obscureText,
       keyboardType: keyboardType,
       maxLines: maxLines,
+      focusNode: focusNode,
       validator: validator,
       readOnly: readOnly,
       onTap: onTap,

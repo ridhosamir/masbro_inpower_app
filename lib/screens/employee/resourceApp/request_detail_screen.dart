@@ -133,6 +133,18 @@ class RequestDetailScreen extends StatelessWidget {
                       fontSize: 14,
                     ),
                   ),
+                  if (request.status == 'completed' &&
+                      request.completionDate != null) ...[
+                    const SizedBox(height: 8),
+                    Text(
+                      'Diselesaikan pada ${DateFormat('dd MMM yyyy, HH:mm').format(request.completionDate!)}',
+                      style: TextStyle(
+                        color: Colors.green[700],
+                        fontSize: 14,
+                        fontWeight: FontWeight.w500,
+                      ),
+                    ),
+                  ],
                 ],
               ),
             ),
@@ -156,7 +168,7 @@ class RequestDetailScreen extends StatelessWidget {
                   request.timeRequired!.isNotEmpty)
                 _buildInfoRow(
                   Icons.calendar_today,
-                  'Hari/Tanggal',
+                  'Waktu\nDibutuhkan',
                   _formatDisplayDate(request.timeRequired!),
                 ),
             ]),
@@ -284,7 +296,32 @@ class RequestDetailScreen extends StatelessWidget {
                 ),
               ),
             ],
-            const SizedBox(height: 24),
+            SizedBox(height: 32),
+            Container(
+              width: double.infinity,
+              padding: EdgeInsets.all(16),
+              decoration: BoxDecoration(
+                color: Colors.amber[50],
+                borderRadius: BorderRadius.circular(8),
+                border: Border.all(color: Colors.amber[200]!),
+              ),
+              child: Row(
+                children: [
+                  Icon(Icons.info, color: Colors.amber[700]),
+                  SizedBox(width: 12),
+                  Expanded(
+                    child: Text(
+                      'Jika Anda memiliki pertanyaan tentang permintaan ini, silakan hubungi kantor manajemen.',
+                      style: TextStyle(
+                        color: Colors.amber[700],
+                        fontSize: 14,
+                      ),
+                    ),
+                  ),
+                ],
+              ),
+            ),
+            SizedBox(height: 20),
           ],
         ),
       ),

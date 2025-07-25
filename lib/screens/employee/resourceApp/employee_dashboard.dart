@@ -32,10 +32,22 @@ class _EmployeeDashboardResourceState extends State<EmployeeDashboardResource>
     _tabController = TabController(length: 4, vsync: this);
     _loadUserData();
 
+    _searchController.addListener(_onSearchChanged);
+
     _tabController.addListener(() {
       if (!_tabController.indexIsChanging) {
         setState(() {});
       }
+    });
+  }
+
+  void _clearSearch() {
+    _searchController.clear();
+  }
+
+  void _onSearchChanged() {
+    setState(() {
+      _searchQuery = _searchController.text;
     });
   }
 
@@ -225,32 +237,6 @@ class _EmployeeDashboardResourceState extends State<EmployeeDashboardResource>
                 ),
               ),
               actions: [
-                IconButton(
-                  icon: Container(
-                    padding: const EdgeInsets.all(4),
-                    decoration: BoxDecoration(
-                      color: Colors.white.withOpacity(0.2),
-                      shape: BoxShape.circle,
-                    ),
-                    child:
-                        const Icon(Icons.search, color: Colors.white, size: 18),
-                  ),
-                  onPressed: _showSearchDialog,
-                  tooltip: 'Cari Permintaan',
-                ),
-                IconButton(
-                  icon: Container(
-                    padding: const EdgeInsets.all(4),
-                    decoration: BoxDecoration(
-                      color: Colors.white.withOpacity(0.2),
-                      shape: BoxShape.circle,
-                    ),
-                    child: const Icon(Icons.filter_list,
-                        color: Colors.white, size: 18),
-                  ),
-                  onPressed: _showFilterDialog,
-                  tooltip: 'Filter Permintaan',
-                ),
                 PopupMenuButton<String>(
                   icon: Container(
                     padding: const EdgeInsets.all(4),
@@ -329,46 +315,76 @@ class _EmployeeDashboardResourceState extends State<EmployeeDashboardResource>
         },
         body: Column(
           children: [
+            const SizedBox(height: 20),
             Container(
               padding: const EdgeInsets.all(16),
               child: _buildStatisticsCards(),
             ),
-            if (_searchQuery.isNotEmpty)
-              Container(
-                margin: const EdgeInsets.fromLTRB(16, 0, 16, 8),
-                padding: const EdgeInsets.all(12),
-                decoration: BoxDecoration(
-                  color: Colors.blue[50],
-                  borderRadius: BorderRadius.circular(12),
-                  border: Border.all(color: Colors.blue[200]!),
-                ),
-                child: Row(
-                  children: [
-                    Icon(Icons.search, color: Colors.blue[700], size: 16),
-                    const SizedBox(width: 8),
-                    Expanded(
-                      child: Text(
-                        'Mencari: "$_searchQuery"',
-                        style: TextStyle(
-                          color: Colors.blue[700],
-                          fontSize: 12,
-                          fontWeight: FontWeight.w600,
+            Padding(
+              padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+              child: Row(
+                children: [
+                  // Kolom Pencarian
+                  Expanded(
+                    child: Container(
+                      decoration: BoxDecoration(
+                        color: Colors.white,
+                        borderRadius: BorderRadius.circular(12),
+                        border: Border.all(color: Colors.grey[300]!),
+                        boxShadow: [
+                          BoxShadow(
+                            color: Colors.black.withOpacity(0.05),
+                            blurRadius: 4,
+                            offset: const Offset(0, 2),
+                          ),
+                        ],
+                      ),
+                      child: TextField(
+                        controller: _searchController,
+                        decoration: InputDecoration(
+                          hintText: 'Cari permintaan...',
+                          prefixIcon:
+                              Icon(Icons.search, color: Colors.grey[600]),
+                          suffixIcon: _searchQuery.isNotEmpty
+                              ? IconButton(
+                                  icon: Icon(Icons.clear,
+                                      color: Colors.grey[600]),
+                                  onPressed: _clearSearch,
+                                )
+                              : null,
+                          border: InputBorder.none,
+                          contentPadding: const EdgeInsets.symmetric(
+                              vertical: 12, horizontal: 16),
                         ),
                       ),
                     ),
-                    GestureDetector(
-                      onTap: () {
-                        setState(() {
-                          _searchQuery = '';
-                          _searchController.clear();
-                        });
-                      },
-                      child:
-                          Icon(Icons.close, color: Colors.blue[700], size: 16),
+                  ),
+                  const SizedBox(width: 8),
+                  Container(
+                    decoration: BoxDecoration(
+                      color: Colors.white,
+                      borderRadius: BorderRadius.circular(12),
+                      border: Border.all(color: Colors.grey[300]!),
+                      boxShadow: [
+                        BoxShadow(
+                          color: Colors.black.withOpacity(0.05),
+                          blurRadius: 4,
+                          offset: const Offset(0, 2),
+                        ),
+                      ],
                     ),
-                  ],
-                ),
+                    child: IconButton(
+                      onPressed: _showFilterDialog,
+                      icon: Icon(
+                        Icons.filter_list,
+                        color: Theme.of(context).primaryColor,
+                      ),
+                      tooltip: 'Filter Permintaan',
+                    ),
+                  ),
+                ],
               ),
+            ),
             Expanded(
               child: TabBarView(
                 controller: _tabController,
@@ -589,6 +605,9 @@ class _EmployeeDashboardResourceState extends State<EmployeeDashboardResource>
         requests.sort((a, b) => b.createdAt.compareTo(a.createdAt));
 
         if (requests.isEmpty) {
+          if (_searchQuery.isNotEmpty) {
+            return _buildEmptySearchState();
+          }
           return _buildEmptyState(status);
         }
 
@@ -605,6 +624,46 @@ class _EmployeeDashboardResourceState extends State<EmployeeDashboardResource>
           ),
         );
       },
+    );
+  }
+
+  Widget _buildEmptySearchState() {
+    return Center(
+      child: Column(
+        mainAxisAlignment: MainAxisAlignment.center,
+        children: [
+          Icon(
+            Icons.search_off,
+            size: 64,
+            color: Colors.grey[400],
+          ),
+          SizedBox(height: 16),
+          Text(
+            'Tidak ada laporan yang cocok',
+            style: TextStyle(
+              fontSize: 18,
+              color: Colors.grey[600],
+              fontWeight: FontWeight.bold,
+            ),
+          ),
+          SizedBox(height: 8),
+          Text(
+            'Coba dengan kata kunci lain atau hapus filter pencarian',
+            style: TextStyle(
+              color: Colors.grey[500],
+              fontSize: 14,
+            ),
+            textAlign: TextAlign.center,
+          ),
+          SizedBox(height: 16),
+          TextButton.icon(
+            onPressed: _clearSearch,
+            icon: Icon(Icons.clear, color: Colors.blue),
+            label:
+                Text('Hapus Pencarian', style: TextStyle(color: Colors.blue)),
+          ),
+        ],
+      ),
     );
   }
 
@@ -704,22 +763,37 @@ class _EmployeeDashboardResourceState extends State<EmployeeDashboardResource>
                 ),
                 const SizedBox(height: 8), // Spasi tambahan
               ],
-
-              // Waktu pembuatan permintaan
               Row(
                 children: [
-                  Icon(Icons.access_time, size: 14, color: Colors.grey[500]),
-                  const SizedBox(width: 6),
+                  Icon(
+                    request.status == 'completed'
+                        ? Icons.check_circle
+                        : Icons.access_time,
+                    size: 14,
+                    color: request.status == 'completed'
+                        ? Colors.green[700]
+                        : Colors.grey[500],
+                  ),
+                  const SizedBox(width: 8),
                   Text(
-                    _getFormattedDate(request.createdAt),
+                    request.status == 'completed' &&
+                            request.completionDate != null
+                        // Jika selesai: tampilkan tanggal selesai
+                        ? 'Selesai: ${DateFormat('d MMM yyyy, HH:mm', 'id_ID').format(request.completionDate!)}'
+                        // Jika belum: tampilkan waktu yang lalu
+                        : 'Dibuat: ${_getTimeAgo(request.createdAt)}',
                     style: TextStyle(
                       fontSize: 12,
-                      color: Colors.grey[600],
+                      color: request.status == 'completed'
+                          ? Colors.green[800]
+                          : Colors.grey[600],
+                      fontWeight: request.status == 'completed'
+                          ? FontWeight.w500
+                          : FontWeight.normal,
                     ),
                   ),
                 ],
               ),
-
               // --- INFO TEKNISI (JIKA ADA) ---
               if (request.status == 'inProgress' &&
                   request.technicianName != null) ...[
@@ -756,6 +830,21 @@ class _EmployeeDashboardResourceState extends State<EmployeeDashboardResource>
         ),
       ),
     );
+  }
+
+  String _getTimeAgo(DateTime dateTime) {
+    final now = DateTime.now();
+    final difference = now.difference(dateTime);
+
+    if (difference.inDays > 0) {
+      return '${difference.inDays}d ago';
+    } else if (difference.inHours > 0) {
+      return '${difference.inHours}h ago';
+    } else if (difference.inMinutes > 0) {
+      return '${difference.inMinutes}m ago';
+    } else {
+      return 'Just now';
+    }
   }
 
   String _getFormattedDate(DateTime date) {
@@ -913,51 +1002,16 @@ class _EmployeeDashboardResourceState extends State<EmployeeDashboardResource>
     );
   }
 
-  void _showSearchDialog() {
-    showDialog(
-      context: context,
-      builder: (context) => AlertDialog(
-        title: const Text('Cari Permintaan'),
-        content: TextField(
-          controller: _searchController,
-          decoration: const InputDecoration(
-            labelText: 'Cari',
-            hintText: 'Ketik deskripsi, waktu, nama teknisi...',
-            prefixIcon: Icon(Icons.search),
-            border: OutlineInputBorder(),
-          ),
-          onChanged: (value) {
-            // Pencarian langsung saat mengetik
-            setState(() {
-              _searchQuery = value;
-            });
-          },
-        ),
-        actions: [
-          TextButton(
-            onPressed: () {
-              setState(() {
-                _searchQuery = '';
-                _searchController.clear();
-              });
-              Navigator.pop(context);
-            },
-            child: const Text('Hapus'),
-          ),
-          TextButton(
-            onPressed: () => Navigator.pop(context),
-            child: const Text('Selesai'),
-          ),
-        ],
-      ),
-    );
-  }
-
   void _showFilterDialog() {
     showDialog(
       context: context,
       builder: (context) => AlertDialog(
-        title: const Text('Filter Berdasarkan Waktu'),
+        title: const Text(
+          'Filter Berdasarkan Waktu',
+          style: TextStyle(
+            fontSize: 16,
+          ),
+        ),
         content: Column(
           mainAxisSize: MainAxisSize.min,
           children: [
