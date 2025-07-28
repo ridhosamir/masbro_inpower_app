@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
 import 'package:masbro_inpower_app/models/user_model.dart';
 import 'package:masbro_inpower_app/screens/technician/maintenanceApp/technician_dashboard.dart';
+import 'package:masbro_inpower_app/screens/technician/operasionalApp/driver_dashboard.dart';
 import 'package:masbro_inpower_app/screens/technician/resourceApp/technician_dashboard.dart';
 import 'package:masbro_inpower_app/services/auth_service.dart';
 import 'package:masbro_inpower_app/services/user_service.dart';
@@ -260,11 +261,10 @@ class _HomeDashboardTechnicianState extends State<HomeDashboardTechnician> {
           icon: Icons.directions_car,
           color: Colors.red,
           onTap: () {
-            ScaffoldMessenger.of(context).showSnackBar(
-              const SnackBar(
-                content: Text('Aplikasi Operasional akan segera tersedia!'),
-                backgroundColor: Colors.blue,
-              ),
+            Navigator.push(
+              context,
+              MaterialPageRoute(
+                  builder: (context) => DriverDashboard()),
             );
           },
         ),

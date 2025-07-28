@@ -58,16 +58,27 @@ class _AssignDriverVehicleScreenState extends State<AssignDriverVehicleScreen> {
     setState(() => _isLoading = true);
 
     try {
-      final allTechnicians = await _userService.getTechnicians();
-      final assignedDriverIds = await _getAssignedDriverIds();
+      // Method 1: Get available technicians using direct query on drivers collection
+      final availableDriversSnapshot = await _firestore
+          .collection('drivers')
+          .where('isAvailable', isEqualTo: true)
+          .get();
 
-      // Filter available technicians (contains 'driver' in name and not assigned)
-      final availableTechnicians = allTechnicians
-          .where((tech) =>
-              tech.name.toLowerCase().contains('driver') &&
-              !assignedDriverIds.contains(tech.uid))
-          .toList();
+      List<UserModel> availableTechnicians = [];
 
+      // For each available driver, get the corresponding user data
+      for (var driverDoc in availableDriversSnapshot.docs) {
+        try {
+          final userData = await _userService.getUserData(driverDoc.id);
+          if (userData.name.toLowerCase().contains('driver')) {
+            availableTechnicians.add(userData);
+          }
+        } catch (e) {
+          print('Error fetching user data for driver ${driverDoc.id}: $e');
+        }
+      }
+
+      // Get available vehicles
       final availableVehicles =
           await _firestoreService.getAvailableVehicles().first;
 
@@ -92,17 +103,33 @@ class _AssignDriverVehicleScreenState extends State<AssignDriverVehicleScreen> {
     }
   }
 
+  // Original method kept as reference but replaced with direct query to drivers collection
   Future<List<String>> _getAssignedDriverIds() async {
     try {
+      // Query ride requests with 'inProgress' status (not 'in-progress')
       final snapshot = await _firestore
           .collection('ride_requests')
-          .where('status', whereIn: ['assigned', 'in-progress']).get();
+          .where('status', isEqualTo: 'inProgress')
+          .get();
 
-      return snapshot.docs
+      // Extract all driver IDs from active requests
+      final driverIds = snapshot.docs
           .map((doc) => doc.data()['driverId'] as String?)
           .where((id) => id != null)
           .cast<String>()
           .toList();
+
+      // Also check drivers collection for unavailable drivers
+      final driversSnapshot = await _firestore
+          .collection('drivers')
+          .where('isAvailable', isEqualTo: false)
+          .get();
+
+      final unavailableDriverIds =
+          driversSnapshot.docs.map((doc) => doc.id).toList();
+
+      // Combine both lists and remove duplicates
+      return [...driverIds, ...unavailableDriverIds].toSet().toList();
     } catch (e) {
       debugPrint('Error getting assigned drivers: $e');
       return [];
@@ -135,32 +162,13 @@ class _AssignDriverVehicleScreenState extends State<AssignDriverVehicleScreen> {
     setState(() => _isAssigning = true);
 
     try {
-      final batch = _firestore.batch();
-
-      // Update ride request
-      final requestRef =
-          _firestore.collection('ride_requests').doc(widget.request.id);
-      batch.update(requestRef, {
-        'driverId': _selectedTechnician!.uid,
-        'driverName': _selectedTechnician!.name,
-        'vehicleId': _selectedVehicle!.id,
-        'vehicleInfo':
-            '${_selectedVehicle!.vehicleType} ${_selectedVehicle!.vehicleModel} - ${_selectedVehicle!.licensePlate}',
-        'status': 'in-progress',
-        'updatedAt': FieldValue.serverTimestamp(),
-      });
-
-      // Update vehicle
-      final vehicleRef =
-          _firestore.collection('vehicles').doc(_selectedVehicle!.id);
-      batch.update(vehicleRef, {
-        'status': 'in-use',
-        'currentDriverId': _selectedTechnician!.uid,
-        'currentDriverName': _selectedTechnician!.name,
-        'updatedAt': FieldValue.serverTimestamp(),
-      });
-
-      await batch.commit();
+      await _firestoreService.assignDriverAndVehicle(
+        widget.request.id,
+        _selectedTechnician!.uid,
+        _selectedTechnician!.name,
+        _selectedVehicle!.id,
+        "${_selectedVehicle!.vehicleType} ${_selectedVehicle!.vehicleModel} - ${_selectedVehicle!.licensePlate}",
+      );
 
       if (mounted) {
         setState(() => _isAssigning = false);
