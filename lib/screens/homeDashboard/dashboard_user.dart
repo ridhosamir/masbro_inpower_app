@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
 import 'package:masbro_inpower_app/models/user_model.dart';
 import 'package:masbro_inpower_app/screens/employee/maintenanceApp/employee_dashboard.dart';
+import 'package:masbro_inpower_app/screens/employee/operasionalApp/employee_dashboard.dart';
 import 'package:masbro_inpower_app/screens/employee/resourceApp/employee_dashboard.dart';
 import 'package:masbro_inpower_app/services/auth_service.dart';
 import 'package:masbro_inpower_app/services/user_service.dart';
@@ -250,11 +251,10 @@ class _HomeDashboardUserState extends State<HomeDashboardUser> {
           icon: Icons.directions_car,
           color: Colors.red,
           onTap: () {
-            ScaffoldMessenger.of(context).showSnackBar(
-              const SnackBar(
-                content: Text('Aplikasi Operasional akan segera tersedia!'),
-                backgroundColor: Colors.blue,
-              ),
+            Navigator.push(
+              context,
+              MaterialPageRoute(
+                  builder: (context) => EmployeeDashboardOprational()),
             );
           },
         ),
