@@ -2,7 +2,6 @@ import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
 import 'package:masbro_inpower_app/models/user_model.dart';
 import 'package:masbro_inpower_app/screens/officer/maintenanceApp/officer_dashboard.dart';
-import 'package:masbro_inpower_app/screens/officer/resourceApp/officer_dashboard.dart';
 import 'package:masbro_inpower_app/services/auth_service.dart';
 import 'package:masbro_inpower_app/services/user_service.dart';
 import 'package:provider/provider.dart';
@@ -233,40 +232,14 @@ class _HomeDashboardOfficerState extends State<HomeDashboardOfficer> {
         ),
         _buildAppCard(
           context: context,
-          title: 'Resource/Item',
+          title: 'Resource',
           icon: Icons.groups,
           color: Colors.blue,
           onTap: () {
-            Navigator.push(
-              context,
-              MaterialPageRoute(
-                  builder: (context) => OfficerDashboardResource()),
-            );
-          },
-        ),
-        _buildAppCard(
-          context: context,
-          title: 'Operational',
-          icon: Icons.directions_car,
-          color: Colors.red,
-          onTap: () {
+            // Aksi untuk aplikasi yang belum tersedia
             ScaffoldMessenger.of(context).showSnackBar(
               const SnackBar(
-                content: Text('Aplikasi Operasional akan segera tersedia!'),
-                backgroundColor: Colors.blue,
-              ),
-            );
-          },
-        ),
-        _buildAppCard(
-          context: context,
-          title: 'Booking Room',
-          icon: Icons.meeting_room,
-          color: Colors.teal,
-          onTap: () {
-            ScaffoldMessenger.of(context).showSnackBar(
-              const SnackBar(
-                content: Text('Aplikasi Booking Room akan segera tersedia!'),
+                content: Text('Aplikasi Resource akan segera tersedia!'),
                 backgroundColor: Colors.blue,
               ),
             );
