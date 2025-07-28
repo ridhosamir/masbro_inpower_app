@@ -6,46 +6,34 @@ import '../../../services/operasionalApp/firestore_service.dart';
 import '../../../services/user_service.dart';
 import '../../../models/operasionalApp/ride_request_model.dart';
 import '../../../models/user_model.dart';
+import '../../../widgets/custom_button.dart';
 import '../../../widgets/custom_text_field.dart';
-import 'vehicle_manage_screen.dart';
-import 'driver_manage_screen.dart';
-import 'ride_request_detail_screen.dart';
-import 'assign_driver_vehicle_screen.dart';
 
-class OfficerDashboardOprational extends StatefulWidget {
+class DriverDashboard extends StatefulWidget {
   @override
-  _OfficerDashboardState createState() => _OfficerDashboardState();
+  _DriverDashboardState createState() => _DriverDashboardState();
 }
 
-class _OfficerDashboardState extends State<OfficerDashboardOprational>
-    with TickerProviderStateMixin {
+class _DriverDashboardState extends State<DriverDashboard>
+    with SingleTickerProviderStateMixin {
   final OperasionalFirestoreService _firestoreService =
       OperasionalFirestoreService();
+  final _completionNoteController = TextEditingController();
   UserModel? currentUser;
   late TabController _tabController;
-  String _selectedFilter = 'all';
-  String _searchQuery = '';
-  final _searchController = TextEditingController();
-  final _completionReasonController = TextEditingController();
-  bool _isCompleting = false;
+  bool _isLoading = false;
 
   @override
   void initState() {
     super.initState();
-    _tabController = TabController(length: 4, vsync: this);
+    _tabController = TabController(length: 2, vsync: this);
     _loadUserData();
-
-    // Run sync on app startup to fix any inconsistent driver/vehicle status
-    WidgetsBinding.instance.addPostFrameCallback((_) {
-      _firestoreService.syncDriverVehicleStatus();
-    });
   }
 
   @override
   void dispose() {
     _tabController.dispose();
-    _searchController.dispose();
-    _completionReasonController.dispose();
+    _completionNoteController.dispose();
     super.dispose();
   }
 
@@ -54,21 +42,17 @@ class _OfficerDashboardState extends State<OfficerDashboardOprational>
     final userService = Provider.of<UserService>(context, listen: false);
 
     if (authService.user != null) {
-      try {
-        final userData = await userService.getUserData(authService.user!.uid);
-        if (mounted) {
-          setState(() {
-            currentUser = userData;
-          });
-        }
-      } catch (e) {
-        print('Error loading user data: $e');
-      }
+      final userData = await userService.getUserData(authService.user!.uid);
+      setState(() {
+        currentUser = userData;
+      });
     }
   }
 
   @override
   Widget build(BuildContext context) {
+    final authService = Provider.of<AuthService>(context);
+
     return Scaffold(
       body: NestedScrollView(
         headerSliverBuilder: (context, innerBoxIsScrolled) {
@@ -144,7 +128,7 @@ class _OfficerDashboardState extends State<OfficerDashboardOprational>
                                     ),
                                     child: Center(
                                       child: Icon(
-                                        Icons.supervisor_account,
+                                        Icons.directions_car,
                                         color: Colors.white,
                                         size: 26,
                                       ),
@@ -189,7 +173,7 @@ class _OfficerDashboardState extends State<OfficerDashboardOprational>
                               Padding(
                                 padding: EdgeInsets.only(top: 16, left: 4),
                                 child: Text(
-                                  'Manage and review transportation requests',
+                                  'Manage your assigned rides',
                                   style: TextStyle(
                                     color: Colors.white.withOpacity(0.85),
                                     fontSize: 14,
@@ -200,19 +184,19 @@ class _OfficerDashboardState extends State<OfficerDashboardOprational>
 
                               SizedBox(height: 8),
                               StreamBuilder<List<RideRequestModel>>(
-                                stream: _firestoreService.getRideRequests(),
+                                stream:
+                                    _firestoreService.getRideRequestsByDriver(
+                                  authService.user!.uid,
+                                ),
                                 builder: (context, snapshot) {
                                   final requests = snapshot.data ?? [];
-                                  final open = requests
-                                      .where((r) => r.status == 'open')
-                                      .length;
                                   final inProgress = requests
                                       .where((r) => r.status == 'inProgress')
                                       .length;
 
                                   if (requests.isEmpty) {
                                     return Text(
-                                      'No requests to review yet',
+                                      'No rides assigned yet',
                                       style: TextStyle(
                                         color: Colors.white.withOpacity(0.7),
                                         fontSize: 12,
@@ -221,7 +205,7 @@ class _OfficerDashboardState extends State<OfficerDashboardOprational>
                                   }
 
                                   return Text(
-                                    '${requests.length} total requests · $open open · $inProgress in progress',
+                                    '${requests.length} total rides · $inProgress in progress',
                                     style: TextStyle(
                                       color: Colors.white.withOpacity(0.7),
                                       fontSize: 12,
@@ -238,31 +222,6 @@ class _OfficerDashboardState extends State<OfficerDashboardOprational>
                 ),
               ),
               actions: [
-                IconButton(
-                  icon: Container(
-                    padding: EdgeInsets.all(4),
-                    decoration: BoxDecoration(
-                      color: Colors.white.withOpacity(0.2),
-                      shape: BoxShape.circle,
-                    ),
-                    child: Icon(Icons.search, color: Colors.white, size: 18),
-                  ),
-                  onPressed: _showSearchDialog,
-                  tooltip: 'Search Requests',
-                ),
-                IconButton(
-                  icon: Container(
-                    padding: EdgeInsets.all(4),
-                    decoration: BoxDecoration(
-                      color: Colors.white.withOpacity(0.2),
-                      shape: BoxShape.circle,
-                    ),
-                    child:
-                        Icon(Icons.filter_list, color: Colors.white, size: 18),
-                  ),
-                  onPressed: _showFilterDialog,
-                  tooltip: 'Filter Requests',
-                ),
                 PopupMenuButton<String>(
                   icon: Container(
                     padding: EdgeInsets.all(4),
@@ -281,9 +240,6 @@ class _OfficerDashboardState extends State<OfficerDashboardOprational>
                       case 'profile':
                         _showProfileDialog();
                         break;
-                      case 'sync':
-                        _syncDriverVehicleStatus();
-                        break;
                       case 'back':
                         Navigator.pop(context);
                         break;
@@ -295,15 +251,6 @@ class _OfficerDashboardState extends State<OfficerDashboardOprational>
                       child: ListTile(
                         leading: Icon(Icons.person),
                         title: Text('Profile'),
-                        contentPadding: EdgeInsets.zero,
-                      ),
-                    ),
-                    PopupMenuItem(
-                      value: 'sync',
-                      child: ListTile(
-                        leading: Icon(Icons.sync, color: Colors.blue),
-                        title: Text('Sync Driver/Vehicle Status',
-                            style: TextStyle(color: Colors.blue)),
                         contentPadding: EdgeInsets.zero,
                       ),
                     ),
@@ -335,8 +282,6 @@ class _OfficerDashboardState extends State<OfficerDashboardOprational>
                   fontSize: 13,
                 ),
                 tabs: [
-                  Tab(text: 'All'),
-                  Tab(text: 'Open'),
                   Tab(text: 'In Progress'),
                   Tab(text: 'Completed'),
                 ],
@@ -352,136 +297,11 @@ class _OfficerDashboardState extends State<OfficerDashboardOprational>
               child: _buildStatisticsCards(),
             ),
 
-            // Quick Action Buttons
-            Container(
-              padding: EdgeInsets.symmetric(horizontal: 16, vertical: 8),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Text(
-                    'Quick Actions',
-                    style: TextStyle(
-                      fontSize: 16,
-                      fontWeight: FontWeight.bold,
-                      color: Colors.grey[700],
-                    ),
-                  ),
-                  SizedBox(height: 12),
-                  Row(
-                    children: [
-                      Expanded(
-                        child: _buildActionButton(
-                          icon: Icons.directions_car,
-                          label: 'Vehicle Management',
-                          color: Colors.purple,
-                          onTap: () {
-                            Navigator.push(
-                              context,
-                              MaterialPageRoute(
-                                builder: (context) => VehicleManagementScreen(),
-                              ),
-                            );
-                          },
-                        ),
-                      ),
-                      SizedBox(width: 12),
-                    ],
-                  ),
-                ],
-              ),
-            ),
-            SizedBox(height: 8),
-
-            // Search Results Info
-            if (_searchQuery.isNotEmpty)
-              Container(
-                margin: EdgeInsets.symmetric(horizontal: 16),
-                padding: EdgeInsets.all(12),
-                decoration: BoxDecoration(
-                  color: Colors.blue[50],
-                  borderRadius: BorderRadius.circular(12),
-                  border: Border.all(color: Colors.blue[200]!),
-                ),
-                child: Row(
-                  children: [
-                    Icon(Icons.search, color: Colors.blue[700], size: 16),
-                    SizedBox(width: 8),
-                    Expanded(
-                      child: Text(
-                        'Searching for: "$_searchQuery"',
-                        style: TextStyle(
-                          color: Colors.blue[700],
-                          fontSize: 12,
-                          fontWeight: FontWeight.w600,
-                        ),
-                      ),
-                    ),
-                    GestureDetector(
-                      onTap: () {
-                        setState(() {
-                          _searchQuery = '';
-                          _searchController.clear();
-                        });
-                      },
-                      child:
-                          Icon(Icons.close, color: Colors.blue[700], size: 16),
-                    ),
-                  ],
-                ),
-              ),
-
-            // Filter indicator
-            if (_selectedFilter != 'all')
-              Container(
-                margin: EdgeInsets.symmetric(
-                    horizontal: 16, vertical: _searchQuery.isNotEmpty ? 8 : 0),
-                padding: EdgeInsets.all(12),
-                decoration: BoxDecoration(
-                  color: Colors.purple[50],
-                  borderRadius: BorderRadius.circular(12),
-                  border: Border.all(color: Colors.purple[200]!),
-                ),
-                child: Row(
-                  children: [
-                    Icon(
-                        _selectedFilter == 'today'
-                            ? Icons.today
-                            : _selectedFilter == 'week'
-                                ? Icons.date_range
-                                : Icons.calendar_month,
-                        color: Colors.purple[700],
-                        size: 16),
-                    SizedBox(width: 8),
-                    Expanded(
-                      child: Text(
-                        'Filtered by: ${_selectedFilter == 'today' ? 'Today' : _selectedFilter == 'week' ? 'This Week' : 'This Month'}',
-                        style: TextStyle(
-                          color: Colors.purple[700],
-                          fontSize: 12,
-                          fontWeight: FontWeight.w600,
-                        ),
-                      ),
-                    ),
-                    GestureDetector(
-                      onTap: () {
-                        setState(() {
-                          _selectedFilter = 'all';
-                        });
-                      },
-                      child: Icon(Icons.close,
-                          color: Colors.purple[700], size: 16),
-                    ),
-                  ],
-                ),
-              ),
-
-            // Ride Requests List
+            // Requests List
             Expanded(
               child: TabBarView(
                 controller: _tabController,
                 children: [
-                  _buildRequestsList('all'),
-                  _buildRequestsList('open'),
                   _buildRequestsList('inProgress'),
                   _buildRequestsList('completed'),
                 ],
@@ -493,114 +313,41 @@ class _OfficerDashboardState extends State<OfficerDashboardOprational>
     );
   }
 
-  // Helper method for syncing driver and vehicle status
-  Future<void> _syncDriverVehicleStatus() async {
-    try {
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: Text('Syncing driver and vehicle status...'),
-          backgroundColor: Colors.blue,
-          behavior: SnackBarBehavior.floating,
-        ),
-      );
-
-      await _firestoreService.syncDriverVehicleStatus();
-
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: Text('Driver and vehicle status synchronized successfully'),
-          backgroundColor: Colors.green,
-          behavior: SnackBarBehavior.floating,
-        ),
-      );
-    } catch (e) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: Text('Error synchronizing status: $e'),
-          backgroundColor: Colors.red,
-          behavior: SnackBarBehavior.floating,
-        ),
-      );
-    }
-  }
-
-  // Helper method for action button
-  Widget _buildActionButton({
-    required IconData icon,
-    required String label,
-    required Color color,
-    required VoidCallback onTap,
-  }) {
-    return InkWell(
-      onTap: onTap,
-      borderRadius: BorderRadius.circular(12),
-      child: Container(
-        padding: EdgeInsets.symmetric(vertical: 16, horizontal: 20),
-        decoration: BoxDecoration(
-          color: color.withOpacity(0.1),
-          borderRadius: BorderRadius.circular(12),
-          border: Border.all(color: color.withOpacity(0.3)),
-        ),
-        child: Row(
-          children: [
-            Icon(
-              icon,
-              color: color,
-              size: 28,
-            ),
-            SizedBox(width: 12),
-            Expanded(
-              child: Text(
-                label,
-                style: TextStyle(
-                  color: color,
-                  fontSize: 14,
-                  fontWeight: FontWeight.w600,
-                ),
-                maxLines: 2,
-                overflow: TextOverflow.ellipsis,
-              ),
-            ),
-          ],
-        ),
-      ),
-    );
-  }
-
   Widget _buildStatisticsCards() {
     return StreamBuilder<List<RideRequestModel>>(
-      stream: _firestoreService.getRideRequests(),
+      stream: _firestoreService.getRideRequestsByDriver(
+        Provider.of<AuthService>(context, listen: false).user!.uid,
+      ),
       builder: (context, snapshot) {
         final requests = snapshot.data ?? [];
-        final open = requests.where((r) => r.status == 'open').length;
         final inProgress =
             requests.where((r) => r.status == 'inProgress').length;
         final completed = requests.where((r) => r.status == 'completed').length;
         final today = DateTime.now();
         final todayRequests = requests
             .where((r) =>
-                r.createdAt.year == today.year &&
-                r.createdAt.month == today.month &&
-                r.createdAt.day == today.day)
+                r.pickupDateTime.year == today.year &&
+                r.pickupDateTime.month == today.month &&
+                r.pickupDateTime.day == today.day)
             .length;
 
         return Row(
           children: [
             Expanded(
               child: _buildStatCard(
-                title: 'All Requests',
+                title: 'Total Rides',
                 count: requests.length,
-                icon: Icons.assignment,
+                icon: Icons.directions_car,
                 color: Colors.blue,
               ),
             ),
             SizedBox(width: 8),
             Expanded(
               child: _buildStatCard(
-                title: 'Open',
-                count: open,
-                icon: Icons.pending,
-                color: Colors.orange,
+                title: 'In Progress',
+                count: inProgress,
+                icon: Icons.directions_car,
+                color: Colors.blue,
               ),
             ),
             SizedBox(width: 8),
@@ -615,10 +362,10 @@ class _OfficerDashboardState extends State<OfficerDashboardOprational>
             SizedBox(width: 8),
             Expanded(
               child: _buildStatCard(
-                title: 'In Progress',
-                count: inProgress,
-                icon: Icons.directions_car,
-                color: Colors.blue,
+                title: 'Completed',
+                count: completed,
+                icon: Icons.check_circle,
+                color: Colors.green,
               ),
             ),
           ],
@@ -672,8 +419,10 @@ class _OfficerDashboardState extends State<OfficerDashboardOprational>
   }
 
   Widget _buildRequestsList(String status) {
+    final authService = Provider.of<AuthService>(context);
+
     return StreamBuilder<List<RideRequestModel>>(
-      stream: _firestoreService.getRideRequests(),
+      stream: _firestoreService.getRideRequestsByDriver(authService.user!.uid),
       builder: (context, snapshot) {
         if (snapshot.connectionState == ConnectionState.waiting) {
           return Center(
@@ -682,7 +431,7 @@ class _OfficerDashboardState extends State<OfficerDashboardOprational>
               children: [
                 CircularProgressIndicator(),
                 SizedBox(height: 16),
-                Text('Loading requests...'),
+                Text('Loading rides...'),
               ],
             ),
           );
@@ -695,7 +444,7 @@ class _OfficerDashboardState extends State<OfficerDashboardOprational>
               children: [
                 Icon(Icons.error, size: 64, color: Colors.red),
                 SizedBox(height: 16),
-                Text('Error loading requests'),
+                Text('Error loading rides'),
                 SizedBox(height: 8),
                 Text(
                   '${snapshot.error}',
@@ -715,64 +464,19 @@ class _OfficerDashboardState extends State<OfficerDashboardOprational>
         List<RideRequestModel> requests = snapshot.data ?? [];
 
         // Filter requests based on status
-        if (status != 'all') {
-          requests = requests.where((r) => r.status == status).toList();
-        }
+        requests = requests.where((r) => r.status == status).toList();
 
-        // Apply search filter
-        if (_searchQuery.isNotEmpty) {
-          requests = requests
-              .where((r) =>
-                  r.pickupLocation
-                      .toLowerCase()
-                      .contains(_searchQuery.toLowerCase()) ||
-                  r.dropoffLocation
-                      .toLowerCase()
-                      .contains(_searchQuery.toLowerCase()) ||
-                  r.employeeName
-                      .toLowerCase()
-                      .contains(_searchQuery.toLowerCase()) ||
-                  r.description
-                      .toLowerCase()
-                      .contains(_searchQuery.toLowerCase()) ||
-                  (r.driverName != null &&
-                      r.driverName!
-                          .toLowerCase()
-                          .contains(_searchQuery.toLowerCase())) ||
-                  (r.vehicleName != null &&
-                      r.vehicleName!
-                          .toLowerCase()
-                          .contains(_searchQuery.toLowerCase())))
-              .toList();
+        // Sort requests by pickup date (nearest first for in progress, most recent completion for completed)
+        if (status == 'inProgress') {
+          requests.sort((a, b) => a.pickupDateTime.compareTo(b.pickupDateTime));
+        } else {
+          requests.sort((a, b) {
+            if (a.completedAt == null && b.completedAt == null) return 0;
+            if (a.completedAt == null) return 1;
+            if (b.completedAt == null) return -1;
+            return b.completedAt!.compareTo(a.completedAt!);
+          });
         }
-
-        // Apply additional filter
-        if (_selectedFilter != 'all') {
-          switch (_selectedFilter) {
-            case 'today':
-              final today = DateTime.now();
-              requests = requests
-                  .where((r) =>
-                      r.createdAt.year == today.year &&
-                      r.createdAt.month == today.month &&
-                      r.createdAt.day == today.day)
-                  .toList();
-              break;
-            case 'week':
-              final weekAgo = DateTime.now().subtract(Duration(days: 7));
-              requests =
-                  requests.where((r) => r.createdAt.isAfter(weekAgo)).toList();
-              break;
-            case 'month':
-              final monthAgo = DateTime.now().subtract(Duration(days: 30));
-              requests =
-                  requests.where((r) => r.createdAt.isAfter(monthAgo)).toList();
-              break;
-          }
-        }
-
-        // Sort requests by creation date (newest first)
-        requests.sort((a, b) => b.createdAt.compareTo(a.createdAt));
 
         if (requests.isEmpty) {
           return _buildEmptyState(status);
@@ -783,7 +487,7 @@ class _OfficerDashboardState extends State<OfficerDashboardOprational>
             setState(() {});
           },
           child: ListView.builder(
-            padding: EdgeInsets.symmetric(horizontal: 8, vertical: 8),
+            padding: EdgeInsets.symmetric(horizontal: 16, vertical: 8),
             itemCount: requests.length,
             itemBuilder: (context, index) {
               return _buildRequestCard(requests[index]);
@@ -796,11 +500,11 @@ class _OfficerDashboardState extends State<OfficerDashboardOprational>
 
   Widget _buildRequestCard(RideRequestModel request) {
     return Card(
-      margin: EdgeInsets.symmetric(horizontal: 8, vertical: 6),
-      elevation: 3,
+      margin: EdgeInsets.symmetric(vertical: 8),
+      elevation: 2,
       shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
       child: InkWell(
-        onTap: () => _navigateToRequestDetail(request),
+        onTap: () => _showRequestDetail(request),
         borderRadius: BorderRadius.circular(16),
         child: Container(
           padding: EdgeInsets.all(16),
@@ -856,36 +560,9 @@ class _OfficerDashboardState extends State<OfficerDashboardOprational>
                   _buildStatusChip(request.status),
                 ],
               ),
-              SizedBox(height: 16),
-
-              // Reporter and date info
-              Row(
-                children: [
-                  Icon(Icons.person, size: 16, color: Colors.grey[500]),
-                  SizedBox(width: 8),
-                  Text(
-                    'By ${request.employeeName}',
-                    style: TextStyle(
-                      fontSize: 12,
-                      color: Colors.grey[600],
-                      fontWeight: FontWeight.w500,
-                    ),
-                  ),
-                  SizedBox(width: 16),
-                  Icon(Icons.access_time, size: 16, color: Colors.grey[500]),
-                  SizedBox(width: 8),
-                  Text(
-                    _getTimeAgo(request.createdAt),
-                    style: TextStyle(
-                      fontSize: 12,
-                      color: Colors.grey[600],
-                    ),
-                  ),
-                ],
-              ),
               SizedBox(height: 12),
 
-              // Pickup and Return Time
+              // Pickup time and passenger info
               Row(
                 children: [
                   Icon(Icons.event, size: 16, color: Colors.grey[500]),
@@ -893,25 +570,58 @@ class _OfficerDashboardState extends State<OfficerDashboardOprational>
                   Text(
                     'Pickup: ${DateFormat('MMM dd, HH:mm').format(request.pickupDateTime)}',
                     style: TextStyle(
-                      fontSize: 12,
+                      fontSize: 14,
+                      color: Colors.grey[600],
+                      fontWeight: FontWeight.w500,
+                    ),
+                  ),
+                ],
+              ),
+              SizedBox(height: 4),
+              Row(
+                children: [
+                  Icon(Icons.group, size: 16, color: Colors.grey[500]),
+                  SizedBox(width: 8),
+                  Text(
+                    'Passengers: ${request.passengerCapacity}',
+                    style: TextStyle(
+                      fontSize: 14,
                       color: Colors.grey[600],
                     ),
                   ),
-                  if (request.returnDateTime != null) ...[
-                    SizedBox(width: 16),
-                    Icon(Icons.event_available,
+                ],
+              ),
+              SizedBox(height: 4),
+              Row(
+                children: [
+                  Icon(Icons.person, size: 16, color: Colors.grey[500]),
+                  SizedBox(width: 8),
+                  Text(
+                    'Requester: ${request.employeeName}',
+                    style: TextStyle(
+                      fontSize: 14,
+                      color: Colors.grey[600],
+                    ),
+                  ),
+                ],
+              ),
+              if (request.vehicleName != null) ...[
+                SizedBox(height: 4),
+                Row(
+                  children: [
+                    Icon(Icons.directions_car,
                         size: 16, color: Colors.grey[500]),
                     SizedBox(width: 8),
                     Text(
-                      'Return: ${DateFormat('MMM dd, HH:mm').format(request.returnDateTime!)}',
+                      'Vehicle: ${request.vehicleName}',
                       style: TextStyle(
-                        fontSize: 12,
+                        fontSize: 14,
                         color: Colors.grey[600],
                       ),
                     ),
                   ],
-                ],
-              ),
+                ),
+              ],
               SizedBox(height: 12),
 
               // Description
@@ -934,131 +644,47 @@ class _OfficerDashboardState extends State<OfficerDashboardOprational>
                 ),
               ),
 
-              // Action buttons for open requests
-              if (request.status == 'open') ...[
-                SizedBox(height: 16),
-                Row(
-                  children: [
-                    Expanded(
-                      child: ElevatedButton.icon(
-                        onPressed: () =>
-                            _navigateToAssignDriverVehicle(request),
-                        icon: Icon(Icons.directions_car, size: 16),
-                        label: Text('Assign'),
-                        style: ElevatedButton.styleFrom(
-                          backgroundColor: Colors.blue,
-                          foregroundColor: Colors.white,
-                          padding: EdgeInsets.symmetric(vertical: 8),
-                          shape: RoundedRectangleBorder(
-                            borderRadius: BorderRadius.circular(8),
+              // Return trip info if available
+              if (request.returnDateTime != null) ...[
+                SizedBox(height: 12),
+                Container(
+                  width: double.infinity,
+                  padding: EdgeInsets.all(12),
+                  decoration: BoxDecoration(
+                    color: Colors.amber[50],
+                    borderRadius: BorderRadius.circular(8),
+                    border: Border.all(color: Colors.amber[200]!),
+                  ),
+                  child: Row(
+                    children: [
+                      Icon(Icons.event_available,
+                          color: Colors.amber[700], size: 16),
+                      SizedBox(width: 8),
+                      Expanded(
+                        child: Text(
+                          'Return trip scheduled for ${DateFormat('MMM dd, HH:mm').format(request.returnDateTime!)}',
+                          style: TextStyle(
+                            color: Colors.amber[700],
+                            fontWeight: FontWeight.w500,
                           ),
                         ),
                       ),
-                    ),
-                    SizedBox(width: 12),
-                    Expanded(
-                      child: ElevatedButton.icon(
-                        onPressed: () => _showCompleteDialog(request),
-                        icon: Icon(Icons.check_circle, size: 16),
-                        label: Text('Complete'),
-                        style: ElevatedButton.styleFrom(
-                          backgroundColor: Colors.green,
-                          foregroundColor: Colors.white,
-                          padding: EdgeInsets.symmetric(vertical: 8),
-                          shape: RoundedRectangleBorder(
-                            borderRadius: BorderRadius.circular(8),
-                          ),
-                        ),
-                      ),
-                    ),
-                  ],
+                    ],
+                  ),
                 ),
               ],
 
-              // Show driver and vehicle info for inProgress requests
+              // Action button for in-progress tasks
               if (request.status == 'inProgress') ...[
                 SizedBox(height: 16),
-                if (request.driverName != null && request.vehicleName != null)
-                  Container(
-                    width: double.infinity,
-                    padding: EdgeInsets.symmetric(vertical: 8, horizontal: 12),
-                    decoration: BoxDecoration(
-                      color: Colors.blue[50],
-                      borderRadius: BorderRadius.circular(8),
-                      border: Border.all(color: Colors.blue[200]!),
-                    ),
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        Row(
-                          children: [
-                            Icon(Icons.person,
-                                color: Colors.blue[700], size: 16),
-                            SizedBox(width: 8),
-                            Expanded(
-                              child: Text(
-                                'Driver: ${request.driverName}',
-                                style: TextStyle(
-                                  color: Colors.blue[700],
-                                  fontWeight: FontWeight.w500,
-                                ),
-                              ),
-                            ),
-                          ],
-                        ),
-                        SizedBox(height: 4),
-                        Row(
-                          children: [
-                            Icon(Icons.directions_car,
-                                color: Colors.blue[700], size: 16),
-                            SizedBox(width: 8),
-                            Expanded(
-                              child: Text(
-                                'Vehicle: ${request.vehicleName}',
-                                style: TextStyle(
-                                  color: Colors.blue[700],
-                                  fontWeight: FontWeight.w500,
-                                ),
-                              ),
-                            ),
-                          ],
-                        ),
-                        SizedBox(height: 8),
-                        Row(
-                          mainAxisAlignment: MainAxisAlignment.end,
-                          children: [
-                            TextButton(
-                              onPressed: () => _showCompleteDialog(request),
-                              child: Text('Complete'),
-                              style: TextButton.styleFrom(
-                                foregroundColor: Colors.green,
-                              ),
-                            ),
-                          ],
-                        ),
-                      ],
-                    ),
-                  )
-                else
-                  SizedBox(
-                    width: double.infinity,
-                    child: ElevatedButton.icon(
-                      onPressed: () => _navigateToAssignDriverVehicle(request),
-                      icon: Icon(Icons.directions_car, size: 16),
-                      label: Text('Assign Driver & Vehicle'),
-                      style: ElevatedButton.styleFrom(
-                        backgroundColor: Colors.blue,
-                        foregroundColor: Colors.white,
-                        padding: EdgeInsets.symmetric(vertical: 8),
-                        shape: RoundedRectangleBorder(
-                          borderRadius: BorderRadius.circular(8),
-                        ),
-                      ),
-                    ),
-                  ),
+                CustomButton(
+                  text: 'Mark as Completed',
+                  onPressed: () => _showCompleteDialog(request),
+                  backgroundColor: Colors.green,
+                ),
               ],
 
-              // Show completion notes for completed requests
+              // Show completion notes for completed tasks
               if (request.status == 'completed' &&
                   request.completionNote != null) ...[
                 SizedBox(height: 12),
@@ -1088,9 +714,18 @@ class _OfficerDashboardState extends State<OfficerDashboardOprational>
                           fontSize: 12,
                           color: Colors.green[600],
                         ),
-                        maxLines: 2,
-                        overflow: TextOverflow.ellipsis,
                       ),
+                      if (request.completedAt != null) ...[
+                        SizedBox(height: 4),
+                        Text(
+                          'Completed on: ${DateFormat('MMM dd, HH:mm').format(request.completedAt!)}',
+                          style: TextStyle(
+                            fontSize: 12,
+                            color: Colors.green[600],
+                            fontStyle: FontStyle.italic,
+                          ),
+                        ),
+                      ],
                     ],
                   ),
                 ),
@@ -1108,11 +743,6 @@ class _OfficerDashboardState extends State<OfficerDashboardOprational>
     IconData icon;
 
     switch (status) {
-      case 'open':
-        color = Colors.orange;
-        text = 'OPEN';
-        icon = Icons.pending;
-        break;
       case 'inProgress':
         color = Colors.blue;
         text = 'IN PROGRESS';
@@ -1130,7 +760,7 @@ class _OfficerDashboardState extends State<OfficerDashboardOprational>
     }
 
     return Container(
-      padding: EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+      padding: EdgeInsets.symmetric(horizontal: 10, vertical: 6),
       decoration: BoxDecoration(
         color: color.withOpacity(0.1),
         borderRadius: BorderRadius.circular(16),
@@ -1160,25 +790,20 @@ class _OfficerDashboardState extends State<OfficerDashboardOprational>
     IconData icon;
 
     switch (status) {
-      case 'open':
-        message = 'No open requests';
-        description = 'All requests have been reviewed';
-        icon = Icons.pending_actions;
-        break;
       case 'inProgress':
-        message = 'No requests in progress';
-        description = 'No requests are currently being worked on';
+        message = 'No Rides In Progress';
+        description = 'You don\'t have any rides currently in progress';
         icon = Icons.directions_car;
         break;
       case 'completed':
-        message = 'No completed requests';
-        description = 'No requests have been completed yet';
+        message = 'No Completed Rides';
+        description = 'You haven\'t completed any rides yet';
         icon = Icons.check_circle_outline;
         break;
       default:
-        message = 'No requests available';
-        description = 'Requests will appear here when submitted by employees';
-        icon = Icons.assignment_outlined;
+        message = 'No Rides';
+        description = 'You don\'t have any rides';
+        icon = Icons.directions_car_outlined;
     }
 
     return Center(
@@ -1215,104 +840,281 @@ class _OfficerDashboardState extends State<OfficerDashboardOprational>
             ),
             textAlign: TextAlign.center,
           ),
-          if (_searchQuery.isNotEmpty || _selectedFilter != 'all') ...[
-            SizedBox(height: 16),
-            ElevatedButton(
-              onPressed: () {
-                setState(() {
-                  _searchQuery = '';
-                  _selectedFilter = 'all';
-                  _searchController.clear();
-                });
-              },
-              child: Text('Clear Filters'),
-            ),
-          ],
         ],
       ),
     );
   }
 
-  String _getTimeAgo(DateTime dateTime) {
-    final now = DateTime.now();
-    final difference = now.difference(dateTime);
+  void _showRequestDetail(RideRequestModel request) {
+    showModalBottomSheet(
+      context: context,
+      isScrollControlled: true,
+      backgroundColor: Colors.transparent,
+      builder: (context) => Container(
+        height: MediaQuery.of(context).size.height * 0.8,
+        decoration: BoxDecoration(
+          color: Colors.white,
+          borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
+        ),
+        child: Column(
+          children: [
+            // Drag handle
+            Container(
+              width: 40,
+              height: 4,
+              margin: EdgeInsets.symmetric(vertical: 12),
+              decoration: BoxDecoration(
+                color: Colors.grey[300],
+                borderRadius: BorderRadius.circular(2),
+              ),
+            ),
 
-    if (difference.inDays > 0) {
-      return '${difference.inDays}d ago';
-    } else if (difference.inHours > 0) {
-      return '${difference.inHours}h ago';
-    } else if (difference.inMinutes > 0) {
-      return '${difference.inMinutes}m ago';
-    } else {
-      return 'Just now';
-    }
-  }
+            // Header with status
+            Padding(
+              padding: EdgeInsets.symmetric(horizontal: 20),
+              child: Row(
+                mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                children: [
+                  Text(
+                    'Ride Details',
+                    style: TextStyle(
+                      fontSize: 20,
+                      fontWeight: FontWeight.bold,
+                    ),
+                  ),
+                  _buildStatusChip(request.status),
+                ],
+              ),
+            ),
 
-  void _navigateToRequestDetail(RideRequestModel request) {
-    Navigator.push(
-      context,
-      MaterialPageRoute(
-        builder: (context) => RideRequestDetailScreen(request: request),
+            Divider(height: 24),
+
+            // Content
+            Expanded(
+              child: SingleChildScrollView(
+                padding: EdgeInsets.all(20),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    // Ride info card
+                    Container(
+                      padding: EdgeInsets.all(16),
+                      decoration: BoxDecoration(
+                        color: Colors.blue[50],
+                        borderRadius: BorderRadius.circular(12),
+                        border: Border.all(color: Colors.blue[200]!),
+                      ),
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          _buildDetailItem('From', request.pickupLocation,
+                              Icons.location_on),
+                          _buildDetailItem(
+                              'To', request.dropoffLocation, Icons.location_on),
+                          _buildDetailItem(
+                            'Pickup',
+                            DateFormat('dd MMM yyyy, HH:mm')
+                                .format(request.pickupDateTime),
+                            Icons.event,
+                          ),
+                          if (request.returnDateTime != null)
+                            _buildDetailItem(
+                              'Return',
+                              DateFormat('dd MMM yyyy, HH:mm')
+                                  .format(request.returnDateTime!),
+                              Icons.event_available,
+                            ),
+                          _buildDetailItem(
+                            'Passengers',
+                            request.passengerCapacity.toString(),
+                            Icons.group,
+                          ),
+                          _buildDetailItem(
+                            'Requester',
+                            request.employeeName,
+                            Icons.person,
+                          ),
+                          if (request.vehicleName != null)
+                            _buildDetailItem(
+                              'Vehicle',
+                              request.vehicleName!,
+                              Icons.directions_car,
+                            ),
+                        ],
+                      ),
+                    ),
+
+                    SizedBox(height: 20),
+
+                    // Description section
+                    Text(
+                      'Description',
+                      style: TextStyle(
+                        fontWeight: FontWeight.bold,
+                        fontSize: 16,
+                      ),
+                    ),
+                    SizedBox(height: 8),
+                    Container(
+                      width: double.infinity,
+                      padding: EdgeInsets.all(16),
+                      decoration: BoxDecoration(
+                        color: Colors.grey[50],
+                        borderRadius: BorderRadius.circular(12),
+                        border: Border.all(color: Colors.grey[200]!),
+                      ),
+                      child: Text(
+                        request.description,
+                        style: TextStyle(
+                          height: 1.5,
+                          color: Colors.grey[800],
+                        ),
+                      ),
+                    ),
+
+                    // Completion Notes
+                    if (request.status == 'completed' &&
+                        request.completionNote != null) ...[
+                      SizedBox(height: 20),
+                      Text(
+                        'Completion Notes',
+                        style: TextStyle(
+                          fontWeight: FontWeight.bold,
+                          fontSize: 16,
+                          color: Colors.green[700],
+                        ),
+                      ),
+                      SizedBox(height: 8),
+                      Container(
+                        width: double.infinity,
+                        padding: EdgeInsets.all(16),
+                        decoration: BoxDecoration(
+                          color: Colors.green[50],
+                          borderRadius: BorderRadius.circular(12),
+                          border: Border.all(color: Colors.green[200]!),
+                        ),
+                        child: Text(
+                          request.completionNote!,
+                          style: TextStyle(
+                            height: 1.5,
+                            color: Colors.green[700],
+                          ),
+                        ),
+                      ),
+                    ],
+
+                    SizedBox(height: 20),
+                  ],
+                ),
+              ),
+            ),
+
+            // Action button
+            if (request.status == 'inProgress')
+              Padding(
+                padding: EdgeInsets.all(16),
+                child: CustomButton(
+                  text: 'Mark as Completed',
+                  onPressed: () {
+                    Navigator.pop(context);
+                    _showCompleteDialog(request);
+                  },
+                  backgroundColor: Colors.green,
+                ),
+              ),
+
+            if (request.status == 'completed')
+              Padding(
+                padding: EdgeInsets.all(16),
+                child: ElevatedButton.icon(
+                  onPressed: () => Navigator.pop(context),
+                  icon: Icon(Icons.keyboard_return),
+                  label: Text('Back to Rides'),
+                  style: ElevatedButton.styleFrom(
+                    minimumSize: Size(double.infinity, 50),
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(12),
+                    ),
+                  ),
+                ),
+              ),
+          ],
+        ),
       ),
     );
   }
 
-  void _navigateToAssignDriverVehicle(RideRequestModel request) {
-    // Check if request already has an assigned driver and vehicle
-    if (request.driverId != null && request.vehicleId != null) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: Text('This request already has assigned driver and vehicle'),
-          backgroundColor: Colors.orange,
-          behavior: SnackBarBehavior.floating,
-        ),
-      );
-      return;
-    }
-
-    Navigator.push(
-      context,
-      MaterialPageRoute(
-        builder: (context) => AssignDriverVehicleScreen(request: request),
+  Widget _buildDetailItem(String label, String value, IconData icon) {
+    return Padding(
+      padding: EdgeInsets.symmetric(vertical: 8),
+      child: Row(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Icon(icon, size: 18, color: Colors.blue[700]),
+          SizedBox(width: 12),
+          SizedBox(
+            width: 80,
+            child: Text(
+              '$label:',
+              style: TextStyle(
+                fontWeight: FontWeight.w600,
+                color: Colors.blue[700],
+              ),
+            ),
+          ),
+          Expanded(
+            child: Text(
+              value,
+              style: TextStyle(
+                color: Colors.blue[800],
+              ),
+            ),
+          ),
+        ],
       ),
-    ).then((result) {
-      // Refresh the UI when returning from assignment screen
-      if (result == true) {
-        setState(() {});
-      }
-    });
+    );
   }
 
   void _showCompleteDialog(RideRequestModel request) {
-    _completionReasonController.clear();
+    _completionNoteController.clear();
 
     showDialog(
       context: context,
       builder: (context) => AlertDialog(
-        title: Text('Complete Request'),
+        title: Text('Mark Ride as Completed'),
         content: Column(
           mainAxisSize: MainAxisSize.min,
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            Text('Provide completion notes:'),
+            Text('Please provide completion notes:'),
             SizedBox(height: 16),
             CustomTextField(
               labelText: 'Completion Notes',
-              hintText: 'Enter notes about completion...',
-              controller: _completionReasonController,
+              hintText: 'Enter notes about the completed ride...',
+              controller: _completionNoteController,
               maxLines: 3,
             ),
           ],
         ),
         actions: [
           TextButton(
-            onPressed: () => Navigator.pop(context),
+            onPressed: () {
+              _completionNoteController.clear();
+              Navigator.pop(context);
+            },
             child: Text('Cancel'),
           ),
           TextButton(
             onPressed: () => _completeRequest(request),
-            child: _isCompleting
-                ? CircularProgressIndicator(strokeWidth: 2)
+            child: _isLoading
+                ? Container(
+                    width: 20,
+                    height: 20,
+                    child: CircularProgressIndicator(
+                      strokeWidth: 2,
+                      valueColor: AlwaysStoppedAnimation<Color>(Colors.green),
+                    ),
+                  )
                 : Text('Complete', style: TextStyle(color: Colors.green)),
           ),
         ],
@@ -1321,7 +1123,7 @@ class _OfficerDashboardState extends State<OfficerDashboardOprational>
   }
 
   Future<void> _completeRequest(RideRequestModel request) async {
-    if (_completionReasonController.text.trim().isEmpty) {
+    if (_completionNoteController.text.trim().isEmpty) {
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
           content: Text('Please provide completion notes'),
@@ -1332,129 +1134,40 @@ class _OfficerDashboardState extends State<OfficerDashboardOprational>
       return;
     }
 
-    setState(() => _isCompleting = true);
+    setState(() => _isLoading = true);
 
     try {
       await _firestoreService.completeRideRequest(
         request.id,
-        _completionReasonController.text.trim(),
+        _completionNoteController.text.trim(),
         driverId: request.driverId,
         vehicleId: request.vehicleId,
       );
 
       Navigator.pop(context); // Close dialog
 
-      setState(() => _isCompleting = false);
+      setState(() => _isLoading = false);
 
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
-          content: Text('Request marked as completed'),
+          content: Text('Ride marked as completed'),
           backgroundColor: Colors.green,
           behavior: SnackBarBehavior.floating,
         ),
       );
     } catch (e) {
-      setState(() => _isCompleting = false);
+      setState(() => _isLoading = false);
 
       Navigator.pop(context); // Close dialog
 
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
-          content: Text('Error completing request: $e'),
+          content: Text('Error completing ride: $e'),
           backgroundColor: Colors.red,
           behavior: SnackBarBehavior.floating,
         ),
       );
     }
-  }
-
-  void _showSearchDialog() {
-    showDialog(
-      context: context,
-      builder: (context) => AlertDialog(
-        title: Text('Search Requests'),
-        content: TextField(
-          controller: _searchController,
-          decoration: InputDecoration(
-            labelText: 'Search',
-            hintText: 'Enter pickup, dropoff, employee name...',
-            prefixIcon: Icon(Icons.search),
-            border: OutlineInputBorder(),
-          ),
-          onChanged: (value) {
-            setState(() {
-              _searchQuery = value;
-            });
-          },
-        ),
-        actions: [
-          TextButton(
-            onPressed: () {
-              setState(() {
-                _searchQuery = '';
-                _searchController.clear();
-              });
-              Navigator.pop(context);
-            },
-            child: Text('Clear'),
-          ),
-          TextButton(
-            onPressed: () => Navigator.pop(context),
-            child: Text('Done'),
-          ),
-        ],
-      ),
-    );
-  }
-
-  void _showFilterDialog() {
-    showDialog(
-      context: context,
-      builder: (context) => AlertDialog(
-        title: Text('Filter Requests'),
-        content: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            RadioListTile<String>(
-              title: Text('All Requests'),
-              value: 'all',
-              groupValue: _selectedFilter,
-              onChanged: (value) {
-                setState(() => _selectedFilter = value!);
-                Navigator.pop(context);
-              },
-            ),
-            RadioListTile<String>(
-              title: Text('Today Only'),
-              value: 'today',
-              groupValue: _selectedFilter,
-              onChanged: (value) {
-                setState(() => _selectedFilter = value!);
-                Navigator.pop(context);
-              },
-            ),
-            RadioListTile<String>(
-              title: Text('This Week'),
-              value: 'week',
-              groupValue: _selectedFilter,
-              onChanged: (value) {
-                setState(() => _selectedFilter = value!);
-                Navigator.pop(context);
-              },
-            ),
-            RadioListTile<String>(
-              title: Text('This Month'),
-              value: 'month',
-              groupValue: _selectedFilter,
-              onChanged: (value) {
-                setState(() => _selectedFilter = value!);
-                Navigator.pop(context);
-              },
-            ),
-          ],
-        ),
-      ),
-    );
   }
 
   void _showProfileDialog() {
