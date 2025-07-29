@@ -2,85 +2,6 @@ import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
 import '../../../models/resourceApp/request_model.dart';
 
-// Helper widget untuk judul setiap seksi
-Widget _buildSectionTitle(String title) {
-  return Text(
-    title,
-    style: TextStyle(
-      fontSize: 18,
-      fontWeight: FontWeight.bold,
-      color: Colors.grey[800],
-    ),
-  );
-}
-
-// Helper widget untuk kartu informasi
-Widget _buildInfoCard(List<Widget> children) {
-  return Container(
-    padding: const EdgeInsets.all(16),
-    decoration: BoxDecoration(
-      color: Colors.white,
-      borderRadius: BorderRadius.circular(12),
-      boxShadow: [
-        BoxShadow(
-          color: Colors.black.withOpacity(0.05),
-          blurRadius: 10,
-          offset: const Offset(0, 2),
-        ),
-      ],
-    ),
-    child: Column(
-      children: children,
-    ),
-  );
-}
-
-// Helper widget untuk setiap baris informasi
-Widget _buildInfoRow(IconData icon, String label, String value) {
-  return Padding(
-    padding: const EdgeInsets.symmetric(vertical: 8),
-    child: Row(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        Icon(icon, size: 20, color: Colors.grey[600]),
-        const SizedBox(width: 16),
-        SizedBox(
-          width: 110,
-          child: Text(
-            label,
-            style: TextStyle(
-              fontWeight: FontWeight.w600,
-              color: Colors.grey[700],
-            ),
-          ),
-        ),
-        Expanded(
-          child: Text(
-            value,
-            style: TextStyle(
-              fontWeight: FontWeight.w500,
-              fontSize: 15,
-              color: Colors.grey[900],
-            ),
-          ),
-        ),
-      ],
-    ),
-  );
-}
-
-// Fungsi bantuan untuk memformat tanggal
-String _formatDisplayDate(String dateTimeString) {
-  try {
-    final DateFormat inputFormat = DateFormat('d MMMM yyyy, HH:mm', 'id_ID');
-    final DateTime dateTime = inputFormat.parse(dateTimeString);
-    final DateFormat outputFormat = DateFormat('EEEE, d MMMM yyyy', 'id_ID');
-    return outputFormat.format(dateTime);
-  } catch (e) {
-    return dateTimeString;
-  }
-}
-
 class RequestDetailScreen extends StatelessWidget {
   final RequestModel request;
 
@@ -326,5 +247,84 @@ class RequestDetailScreen extends StatelessWidget {
         ),
       ),
     );
+  }
+}
+
+// Helper widget untuk judul setiap seksi
+Widget _buildSectionTitle(String title) {
+  return Text(
+    title,
+    style: TextStyle(
+      fontSize: 18,
+      fontWeight: FontWeight.bold,
+      color: Colors.grey[800],
+    ),
+  );
+}
+
+// Helper widget untuk kartu informasi
+Widget _buildInfoCard(List<Widget> children) {
+  return Container(
+    padding: const EdgeInsets.all(16),
+    decoration: BoxDecoration(
+      color: Colors.white,
+      borderRadius: BorderRadius.circular(12),
+      boxShadow: [
+        BoxShadow(
+          color: Colors.black.withOpacity(0.05),
+          blurRadius: 10,
+          offset: const Offset(0, 2),
+        ),
+      ],
+    ),
+    child: Column(
+      children: children,
+    ),
+  );
+}
+
+// Helper widget untuk setiap baris informasi
+Widget _buildInfoRow(IconData icon, String label, String value) {
+  return Padding(
+    padding: const EdgeInsets.symmetric(vertical: 8),
+    child: Row(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Icon(icon, size: 20, color: Colors.grey[600]),
+        const SizedBox(width: 16),
+        SizedBox(
+          width: 110,
+          child: Text(
+            label,
+            style: TextStyle(
+              fontWeight: FontWeight.w600,
+              color: Colors.grey[700],
+            ),
+          ),
+        ),
+        Expanded(
+          child: Text(
+            value,
+            style: TextStyle(
+              fontWeight: FontWeight.w500,
+              fontSize: 15,
+              color: Colors.grey[900],
+            ),
+          ),
+        ),
+      ],
+    ),
+  );
+}
+
+// Fungsi bantuan untuk memformat tanggal
+String _formatDisplayDate(String dateTimeString) {
+  try {
+    final DateFormat inputFormat = DateFormat('d MMMM yyyy, HH:mm', 'id_ID');
+    final DateTime dateTime = inputFormat.parse(dateTimeString);
+    final DateFormat outputFormat = DateFormat('EEEE, d MMMM yyyy', 'id_ID');
+    return outputFormat.format(dateTime);
+  } catch (e) {
+    return dateTimeString;
   }
 }

@@ -639,7 +639,7 @@ class _EmployeeDashboardResourceState extends State<EmployeeDashboardResource>
           ),
           SizedBox(height: 16),
           Text(
-            'Tidak ada laporan yang cocok',
+            'Tidak ada permintaan yang cocok',
             style: TextStyle(
               fontSize: 18,
               color: Colors.grey[600],
