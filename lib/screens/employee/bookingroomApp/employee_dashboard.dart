@@ -198,6 +198,30 @@ class _EmployeeDashboardBookingRoomState
               ),
             ),
           ),
+          Positioned(
+            right: -30,
+            top: -20,
+            child: Container(
+              width: 180,
+              height: 180,
+              decoration: BoxDecoration(
+                color: Colors.white.withOpacity(0.05),
+                shape: BoxShape.circle,
+              ),
+            ),
+          ),
+          Positioned(
+            left: -60,
+            bottom: -40,
+            child: Container(
+              width: 150,
+              height: 150,
+              decoration: BoxDecoration(
+                color: Colors.white.withOpacity(0.05),
+                shape: BoxShape.circle,
+              ),
+            ),
+          ),
           SafeArea(
             child: Padding(
               padding: const EdgeInsets.fromLTRB(20, 20, 20, 60),
@@ -602,9 +626,25 @@ class _EmployeeDashboardBookingRoomState
                   Icon(Icons.access_time, size: 14, color: Colors.grey[500]),
                   const SizedBox(width: 8),
                   Text(
-                    'Dibuat: ${_getTimeAgo(booking.createdAt)}',
-                    style: TextStyle(fontSize: 12, color: Colors.grey[600]),
-                  ),
+                    booking.status == 'approved' &&
+                            booking.completionDate != null
+                        ? 'Disetujui: ${DateFormat('d MMM yyyy, HH:mm', 'id_ID').format(booking.completionDate!)}'
+                        : booking.status == 'cancelled' &&
+                                booking.completionDate != null
+                            ? 'Dibatalkan: ${DateFormat('d MMM yyyy, HH:mm', 'id_ID').format(booking.completionDate!)}'
+                            : 'Dibuat: ${_getTimeAgo(booking.createdAt)}',
+                    style: TextStyle(
+                      fontSize: 12,
+                      color: booking.status == 'approved'
+                          ? Colors.green[800]
+                          : booking.status == 'cancelled'
+                              ? Colors.red[800]
+                              : Colors.grey[600],
+                      fontWeight: booking.status == 'open'
+                          ? FontWeight.normal
+                          : FontWeight.w500,
+                    ),
+                  )
                 ],
               ),
             ],
