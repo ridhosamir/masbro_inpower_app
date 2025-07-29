@@ -3,6 +3,7 @@ import 'package:intl/intl.dart';
 import 'package:masbro_inpower_app/models/user_model.dart';
 import 'package:masbro_inpower_app/screens/officer/maintenanceApp/officer_dashboard.dart';
 import 'package:masbro_inpower_app/screens/officer/operasionalApp/officer_dashboard.dart';
+import 'package:masbro_inpower_app/screens/officer/resourceApp/officer_dashboard.dart';
 import 'package:masbro_inpower_app/services/auth_service.dart';
 import 'package:masbro_inpower_app/services/user_service.dart';
 import 'package:provider/provider.dart';
@@ -233,16 +234,14 @@ class _HomeDashboardOfficerState extends State<HomeDashboardOfficer> {
         ),
         _buildAppCard(
           context: context,
-          title: 'Resource',
+          title: 'Resource/Item',
           icon: Icons.groups,
           color: Colors.blue,
           onTap: () {
-            // Aksi untuk aplikasi yang belum tersedia
-            ScaffoldMessenger.of(context).showSnackBar(
-              const SnackBar(
-                content: Text('Aplikasi Resource akan segera tersedia!'),
-                backgroundColor: Colors.blue,
-              ),
+            Navigator.push(
+              context,
+              MaterialPageRoute(
+                  builder: (context) => OfficerDashboardResource()),
             );
           },
         ),
@@ -256,6 +255,20 @@ class _HomeDashboardOfficerState extends State<HomeDashboardOfficer> {
               context,
               MaterialPageRoute(
                   builder: (context) => OfficerDashboardOprational()),
+            );
+          },
+        ),
+        _buildAppCard(
+          context: context,
+          title: 'Booking Room',
+          icon: Icons.meeting_room,
+          color: Colors.teal,
+          onTap: () {
+            ScaffoldMessenger.of(context).showSnackBar(
+              const SnackBar(
+                content: Text('Aplikasi Booking Room akan segera tersedia!'),
+                backgroundColor: Colors.blue,
+              ),
             );
           },
         ),
