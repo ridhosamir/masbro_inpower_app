@@ -29,6 +29,9 @@ class _CreateRequestScreenState extends State<CreateRequestScreen>
   bool _isLoading = false;
   UserModel? currentUser;
 
+  DateTime? _selectedDate;
+  TimeOfDay? _selectedTime;
+
   @override
   void initState() {
     super.initState();
@@ -45,11 +48,11 @@ class _CreateRequestScreenState extends State<CreateRequestScreen>
 
   void _handleTabSelection() {
     if (_tabController.indexIsChanging) {
-      // Membersihkan input field saat tab diganti untuk UX yang lebih baik
       _formKey.currentState?.reset();
       _descriptionController.clear();
       _timeRequiredController.clear();
-      // Memaksa rebuild untuk menampilkan/menyembunyikan field yang sesuai
+      _selectedDate = null;
+      _selectedTime = null;
       setState(() {});
     }
   }
@@ -81,44 +84,56 @@ class _CreateRequestScreenState extends State<CreateRequestScreen>
   Future<void> _selectDateTime() async {
     final DateTime? pickedDate = await showDatePicker(
       context: context,
-      initialDate: DateTime.now(),
+      initialDate: _selectedDate ?? DateTime.now(),
       firstDate: DateTime.now(),
       lastDate: DateTime(2101),
     );
 
     if (pickedDate != null) {
-      final TimeOfDay? pickedTime = await showTimePicker(
-        context: context,
-        initialTime: TimeOfDay.fromDateTime(DateTime.now()),
-        initialEntryMode: TimePickerEntryMode.input,
-      );
-
-      if (pickedTime != null) {
-        final DateTime finalDateTime = DateTime(
-          pickedDate.year,
-          pickedDate.month,
-          pickedDate.day,
-          pickedTime.hour,
-          pickedTime.minute,
-        );
-        String formattedDateTime =
-            DateFormat('EEEE, d MMMM yyyy, HH:mm', 'id_ID')
-                .format(finalDateTime);
-        setState(() {
-          _timeRequiredController.text = formattedDateTime;
-        });
-      }
+      setState(() {
+        _selectedDate = pickedDate;
+        _selectedTime = null;
+        _timeRequiredController.text =
+            DateFormat('EEEE, d MMMM yyyy', 'id_ID').format(pickedDate);
+      });
     }
   }
 
   Future<void> _submitRequest() async {
     if (!_formKey.currentState!.validate() || currentUser == null) return;
 
+    if (_tabController.index == 0 &&
+        (_selectedDate == null || _selectedTime == null)) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('Harap tentukan tanggal dan jam yang dibutuhkan'),
+          backgroundColor: Colors.red,
+          behavior: SnackBarBehavior.floating,
+        ),
+      );
+      return;
+    }
+
     setState(() => _isLoading = true);
 
     try {
       final authService = Provider.of<AuthService>(context, listen: false);
       final requestType = _tabController.index == 0 ? 'resource' : 'item';
+
+      String? timeRequiredString;
+      if (requestType == 'resource' &&
+          _selectedDate != null &&
+          _selectedTime != null) {
+        final DateTime finalDateTime = DateTime(
+          _selectedDate!.year,
+          _selectedDate!.month,
+          _selectedDate!.day,
+          _selectedTime!.hour,
+          _selectedTime!.minute,
+        );
+        timeRequiredString = DateFormat('EEEE, d MMMM yyyy, HH:mm', 'id_ID')
+            .format(finalDateTime);
+      }
 
       final request = RequestModel(
         id: '',
@@ -127,10 +142,8 @@ class _CreateRequestScreenState extends State<CreateRequestScreen>
         description: _descriptionController.text.trim(),
         status: 'open',
         createdAt: DateTime.now(),
-        request: requestType, // Mengisi atribut 'request' baru
-        timeRequired: requestType == 'resource'
-            ? _timeRequiredController.text.trim()
-            : null,
+        request: requestType,
+        timeRequired: timeRequiredString,
       );
 
       await _firestoreService.createRequest(request);
@@ -218,21 +231,43 @@ class _CreateRequestScreenState extends State<CreateRequestScreen>
 
                     // --- Form Field Dinamis ---
                     if (isResourceRequest) ...[
-                      _buildLabel('Waktu Dibutuhkan'),
+                      _buildLabel('Tanggal Dibutuhkan'),
                       CustomTextField(
-                        labelText: 'Pilih Tanggal & Jam',
-                        hintText: 'Contoh: 23 Juli 2025, 14:00',
+                        labelText: 'Pilih Tanggal',
                         controller: _timeRequiredController,
                         readOnly: true,
                         onTap: _selectDateTime,
                         prefixIcon: Icons.calendar_today,
                         validator: (value) {
-                          if (isResourceRequest &&
-                              (value == null || value.isEmpty)) {
-                            return 'Harap tentukan waktu yang dibutuhkan';
+                          if (isResourceRequest && (_selectedDate == null)) {
+                            return 'Harap tentukan tanggal yang dibutuhkan';
                           }
                           return null;
                         },
+                      ),
+                      const SizedBox(height: 24),
+                      _buildLabel('Jam Dibutuhkan'),
+                      _buildTimePicker(
+                        'Pilih Jam',
+                        _selectedTime,
+                        (time) {
+                          setState(() {
+                            _selectedTime = time;
+                            if (_selectedDate != null) {
+                              final DateTime combinedDateTime = DateTime(
+                                _selectedDate!.year,
+                                _selectedDate!.month,
+                                _selectedDate!.day,
+                                _selectedTime!.hour,
+                                _selectedTime!.minute,
+                              );
+                              _timeRequiredController.text = DateFormat(
+                                      'EEEE, d MMMM yyyy, HH:mm', 'id_ID')
+                                  .format(combinedDateTime);
+                            }
+                          });
+                        },
+                        selectedDate: _selectedDate,
                       ),
                       const SizedBox(height: 24),
                     ],
@@ -268,6 +303,7 @@ class _CreateRequestScreenState extends State<CreateRequestScreen>
                       isLoading: _isLoading,
                       icon: Icons.send,
                     ),
+                    const SizedBox(height: 24),
                   ],
                 ),
               ),
@@ -330,6 +366,107 @@ class _CreateRequestScreenState extends State<CreateRequestScreen>
           ),
         ],
       ),
+    );
+  }
+
+  Widget _buildTimePicker(
+      String label, TimeOfDay? value, Function(TimeOfDay) onPicked,
+      {required DateTime? selectedDate}) {
+    List<TimeOfDay> times = [];
+    for (int i = 0; i < 24; i++) {
+      times.add(TimeOfDay(hour: i, minute: 0));
+      times.add(TimeOfDay(hour: i, minute: 30));
+    }
+
+    // Filter times based on selectedDate and current time if it's today
+    if (selectedDate != null) {
+      final now = DateTime.now();
+      final isToday = selectedDate.year == now.year &&
+          selectedDate.month == now.month &&
+          selectedDate.day == now.day;
+
+      if (isToday) {
+        final currentHour = now.hour;
+        final currentMinute = now.minute;
+        final filterStartMinute = (currentMinute < 30) ? 0 : 30;
+
+        times = times.where((time) {
+          if (time.hour > currentHour) {
+            return true;
+          } else if (time.hour == currentHour) {
+            return time.minute >= filterStartMinute;
+          }
+          return false;
+        }).toList();
+
+        if (times.isEmpty &&
+            now.isAfter(DateTime(now.year, now.month, now.day, 23, 30))) {
+          value = null;
+        } else if (value != null && !times.contains(value)) {
+          value = null;
+        }
+      }
+    }
+
+    if (value != null && !times.contains(value)) {
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        setState(() {
+          _selectedTime = null;
+          if (_selectedDate != null) {
+            _timeRequiredController.text =
+                DateFormat('EEEE, d MMMM yyyy', 'id_ID').format(_selectedDate!);
+          } else {
+            _timeRequiredController.clear();
+          }
+        });
+      });
+    }
+
+    return DropdownButtonFormField<TimeOfDay>(
+      value: value,
+      decoration: InputDecoration(
+        labelText: label,
+        border: const OutlineInputBorder(),
+        contentPadding:
+            const EdgeInsets.symmetric(horizontal: 12, vertical: 15),
+      ),
+      menuMaxHeight: 200,
+      items: times.map((time) {
+        return DropdownMenuItem<TimeOfDay>(
+          value: time,
+          child: Text(
+            time.format(context),
+            style: const TextStyle(fontSize: 14),
+          ),
+        );
+      }).toList(),
+      onChanged: (newValue) {
+        if (newValue != null) {
+          onPicked(newValue);
+        }
+      },
+      validator: (val) {
+        if (val == null) {
+          return 'Harap tentukan jam yang dibutuhkan';
+        }
+
+        if (selectedDate != null) {
+          final now = DateTime.now();
+          final isToday = selectedDate.year == now.year &&
+              selectedDate.month == now.month &&
+              selectedDate.day == now.day;
+
+          if (isToday) {
+            final selectedDateTime = DateTime(selectedDate.year,
+                selectedDate.month, selectedDate.day, val.hour, val.minute);
+            if (selectedDateTime
+                .isBefore(now.subtract(const Duration(minutes: 1)))) {
+              return 'Waktu yang dipilih sudah lewat';
+            }
+          }
+        }
+        return null;
+      },
     );
   }
 }

@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
 import 'package:masbro_inpower_app/models/user_model.dart';
+import 'package:masbro_inpower_app/screens/employee/bookingroomApp/employee_dashboard.dart';
 import 'package:masbro_inpower_app/screens/employee/maintenanceApp/employee_dashboard.dart';
 import 'package:masbro_inpower_app/screens/employee/operasionalApp/employee_dashboard.dart';
 import 'package:masbro_inpower_app/screens/employee/resourceApp/employee_dashboard.dart';
@@ -264,12 +265,17 @@ class _HomeDashboardUserState extends State<HomeDashboardUser> {
           icon: Icons.meeting_room,
           color: Colors.teal,
           onTap: () {
-            ScaffoldMessenger.of(context).showSnackBar(
-              const SnackBar(
-                content: Text('Aplikasi Booking Room akan segera tersedia!'),
-                backgroundColor: Colors.blue,
-              ),
+            Navigator.push(
+              context,
+              MaterialPageRoute(
+                  builder: (context) => EmployeeDashboardBookingRoom()),
             );
+            // ScaffoldMessenger.of(context).showSnackBar(
+            //   const SnackBar(
+            //     content: Text('Aplikasi Booking Room akan segera tersedia!'),
+            //     backgroundColor: Colors.blue,
+            //   ),
+            // );
           },
         ),
       ],
