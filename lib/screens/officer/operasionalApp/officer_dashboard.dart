@@ -352,9 +352,9 @@ class _OfficerDashboardState extends State<OfficerDashboardOprational>
               child: _buildStatisticsCards(),
             ),
 
-            // Quick Action Buttons
+            // Quick Action Buttons - MODIFIED THIS SECTION TO MAKE BUTTON WIDER
             Container(
-              padding: EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+              padding: EdgeInsets.symmetric(horizontal: 18, vertical: 8),
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
@@ -366,26 +366,20 @@ class _OfficerDashboardState extends State<OfficerDashboardOprational>
                       color: Colors.grey[700],
                     ),
                   ),
-                  SizedBox(height: 12),
-                  Row(
-                    children: [
-                      Expanded(
-                        child: _buildActionButton(
-                          icon: Icons.directions_car,
-                          label: 'Vehicle Management',
-                          color: Colors.purple,
-                          onTap: () {
-                            Navigator.push(
-                              context,
-                              MaterialPageRoute(
-                                builder: (context) => VehicleManagementScreen(),
-                              ),
-                            );
-                          },
+                  SizedBox(height: 15),
+                  // Remove the Row and make the button take full width
+                  _buildActionButton(
+                    icon: Icons.directions_car,
+                    label: 'Vehicle Management',
+                    color: Colors.purple,
+                    onTap: () {
+                      Navigator.push(
+                        context,
+                        MaterialPageRoute(
+                          builder: (context) => VehicleManagementScreen(),
                         ),
-                      ),
-                      SizedBox(width: 12),
-                    ],
+                      );
+                    },
                   ),
                 ],
               ),

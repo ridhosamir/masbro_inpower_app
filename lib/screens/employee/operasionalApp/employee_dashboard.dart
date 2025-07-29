@@ -22,6 +22,7 @@ class _EmployeeDashboardState extends State<EmployeeDashboardOprational>
   late TabController _tabController;
   TextEditingController _searchController = TextEditingController();
   String _searchQuery = '';
+  String _selectedFilter = 'all'; // Add filter state
 
   @override
   void initState() {
@@ -37,14 +38,12 @@ class _EmployeeDashboardState extends State<EmployeeDashboardOprational>
     });
   }
 
-  // Search listener
   void _onSearchChanged() {
     setState(() {
       _searchQuery = _searchController.text.toLowerCase();
     });
   }
 
-  // Clear search
   void _clearSearch() {
     _searchController.clear();
   }
@@ -328,41 +327,73 @@ class _EmployeeDashboardState extends State<EmployeeDashboardOprational>
               padding: EdgeInsets.all(16),
               child: _buildStatisticsCards(),
             ),
-            // Add search field
+            // Enhanced search field with filter button
             Padding(
-              padding: EdgeInsets.symmetric(horizontal: 16),
-              child: Container(
-                decoration: BoxDecoration(
-                  color: Colors.white,
-                  borderRadius: BorderRadius.circular(8),
-                  border: Border.all(color: Colors.grey[300]!),
-                  boxShadow: [
-                    BoxShadow(
-                      color: Colors.black.withOpacity(0.05),
-                      blurRadius: 4,
-                      offset: Offset(0, 2),
+              padding: EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+              child: Row(
+                children: [
+                  // Search field
+                  Expanded(
+                    child: Container(
+                      decoration: BoxDecoration(
+                        color: Colors.white,
+                        borderRadius: BorderRadius.circular(12),
+                        border: Border.all(color: Colors.grey[300]!),
+                        boxShadow: [
+                          BoxShadow(
+                            color: Colors.black.withOpacity(0.05),
+                            blurRadius: 4,
+                            offset: Offset(0, 2),
+                          ),
+                        ],
+                      ),
+                      child: TextField(
+                        controller: _searchController,
+                        decoration: InputDecoration(
+                          hintText: 'Search ride requests...',
+                          prefixIcon:
+                              Icon(Icons.search, color: Colors.grey[600]),
+                          suffixIcon: _searchQuery.isNotEmpty
+                              ? IconButton(
+                                  icon: Icon(Icons.clear,
+                                      color: Colors.grey[600]),
+                                  onPressed: _clearSearch,
+                                )
+                              : null,
+                          border: InputBorder.none,
+                          contentPadding: EdgeInsets.symmetric(
+                              vertical: 12, horizontal: 16),
+                        ),
+                      ),
                     ),
-                  ],
-                ),
-                child: TextField(
-                  controller: _searchController,
-                  decoration: InputDecoration(
-                    hintText: 'Search ride requests...',
-                    prefixIcon: Icon(Icons.search, color: Colors.grey[600]),
-                    suffixIcon: _searchQuery.isNotEmpty
-                        ? IconButton(
-                            icon: Icon(Icons.clear, color: Colors.grey[600]),
-                            onPressed: _clearSearch,
-                          )
-                        : null,
-                    border: InputBorder.none,
-                    contentPadding:
-                        EdgeInsets.symmetric(vertical: 12, horizontal: 16),
                   ),
-                ),
+                  SizedBox(width: 8),
+                  // Filter button
+                  Container(
+                    decoration: BoxDecoration(
+                      color: Colors.white,
+                      borderRadius: BorderRadius.circular(12),
+                      border: Border.all(color: Colors.grey[300]!),
+                      boxShadow: [
+                        BoxShadow(
+                          color: Colors.black.withOpacity(0.05),
+                          blurRadius: 4,
+                          offset: Offset(0, 2),
+                        ),
+                      ],
+                    ),
+                    child: IconButton(
+                      onPressed: _showFilterDialog,
+                      icon: Icon(
+                        Icons.filter_list,
+                        color: Theme.of(context).primaryColor,
+                      ),
+                      tooltip: 'Filter Requests',
+                    ),
+                  ),
+                ],
               ),
             ),
-            SizedBox(height: 16),
             Expanded(
               child: TabBarView(
                 controller: _tabController,
@@ -393,6 +424,62 @@ class _EmployeeDashboardState extends State<EmployeeDashboardOprational>
         label: Text('New Request', style: TextStyle(color: Colors.white)),
         backgroundColor: Theme.of(context).primaryColor,
         elevation: 4,
+      ),
+    );
+  }
+
+  // Add filter dialog method with English options
+  void _showFilterDialog() {
+    showDialog(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: Text(
+          'Filter by Time',
+          style: TextStyle(
+            fontSize: 16,
+          ),
+        ),
+        content: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            RadioListTile<String>(
+              title: Text('All'),
+              value: 'all',
+              groupValue: _selectedFilter,
+              onChanged: (value) {
+                setState(() => _selectedFilter = value!);
+                Navigator.pop(context);
+              },
+            ),
+            RadioListTile<String>(
+              title: Text('Today'),
+              value: 'today',
+              groupValue: _selectedFilter,
+              onChanged: (value) {
+                setState(() => _selectedFilter = value!);
+                Navigator.pop(context);
+              },
+            ),
+            RadioListTile<String>(
+              title: Text('This Week'),
+              value: 'week',
+              groupValue: _selectedFilter,
+              onChanged: (value) {
+                setState(() => _selectedFilter = value!);
+                Navigator.pop(context);
+              },
+            ),
+            RadioListTile<String>(
+              title: Text('This Month'),
+              value: 'month',
+              groupValue: _selectedFilter,
+              onChanged: (value) {
+                setState(() => _selectedFilter = value!);
+                Navigator.pop(context);
+              },
+            ),
+          ],
+        ),
       ),
     );
   }
@@ -567,6 +654,27 @@ class _EmployeeDashboardState extends State<EmployeeDashboardOprational>
               .toList();
         }
 
+        // Filter by time (new filter functionality)
+        if (_selectedFilter != 'all') {
+          final now = DateTime.now();
+          requests = requests.where((r) {
+            final createdAt = r.createdAt;
+            switch (_selectedFilter) {
+              case 'today':
+                return createdAt.year == now.year &&
+                    createdAt.month == now.month &&
+                    createdAt.day == now.day;
+              case 'week':
+                return now.difference(createdAt).inDays < 7;
+              case 'month':
+                return createdAt.year == now.year &&
+                    createdAt.month == now.month;
+              default:
+                return true;
+            }
+          }).toList();
+        }
+
         // Sort by creation date (newest first)
         requests.sort((a, b) => b.createdAt.compareTo(a.createdAt));
 
@@ -593,7 +701,6 @@ class _EmployeeDashboardState extends State<EmployeeDashboardOprational>
     );
   }
 
-  // Empty state when no search results found
   Widget _buildEmptySearchState() {
     return Center(
       child: Column(
@@ -726,8 +833,6 @@ class _EmployeeDashboardState extends State<EmployeeDashboardOprational>
                 ),
               ),
               SizedBox(height: 12),
-
-              // Date information
               Row(
                 children: [
                   Icon(Icons.event, size: 14, color: Colors.grey[500]),
@@ -772,7 +877,6 @@ class _EmployeeDashboardState extends State<EmployeeDashboardOprational>
                   ),
                 ],
               ),
-
               if (request.status == 'inProgress' &&
                   request.vehicleName != null) ...[
                 SizedBox(height: 12),
@@ -803,7 +907,6 @@ class _EmployeeDashboardState extends State<EmployeeDashboardOprational>
                   ),
                 ),
               ],
-
               if (request.status == 'completed' &&
                   request.completionNote != null) ...[
                 SizedBox(height: 12),

@@ -320,34 +320,56 @@ class _RideRequestDetailScreenState extends State<RideRequestDetailScreen> {
 
             SizedBox(height: 32),
 
-            // Action Buttons (for officers)
+            // Enhanced Action Buttons (for officers)
             if (widget.request.status == 'open') ...[
               _buildSectionTitle('Actions'),
-              SizedBox(height: 12),
+              SizedBox(height: 16),
               Row(
                 children: [
+                  // Assign Driver & Vehicle Button
                   Expanded(
-                    child: CustomButton(
-                      text: 'Assign Driver & Vehicle',
-                      onPressed: () => _navigateToAssignDriverVehicle(),
-                      backgroundColor: Colors.blue,
+                    child: _buildElegantButton(
+                      icon: Icons.assignment_ind_rounded,
+                      title: 'Assign Driver & Vehicle',
+                      subtitle: 'Select driver and vehicle for this request',
+                      gradient: LinearGradient(
+                        colors: [Colors.blue[600]!, Colors.blue[700]!],
+                        begin: Alignment.centerLeft,
+                        end: Alignment.centerRight,
+                      ),
+                      onPressed: _navigateToAssignDriverVehicle,
                     ),
                   ),
                   SizedBox(width: 12),
+                  // Mark Completed Button
                   Expanded(
-                    child: CustomButton(
-                      text: 'Mark Completed',
-                      onPressed: () => _showCompleteDialog(),
-                      backgroundColor: Colors.green,
+                    child: _buildElegantButton(
+                      icon: Icons.check_circle_outline_rounded,
+                      title: 'Mark as Completed',
+                      subtitle: 'Complete this request with notes',
+                      gradient: LinearGradient(
+                        colors: [Colors.green[600]!, Colors.green[700]!],
+                        begin: Alignment.centerLeft,
+                        end: Alignment.centerRight,
+                      ),
+                      onPressed: _showCompleteDialog,
                     ),
                   ),
                 ],
               ),
             ] else if (widget.request.status == 'inProgress') ...[
-              CustomButton(
-                text: 'Mark Completed',
-                onPressed: () => _showCompleteDialog(),
-                backgroundColor: Colors.green,
+              _buildSectionTitle('Actions'),
+              SizedBox(height: 16),
+              _buildElegantButton(
+                icon: Icons.check_circle_outline_rounded,
+                title: 'Mark as Completed',
+                subtitle: 'Complete this request with notes',
+                gradient: LinearGradient(
+                  colors: [Colors.green[600]!, Colors.green[700]!],
+                  begin: Alignment.centerLeft,
+                  end: Alignment.centerRight,
+                ),
+                onPressed: _showCompleteDialog,
               ),
             ],
 
@@ -380,6 +402,95 @@ class _RideRequestDetailScreenState extends State<RideRequestDetailScreen> {
             ),
             SizedBox(height: 20),
           ],
+        ),
+      ),
+    );
+  }
+
+  // Enhanced elegant button widget
+  Widget _buildElegantButton({
+    required IconData icon,
+    required String title,
+    required String subtitle,
+    required Gradient gradient,
+    required VoidCallback onPressed,
+  }) {
+    return Container(
+      height: 85, // Reduced height to prevent overflow
+      decoration: BoxDecoration(
+        gradient: gradient,
+        borderRadius: BorderRadius.circular(16),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withOpacity(0.1),
+            blurRadius: 8,
+            offset: Offset(0, 4),
+          ),
+        ],
+      ),
+      child: Material(
+        color: Colors.transparent,
+        child: InkWell(
+          onTap: onPressed,
+          borderRadius: BorderRadius.circular(16),
+          child: Padding(
+            padding: EdgeInsets.symmetric(horizontal: 12, vertical: 12),
+            child: Row(
+              children: [
+                Container(
+                  width: 36,
+                  height: 36,
+                  decoration: BoxDecoration(
+                    color: Colors.white.withOpacity(0.2),
+                    borderRadius: BorderRadius.circular(10),
+                  ),
+                  child: Icon(
+                    icon,
+                    color: Colors.white,
+                    size: 18,
+                  ),
+                ),
+                SizedBox(width: 10),
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    mainAxisAlignment: MainAxisAlignment.center,
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      Text(
+                        title,
+                        style: TextStyle(
+                          color: Colors.white,
+                          fontSize: 13,
+                          fontWeight: FontWeight.bold,
+                          height: 1.2,
+                        ),
+                        maxLines: 2,
+                        overflow: TextOverflow.ellipsis,
+                      ),
+                      SizedBox(height: 2),
+                      Text(
+                        subtitle,
+                        style: TextStyle(
+                          color: Colors.white.withOpacity(0.9),
+                          fontSize: 11,
+                          height: 1.2,
+                        ),
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
+                      ),
+                    ],
+                  ),
+                ),
+                SizedBox(width: 4),
+                Icon(
+                  Icons.arrow_forward_ios_rounded,
+                  color: Colors.white.withOpacity(0.8),
+                  size: 14,
+                ),
+              ],
+            ),
+          ),
         ),
       ),
     );

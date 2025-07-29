@@ -17,6 +17,35 @@ class AuthService extends ChangeNotifier {
     });
   }
 
+  // Helper function untuk mengecek apakah user adalah driver
+  bool _isDriverUser(String name, String email) {
+    String nameLower = name.toLowerCase();
+    String emailLower = email.toLowerCase();
+    return nameLower.contains('driver') || emailLower.contains('driver');
+  }
+
+  // Helper function untuk membuat driver document
+  Future<void> _createDriverDocument(
+      String uid, String name, String email) async {
+    try {
+      await _firestore.collection('drivers').doc(uid).set({
+        'createdAt': Timestamp.now(),
+        'currentVehicleId': null,
+        'currentVehicleName': null,
+        'email': email,
+        'isAvailable': true,
+        'name': name,
+        'status': 'active',
+        'uid': uid,
+        'updatedAt': Timestamp.now(),
+      });
+      print('Driver document created successfully for: $name');
+    } catch (e) {
+      print('Error creating driver document: $e');
+      throw e;
+    }
+  }
+
   // Sign up with email and password
   Future<String?> signUp(
       String email, String password, String name, String role) async {
@@ -41,6 +70,17 @@ class AuthService extends ChangeNotifier {
           .collection('users')
           .doc(result.user!.uid)
           .set(userData.toMap());
+
+      // Buat driver document jika user adalah teknisi dengan nama/email "driver"
+      if (role == 'technician' && _isDriverUser(name, email)) {
+        try {
+          await _createDriverDocument(result.user!.uid, name, email);
+          print('Driver document created for new user: $name');
+        } catch (driverError) {
+          print('Warning: Failed to create driver document: $driverError');
+          // Tidak menggagalkan registrasi jika driver document gagal
+        }
+      }
 
       _isLoading = false;
       notifyListeners();
@@ -123,6 +163,17 @@ class AuthService extends ChangeNotifier {
           .collection('users')
           .doc(newUserUid)
           .set(userData.toMap());
+
+      // Buat driver document jika user adalah teknisi dengan nama/email "driver"
+      if (role == 'technician' && _isDriverUser(name, email)) {
+        try {
+          await _createDriverDocument(newUserUid, name, email);
+          print('Driver document created for admin-created user: $name');
+        } catch (driverError) {
+          print('Warning: Failed to create driver document: $driverError');
+          // Tidak menggagalkan pembuatan user jika driver document gagal
+        }
+      }
 
       _isLoading = false;
       notifyListeners();

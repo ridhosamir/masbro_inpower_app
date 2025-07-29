@@ -22,16 +22,16 @@ class _EmployeeDashboardState extends State<EmployeeDashboard>
   UserModel? currentUser;
   late TabController _tabController;
   final DefaultCacheManager _cacheManager = DefaultCacheManager();
-  TextEditingController _searchController =
-      TextEditingController(); // Add search controller
-  String _searchQuery = ''; // Track search query
+  TextEditingController _searchController = TextEditingController();
+  String _searchQuery = '';
+  String _selectedFilter = 'all'; // Add filter state
 
   @override
   void initState() {
     super.initState();
     _tabController = TabController(length: 4, vsync: this);
     _loadUserData();
-    _searchController.addListener(_onSearchChanged); // Add listener for search
+    _searchController.addListener(_onSearchChanged);
 
     _tabController.addListener(() {
       if (!_tabController.indexIsChanging) {
@@ -40,14 +40,12 @@ class _EmployeeDashboardState extends State<EmployeeDashboard>
     });
   }
 
-  // Search listener
   void _onSearchChanged() {
     setState(() {
       _searchQuery = _searchController.text.toLowerCase();
     });
   }
 
-  // Clear search
   void _clearSearch() {
     _searchController.clear();
   }
@@ -55,7 +53,7 @@ class _EmployeeDashboardState extends State<EmployeeDashboard>
   @override
   void dispose() {
     _tabController.dispose();
-    _searchController.dispose(); // Dispose search controller
+    _searchController.dispose();
     super.dispose();
   }
 
@@ -330,41 +328,73 @@ class _EmployeeDashboardState extends State<EmployeeDashboard>
               padding: EdgeInsets.all(16),
               child: _buildStatisticsCards(),
             ),
-            // Add search field
+            // Enhanced search field with filter button
             Padding(
-              padding: EdgeInsets.symmetric(horizontal: 16),
-              child: Container(
-                decoration: BoxDecoration(
-                  color: Colors.white,
-                  borderRadius: BorderRadius.circular(8),
-                  border: Border.all(color: Colors.grey[300]!),
-                  boxShadow: [
-                    BoxShadow(
-                      color: Colors.black.withOpacity(0.05),
-                      blurRadius: 4,
-                      offset: Offset(0, 2),
+              padding: EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+              child: Row(
+                children: [
+                  // Search field
+                  Expanded(
+                    child: Container(
+                      decoration: BoxDecoration(
+                        color: Colors.white,
+                        borderRadius: BorderRadius.circular(12),
+                        border: Border.all(color: Colors.grey[300]!),
+                        boxShadow: [
+                          BoxShadow(
+                            color: Colors.black.withOpacity(0.05),
+                            blurRadius: 4,
+                            offset: Offset(0, 2),
+                          ),
+                        ],
+                      ),
+                      child: TextField(
+                        controller: _searchController,
+                        decoration: InputDecoration(
+                          hintText: 'Cari laporan...',
+                          prefixIcon:
+                              Icon(Icons.search, color: Colors.grey[600]),
+                          suffixIcon: _searchQuery.isNotEmpty
+                              ? IconButton(
+                                  icon: Icon(Icons.clear,
+                                      color: Colors.grey[600]),
+                                  onPressed: _clearSearch,
+                                )
+                              : null,
+                          border: InputBorder.none,
+                          contentPadding: EdgeInsets.symmetric(
+                              vertical: 12, horizontal: 16),
+                        ),
+                      ),
                     ),
-                  ],
-                ),
-                child: TextField(
-                  controller: _searchController,
-                  decoration: InputDecoration(
-                    hintText: 'Cari laporan...',
-                    prefixIcon: Icon(Icons.search, color: Colors.grey[600]),
-                    suffixIcon: _searchQuery.isNotEmpty
-                        ? IconButton(
-                            icon: Icon(Icons.clear, color: Colors.grey[600]),
-                            onPressed: _clearSearch,
-                          )
-                        : null,
-                    border: InputBorder.none,
-                    contentPadding:
-                        EdgeInsets.symmetric(vertical: 12, horizontal: 16),
                   ),
-                ),
+                  SizedBox(width: 8),
+                  // Filter button
+                  Container(
+                    decoration: BoxDecoration(
+                      color: Colors.white,
+                      borderRadius: BorderRadius.circular(12),
+                      border: Border.all(color: Colors.grey[300]!),
+                      boxShadow: [
+                        BoxShadow(
+                          color: Colors.black.withOpacity(0.05),
+                          blurRadius: 4,
+                          offset: Offset(0, 2),
+                        ),
+                      ],
+                    ),
+                    child: IconButton(
+                      onPressed: _showFilterDialog,
+                      icon: Icon(
+                        Icons.filter_list,
+                        color: Theme.of(context).primaryColor,
+                      ),
+                      tooltip: 'Filter Laporan',
+                    ),
+                  ),
+                ],
               ),
             ),
-            SizedBox(height: 16),
             Expanded(
               child: TabBarView(
                 controller: _tabController,
@@ -395,6 +425,62 @@ class _EmployeeDashboardState extends State<EmployeeDashboard>
         label: Text('Laporan Baru', style: TextStyle(color: Colors.white)),
         backgroundColor: Theme.of(context).primaryColor,
         elevation: 4,
+      ),
+    );
+  }
+
+  // Add filter dialog method
+  void _showFilterDialog() {
+    showDialog(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: Text(
+          'Filter Berdasarkan Waktu',
+          style: TextStyle(
+            fontSize: 16,
+          ),
+        ),
+        content: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            RadioListTile<String>(
+              title: Text('All'),
+              value: 'all',
+              groupValue: _selectedFilter,
+              onChanged: (value) {
+                setState(() => _selectedFilter = value!);
+                Navigator.pop(context);
+              },
+            ),
+            RadioListTile<String>(
+              title: Text('Today'),
+              value: 'today',
+              groupValue: _selectedFilter,
+              onChanged: (value) {
+                setState(() => _selectedFilter = value!);
+                Navigator.pop(context);
+              },
+            ),
+            RadioListTile<String>(
+              title: Text('This Week'),
+              value: 'week',
+              groupValue: _selectedFilter,
+              onChanged: (value) {
+                setState(() => _selectedFilter = value!);
+                Navigator.pop(context);
+              },
+            ),
+            RadioListTile<String>(
+              title: Text('This Month'),
+              value: 'month',
+              groupValue: _selectedFilter,
+              onChanged: (value) {
+                setState(() => _selectedFilter = value!);
+                Navigator.pop(context);
+              },
+            ),
+          ],
+        ),
       ),
     );
   }
@@ -564,6 +650,27 @@ class _EmployeeDashboardState extends State<EmployeeDashboard>
               .toList();
         }
 
+        // Filter by time (new filter functionality)
+        if (_selectedFilter != 'all') {
+          final now = DateTime.now();
+          reports = reports.where((r) {
+            final createdAt = r.createdAt;
+            switch (_selectedFilter) {
+              case 'today':
+                return createdAt.year == now.year &&
+                    createdAt.month == now.month &&
+                    createdAt.day == now.day;
+              case 'week':
+                return now.difference(createdAt).inDays < 7;
+              case 'month':
+                return createdAt.year == now.year &&
+                    createdAt.month == now.month;
+              default:
+                return true;
+            }
+          }).toList();
+        }
+
         // Sort by creation date (newest first)
         reports.sort((a, b) => b.createdAt.compareTo(a.createdAt));
 
@@ -577,7 +684,7 @@ class _EmployeeDashboardState extends State<EmployeeDashboard>
         return RefreshIndicator(
           onRefresh: () async {
             try {
-              await _cacheManager.emptyCache(); // Bersihkan cache
+              await _cacheManager.emptyCache();
               if (mounted) {
                 setState(() {});
               }
@@ -597,7 +704,6 @@ class _EmployeeDashboardState extends State<EmployeeDashboard>
     );
   }
 
-  // Empty state when no search results found
   Widget _buildEmptySearchState() {
     return Center(
       child: Column(
@@ -773,8 +879,6 @@ class _EmployeeDashboardState extends State<EmployeeDashboard>
                 ),
               ),
               SizedBox(height: 12),
-
-              // Date information - Creation date always shown
               Row(
                 children: [
                   Icon(Icons.access_time, size: 14, color: Colors.grey[500]),
@@ -788,8 +892,6 @@ class _EmployeeDashboardState extends State<EmployeeDashboard>
                   ),
                 ],
               ),
-
-              // Completion date shown below creation date when available
               if (report.status == 'completed' &&
                   report.completionDate != null) ...[
                 SizedBox(height: 4),
@@ -809,7 +911,6 @@ class _EmployeeDashboardState extends State<EmployeeDashboard>
                   ],
                 ),
               ],
-
               if (report.status == 'completed' &&
                   report.completionReason != null) ...[
                 SizedBox(height: 12),

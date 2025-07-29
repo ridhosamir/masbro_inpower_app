@@ -103,23 +103,19 @@ class _AssignDriverVehicleScreenState extends State<AssignDriverVehicleScreen> {
     }
   }
 
-  // Original method kept as reference but replaced with direct query to drivers collection
   Future<List<String>> _getAssignedDriverIds() async {
     try {
-      // Query ride requests with 'inProgress' status (not 'in-progress')
       final snapshot = await _firestore
           .collection('ride_requests')
           .where('status', isEqualTo: 'inProgress')
           .get();
 
-      // Extract all driver IDs from active requests
       final driverIds = snapshot.docs
           .map((doc) => doc.data()['driverId'] as String?)
           .where((id) => id != null)
           .cast<String>()
           .toList();
 
-      // Also check drivers collection for unavailable drivers
       final driversSnapshot = await _firestore
           .collection('drivers')
           .where('isAvailable', isEqualTo: false)
@@ -128,7 +124,6 @@ class _AssignDriverVehicleScreenState extends State<AssignDriverVehicleScreen> {
       final unavailableDriverIds =
           driversSnapshot.docs.map((doc) => doc.id).toList();
 
-      // Combine both lists and remove duplicates
       return [...driverIds, ...unavailableDriverIds].toSet().toList();
     } catch (e) {
       debugPrint('Error getting assigned drivers: $e');
@@ -172,14 +167,8 @@ class _AssignDriverVehicleScreenState extends State<AssignDriverVehicleScreen> {
 
       if (mounted) {
         setState(() => _isAssigning = false);
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text('Technician and vehicle assigned successfully'),
-            backgroundColor: Colors.green,
-            behavior: SnackBarBehavior.floating,
-          ),
-        );
         Navigator.pop(context, true);
+        Navigator.pop(context);
       }
     } catch (e) {
       if (mounted) {
@@ -200,47 +189,46 @@ class _AssignDriverVehicleScreenState extends State<AssignDriverVehicleScreen> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
+      backgroundColor: Colors.grey[50],
       appBar: AppBar(
-        title: Text('Assign Technician & Vehicle'),
+        title: Text('Assign Driver & Vehicle'),
         backgroundColor: Theme.of(context).primaryColor,
         foregroundColor: Colors.white,
+        elevation: 0,
       ),
       body: _isLoading
-          ? Center(child: CircularProgressIndicator())
+          ? Center(
+              child: Column(
+                mainAxisAlignment: MainAxisAlignment.center,
+                children: [
+                  CircularProgressIndicator(
+                    valueColor: AlwaysStoppedAnimation<Color>(
+                        Theme.of(context).primaryColor),
+                  ),
+                  SizedBox(height: 16),
+                  Text(
+                    'Loading available drivers and vehicles...',
+                    style: TextStyle(
+                      color: Colors.grey[600],
+                      fontSize: 16,
+                    ),
+                  ),
+                ],
+              ),
+            )
           : SingleChildScrollView(
               padding: EdgeInsets.all(16),
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
                   _buildRequestSummaryCard(),
+                  SizedBox(height: 24),
+                  _buildDriverSection(),
+                  SizedBox(height: 24),
+                  _buildVehicleSection(),
+                  SizedBox(height: 32),
+                  _buildAssignButton(),
                   SizedBox(height: 20),
-                  _buildSectionHeader('Available Technicians (Drivers)'),
-                  SizedBox(height: 12),
-                  _buildSearchField(
-                    hintText: 'Search available technicians...',
-                    onChanged: (value) => setState(
-                        () => _searchDriverQuery = value.toLowerCase()),
-                  ),
-                  SizedBox(height: 12),
-                  _buildTechniciansList(),
-                  SizedBox(height: 20),
-                  _buildSectionHeader('Available Vehicles'),
-                  SizedBox(height: 12),
-                  _buildSearchField(
-                    hintText: 'Search available vehicles...',
-                    onChanged: (value) => setState(
-                        () => _searchVehicleQuery = value.toLowerCase()),
-                    enabled: _selectedTechnician != null,
-                  ),
-                  SizedBox(height: 12),
-                  _buildVehiclesList(),
-                  SizedBox(height: 16),
-                  CustomButton(
-                    text: 'Assign Technician & Vehicle',
-                    onPressed: _assignDriverAndVehicle,
-                    isLoading: _isAssigning,
-                    backgroundColor: Colors.blue,
-                  ),
                 ],
               ),
             ),
@@ -250,67 +238,252 @@ class _AssignDriverVehicleScreenState extends State<AssignDriverVehicleScreen> {
   Widget _buildRequestSummaryCard() {
     return Container(
       width: double.infinity,
-      padding: EdgeInsets.all(16),
       decoration: BoxDecoration(
-        color: Colors.blue[50],
-        borderRadius: BorderRadius.circular(12),
-        border: Border.all(color: Colors.blue[200]!),
+        gradient: LinearGradient(
+          colors: [Colors.blue[600]!, Colors.blue[700]!],
+          begin: Alignment.topLeft,
+          end: Alignment.bottomRight,
+        ),
+        borderRadius: BorderRadius.circular(16),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.blue.withOpacity(0.3),
+            blurRadius: 12,
+            offset: Offset(0, 6),
+          ),
+        ],
       ),
-      child: Column(
+      child: Padding(
+        padding: EdgeInsets.all(20),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Row(
+              children: [
+                Container(
+                  padding: EdgeInsets.all(8),
+                  decoration: BoxDecoration(
+                    color: Colors.white.withOpacity(0.2),
+                    borderRadius: BorderRadius.circular(8),
+                  ),
+                  child: Icon(
+                    Icons.assignment,
+                    color: Colors.white,
+                    size: 24,
+                  ),
+                ),
+                SizedBox(width: 12),
+                Text(
+                  'Request Summary',
+                  style: TextStyle(
+                    fontSize: 20,
+                    fontWeight: FontWeight.bold,
+                    color: Colors.white,
+                  ),
+                ),
+              ],
+            ),
+            SizedBox(height: 20),
+            _buildSummaryRow(
+                Icons.location_on, 'Pickup', widget.request.pickupLocation),
+            _buildSummaryRow(
+                Icons.location_on, 'Dropoff', widget.request.dropoffLocation),
+            _buildSummaryRow(
+                Icons.person, 'Requester', widget.request.employeeName),
+            _buildSummaryRow(
+              Icons.calendar_today,
+              'Pickup Date',
+              DateFormat('dd MMM yyyy, HH:mm')
+                  .format(widget.request.pickupDateTime),
+            ),
+            if (widget.request.returnDateTime != null)
+              _buildSummaryRow(
+                Icons.calendar_today,
+                'Return Date',
+                DateFormat('dd MMM yyyy, HH:mm')
+                    .format(widget.request.returnDateTime!),
+              ),
+            _buildSummaryRow(
+              Icons.group,
+              'Passengers',
+              '${widget.request.passengerCapacity} ${widget.request.passengerCapacity > 1 ? 'passengers' : 'passenger'}',
+            ),
+            SizedBox(height: 16),
+            Container(
+              padding: EdgeInsets.all(12),
+              decoration: BoxDecoration(
+                color: Colors.white.withOpacity(0.1),
+                borderRadius: BorderRadius.circular(8),
+              ),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Row(
+                    children: [
+                      Icon(Icons.description, color: Colors.white, size: 16),
+                      SizedBox(width: 8),
+                      Text(
+                        'Description:',
+                        style: TextStyle(
+                          fontWeight: FontWeight.w600,
+                          color: Colors.white,
+                          fontSize: 14,
+                        ),
+                      ),
+                    ],
+                  ),
+                  SizedBox(height: 8),
+                  Text(
+                    widget.request.description,
+                    style: TextStyle(
+                      color: Colors.white.withOpacity(0.9),
+                      height: 1.4,
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _buildSummaryRow(IconData icon, String label, String value) {
+    return Padding(
+      padding: EdgeInsets.symmetric(vertical: 6),
+      child: Row(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Text(
-            'Request Summary',
-            style: TextStyle(
-              fontSize: 18,
-              fontWeight: FontWeight.bold,
-              color: Colors.blue[700],
+          Icon(icon, color: Colors.white, size: 16),
+          SizedBox(width: 8),
+          SizedBox(
+            width: 80,
+            child: Text(
+              '$label:',
+              style: TextStyle(
+                fontWeight: FontWeight.w600,
+                color: Colors.white,
+                fontSize: 14,
+              ),
             ),
           ),
-          SizedBox(height: 12),
-          _buildSummaryRow('Pickup', widget.request.pickupLocation),
-          _buildSummaryRow('Dropoff', widget.request.dropoffLocation),
-          _buildSummaryRow('Requester', widget.request.employeeName),
-          _buildSummaryRow(
-            'Pickup Date',
-            DateFormat('dd MMM yyyy, HH:mm')
-                .format(widget.request.pickupDateTime),
-          ),
-          if (widget.request.returnDateTime != null)
-            _buildSummaryRow(
-              'Return Date',
-              DateFormat('dd MMM yyyy, HH:mm')
-                  .format(widget.request.returnDateTime!),
+          Expanded(
+            child: Text(
+              value,
+              style: TextStyle(
+                color: Colors.white.withOpacity(0.9),
+                fontSize: 14,
+              ),
             ),
-          _buildSummaryRow(
-            'Passengers',
-            '${widget.request.passengerCapacity} ${widget.request.passengerCapacity > 1 ? 'passengers' : 'passenger'}',
-          ),
-          SizedBox(height: 8),
-          Text(
-            'Description:',
-            style: TextStyle(
-              fontWeight: FontWeight.w600,
-              color: Colors.blue[700],
-            ),
-          ),
-          SizedBox(height: 4),
-          Text(
-            widget.request.description,
-            style: TextStyle(color: Colors.blue[600]),
           ),
         ],
       ),
     );
   }
 
-  Widget _buildSectionHeader(String title) {
-    return Text(
-      title,
-      style: TextStyle(
-        fontSize: 18,
-        fontWeight: FontWeight.bold,
-        color: Colors.grey[800],
+  Widget _buildDriverSection() {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        _buildSectionHeader(
+          icon: Icons.engineering,
+          title: 'Select Driver',
+          subtitle: 'Choose an available technician as driver',
+        ),
+        SizedBox(height: 16),
+        _buildSearchField(
+          hintText: 'Search available drivers...',
+          onChanged: (value) =>
+              setState(() => _searchDriverQuery = value.toLowerCase()),
+        ),
+        SizedBox(height: 16),
+        _buildTechniciansList(),
+      ],
+    );
+  }
+
+  Widget _buildVehicleSection() {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        _buildSectionHeader(
+          icon: Icons.directions_car,
+          title: 'Select Vehicle',
+          subtitle: _selectedTechnician == null
+              ? 'Please select a driver first'
+              : 'Choose an available vehicle',
+        ),
+        SizedBox(height: 16),
+        _buildSearchField(
+          hintText: 'Search available vehicles...',
+          onChanged: (value) =>
+              setState(() => _searchVehicleQuery = value.toLowerCase()),
+          enabled: _selectedTechnician != null,
+        ),
+        SizedBox(height: 16),
+        _buildVehiclesList(),
+      ],
+    );
+  }
+
+  Widget _buildSectionHeader({
+    required IconData icon,
+    required String title,
+    required String subtitle,
+  }) {
+    return Container(
+      padding: EdgeInsets.all(16),
+      decoration: BoxDecoration(
+        gradient: LinearGradient(
+          colors: [Colors.blue[500]!, Colors.blue[600]!],
+          begin: Alignment.topLeft,
+          end: Alignment.bottomRight,
+        ),
+        borderRadius: BorderRadius.circular(12),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.blue.withOpacity(0.2),
+            blurRadius: 8,
+            offset: Offset(0, 4),
+          ),
+        ],
+      ),
+      child: Row(
+        children: [
+          Container(
+            padding: EdgeInsets.all(8),
+            decoration: BoxDecoration(
+              color: Colors.white.withOpacity(0.2),
+              borderRadius: BorderRadius.circular(8),
+            ),
+            child: Icon(icon, color: Colors.white, size: 24),
+          ),
+          SizedBox(width: 16),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  title,
+                  style: TextStyle(
+                    fontSize: 18,
+                    fontWeight: FontWeight.bold,
+                    color: Colors.white,
+                  ),
+                ),
+                SizedBox(height: 4),
+                Text(
+                  subtitle,
+                  style: TextStyle(
+                    fontSize: 14,
+                    color: Colors.white.withOpacity(0.9),
+                  ),
+                ),
+              ],
+            ),
+          ),
+        ],
       ),
     );
   }
@@ -322,14 +495,12 @@ class _AssignDriverVehicleScreenState extends State<AssignDriverVehicleScreen> {
   }) {
     return Container(
       decoration: BoxDecoration(
-        color: enabled ? Colors.white : Colors.grey[100],
-        borderRadius: BorderRadius.circular(8),
-        border:
-            Border.all(color: enabled ? Colors.grey[300]! : Colors.grey[200]!),
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(12),
         boxShadow: [
           BoxShadow(
             color: Colors.black.withOpacity(0.05),
-            blurRadius: 4,
+            blurRadius: 8,
             offset: Offset(0, 2),
           ),
         ],
@@ -339,8 +510,11 @@ class _AssignDriverVehicleScreenState extends State<AssignDriverVehicleScreen> {
         onChanged: onChanged,
         decoration: InputDecoration(
           hintText: hintText,
-          prefixIcon: Icon(Icons.search,
-              color: enabled ? Colors.grey[600] : Colors.grey[400]),
+          hintStyle: TextStyle(color: Colors.grey[500]),
+          prefixIcon: Icon(
+            Icons.search,
+            color: enabled ? Colors.grey[600] : Colors.grey[400],
+          ),
           suffixIcon: enabled &&
                   ((_searchDriverQuery.isNotEmpty) ||
                       (_searchVehicleQuery.isNotEmpty))
@@ -348,7 +522,7 @@ class _AssignDriverVehicleScreenState extends State<AssignDriverVehicleScreen> {
                   icon: Icon(Icons.clear, color: Colors.grey[600]),
                   onPressed: () {
                     setState(() {
-                      if (hintText.contains('technician')) {
+                      if (hintText.contains('driver')) {
                         _searchDriverQuery = '';
                       } else {
                         _searchVehicleQuery = '';
@@ -357,8 +531,13 @@ class _AssignDriverVehicleScreenState extends State<AssignDriverVehicleScreen> {
                   },
                 )
               : null,
-          border: InputBorder.none,
-          contentPadding: EdgeInsets.symmetric(vertical: 12, horizontal: 16),
+          border: OutlineInputBorder(
+            borderRadius: BorderRadius.circular(12),
+            borderSide: BorderSide.none,
+          ),
+          filled: true,
+          fillColor: enabled ? Colors.white : Colors.grey[100],
+          contentPadding: EdgeInsets.symmetric(vertical: 16, horizontal: 20),
         ),
       ),
     );
@@ -373,113 +552,131 @@ class _AssignDriverVehicleScreenState extends State<AssignDriverVehicleScreen> {
         .toList();
 
     if (filteredTechnicians.isEmpty) {
-      return Container(
-        height: 200,
-        child: Center(
-          child: Column(
-            mainAxisAlignment: MainAxisAlignment.center,
-            children: [
-              Icon(Icons.engineering, size: 64, color: Colors.grey[400]),
-              SizedBox(height: 16),
-              Text(
-                _searchDriverQuery.isEmpty
-                    ? 'No Available Drivers'
-                    : 'No Matching Drivers',
-                style: TextStyle(
-                  fontSize: 18,
-                  fontWeight: FontWeight.bold,
-                  color: Colors.grey[600],
-                ),
-              ),
-              Text(
-                _searchDriverQuery.isEmpty
-                    ? 'All drivers are currently assigned to other tasks'
-                    : 'Try a different search term',
-                style: TextStyle(color: Colors.grey[500]),
-              ),
-            ],
-          ),
-        ),
+      return _buildEmptyState(
+        icon: Icons.engineering,
+        title: _searchDriverQuery.isEmpty
+            ? 'No Available Drivers'
+            : 'No Matching Drivers',
+        subtitle: _searchDriverQuery.isEmpty
+            ? 'All drivers are currently assigned to other tasks'
+            : 'Try a different search term',
       );
     }
 
     return Container(
-      height: 300,
+      height: 280,
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(12),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withOpacity(0.05),
+            blurRadius: 8,
+            offset: Offset(0, 2),
+          ),
+        ],
+      ),
       child: ListView.builder(
+        padding: EdgeInsets.all(8),
         itemCount: filteredTechnicians.length,
         itemBuilder: (context, index) {
           final technician = filteredTechnicians[index];
           final isSelected = _selectedTechnician?.uid == technician.uid;
 
           return Container(
-            margin: EdgeInsets.only(bottom: 8),
-            child: InkWell(
-              onTap: () {
-                setState(() {
-                  _selectedTechnician = isSelected ? null : technician;
-                  _selectedVehicle = null;
-                });
-              },
-              borderRadius: BorderRadius.circular(8),
-              child: Container(
-                padding: EdgeInsets.all(12),
-                decoration: BoxDecoration(
-                  color: isSelected ? Colors.blue[50] : Colors.white,
-                  borderRadius: BorderRadius.circular(8),
-                  border: Border.all(
-                    color: isSelected ? Colors.blue[300]! : Colors.grey[200]!,
-                    width: isSelected ? 1.5 : 1,
+            margin: EdgeInsets.symmetric(vertical: 4),
+            child: Material(
+              color: Colors.transparent,
+              child: InkWell(
+                onTap: () {
+                  setState(() {
+                    _selectedTechnician = isSelected ? null : technician;
+                    _selectedVehicle = null;
+                  });
+                },
+                borderRadius: BorderRadius.circular(8),
+                child: Container(
+                  padding: EdgeInsets.all(12),
+                  decoration: BoxDecoration(
+                    color: isSelected ? Colors.blue[50] : Colors.transparent,
+                    borderRadius: BorderRadius.circular(8),
+                    border: Border.all(
+                      color: isSelected ? Colors.blue[300]! : Colors.grey[200]!,
+                      width: isSelected ? 2 : 1,
+                    ),
                   ),
-                ),
-                child: Row(
-                  children: [
-                    Container(
-                      width: 40,
-                      height: 40,
-                      decoration: BoxDecoration(
-                        color: isSelected ? Colors.blue[100] : Colors.grey[100],
-                        borderRadius: BorderRadius.circular(20),
+                  child: Row(
+                    children: [
+                      Container(
+                        width: 48,
+                        height: 48,
+                        decoration: BoxDecoration(
+                          gradient: isSelected
+                              ? LinearGradient(colors: [
+                                  Colors.blue[400]!,
+                                  Colors.blue[600]!
+                                ])
+                              : LinearGradient(colors: [
+                                  Colors.grey[300]!,
+                                  Colors.grey[400]!
+                                ]),
+                          borderRadius: BorderRadius.circular(24),
+                        ),
+                        child: Icon(
+                          Icons.engineering,
+                          color: Colors.white,
+                          size: 24,
+                        ),
                       ),
-                      child: Icon(
-                        Icons.engineering,
-                        color: isSelected ? Colors.blue[700] : Colors.grey[600],
-                        size: 20,
-                      ),
-                    ),
-                    SizedBox(width: 12),
-                    Expanded(
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          Text(
-                            technician.name,
-                            style: TextStyle(
-                              fontSize: 15,
-                              fontWeight: FontWeight.bold,
-                              color: isSelected
-                                  ? Colors.blue[700]
-                                  : Colors.grey[800],
+                      SizedBox(width: 16),
+                      Expanded(
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Text(
+                              technician.name,
+                              style: TextStyle(
+                                fontSize: 16,
+                                fontWeight: FontWeight.bold,
+                                color: isSelected
+                                    ? Colors.blue[700]
+                                    : Colors.grey[800],
+                              ),
                             ),
-                          ),
-                          SizedBox(height: 2),
-                          Text(
-                            technician.email,
-                            style: TextStyle(
-                              fontSize: 13,
-                              color: Colors.grey[600],
+                            SizedBox(height: 4),
+                            Text(
+                              technician.email,
+                              style: TextStyle(
+                                fontSize: 14,
+                                color: Colors.grey[600],
+                              ),
+                              maxLines: 1,
+                              overflow: TextOverflow.ellipsis,
                             ),
-                            maxLines: 1,
-                            overflow: TextOverflow.ellipsis,
-                          ),
-                        ],
+                          ],
+                        ),
                       ),
-                    ),
-                    isSelected
-                        ? Icon(Icons.check_circle,
-                            color: Colors.blue[700], size: 20)
-                        : Icon(Icons.radio_button_unchecked,
-                            color: Colors.grey[400], size: 20),
-                  ],
+                      Container(
+                        width: 24,
+                        height: 24,
+                        decoration: BoxDecoration(
+                          color: isSelected
+                              ? Colors.blue[700]
+                              : Colors.transparent,
+                          border: Border.all(
+                            color: isSelected
+                                ? Colors.blue[700]!
+                                : Colors.grey[400]!,
+                            width: 2,
+                          ),
+                          borderRadius: BorderRadius.circular(12),
+                        ),
+                        child: isSelected
+                            ? Icon(Icons.check, color: Colors.white, size: 16)
+                            : null,
+                      ),
+                    ],
+                  ),
                 ),
               ),
             ),
@@ -491,29 +688,10 @@ class _AssignDriverVehicleScreenState extends State<AssignDriverVehicleScreen> {
 
   Widget _buildVehiclesList() {
     if (_selectedTechnician == null) {
-      return Container(
-        height: 200,
-        child: Center(
-          child: Column(
-            mainAxisAlignment: MainAxisAlignment.center,
-            children: [
-              Icon(Icons.directions_car, size: 64, color: Colors.grey[300]),
-              SizedBox(height: 16),
-              Text(
-                'Select a driver first',
-                style: TextStyle(
-                  fontSize: 18,
-                  fontWeight: FontWeight.bold,
-                  color: Colors.grey[600],
-                ),
-              ),
-              Text(
-                'Please select a technician before choosing a vehicle',
-                style: TextStyle(color: Colors.grey[500]),
-              ),
-            ],
-          ),
-        ),
+      return _buildEmptyState(
+        icon: Icons.directions_car,
+        title: 'Select a driver first',
+        subtitle: 'Please select a technician before choosing a vehicle',
       );
     }
 
@@ -527,122 +705,147 @@ class _AssignDriverVehicleScreenState extends State<AssignDriverVehicleScreen> {
         .toList();
 
     if (filteredVehicles.isEmpty) {
-      return Container(
-        height: 200,
-        child: Center(
-          child: Column(
-            mainAxisAlignment: MainAxisAlignment.center,
-            children: [
-              Icon(Icons.directions_car, size: 64, color: Colors.grey[400]),
-              SizedBox(height: 16),
-              Text(
-                _searchVehicleQuery.isEmpty
-                    ? 'No Available Vehicles'
-                    : 'No Matching Vehicles',
-                style: TextStyle(
-                  fontSize: 18,
-                  fontWeight: FontWeight.bold,
-                  color: Colors.grey[600],
-                ),
-              ),
-              Text(
-                _searchVehicleQuery.isEmpty
-                    ? 'All vehicles are currently in use'
-                    : 'Try a different search term',
-                style: TextStyle(color: Colors.grey[500]),
-              ),
-            ],
-          ),
-        ),
+      return _buildEmptyState(
+        icon: Icons.directions_car,
+        title: _searchVehicleQuery.isEmpty
+            ? 'No Available Vehicles'
+            : 'No Matching Vehicles',
+        subtitle: _searchVehicleQuery.isEmpty
+            ? 'All vehicles are currently in use'
+            : 'Try a different search term',
       );
     }
 
     return Container(
-      height: 300,
+      height: 280,
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(12),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withOpacity(0.05),
+            blurRadius: 8,
+            offset: Offset(0, 2),
+          ),
+        ],
+      ),
       child: ListView.builder(
+        padding: EdgeInsets.all(8),
         itemCount: filteredVehicles.length,
         itemBuilder: (context, index) {
           final vehicle = filteredVehicles[index];
           final isSelected = _selectedVehicle?.id == vehicle.id;
 
           return Container(
-            margin: EdgeInsets.only(bottom: 8),
-            child: InkWell(
-              onTap: () {
-                setState(() {
-                  _selectedVehicle = isSelected ? null : vehicle;
-                });
-              },
-              borderRadius: BorderRadius.circular(8),
-              child: Container(
-                padding: EdgeInsets.all(12),
-                decoration: BoxDecoration(
-                  color: isSelected ? Colors.blue[50] : Colors.white,
-                  borderRadius: BorderRadius.circular(8),
-                  border: Border.all(
-                    color: isSelected ? Colors.blue[300]! : Colors.grey[200]!,
-                    width: isSelected ? 1.5 : 1,
+            margin: EdgeInsets.symmetric(vertical: 4),
+            child: Material(
+              color: Colors.transparent,
+              child: InkWell(
+                onTap: () {
+                  setState(() {
+                    _selectedVehicle = isSelected ? null : vehicle;
+                  });
+                },
+                borderRadius: BorderRadius.circular(8),
+                child: Container(
+                  padding: EdgeInsets.all(12),
+                  decoration: BoxDecoration(
+                    color: isSelected ? Colors.blue[50] : Colors.transparent,
+                    borderRadius: BorderRadius.circular(8),
+                    border: Border.all(
+                      color: isSelected ? Colors.blue[300]! : Colors.grey[200]!,
+                      width: isSelected ? 2 : 1,
+                    ),
                   ),
-                ),
-                child: Row(
-                  children: [
-                    Container(
-                      width: 40,
-                      height: 40,
-                      decoration: BoxDecoration(
-                        color: isSelected ? Colors.blue[100] : Colors.grey[100],
-                        borderRadius: BorderRadius.circular(8),
+                  child: Row(
+                    children: [
+                      Container(
+                        width: 48,
+                        height: 48,
+                        decoration: BoxDecoration(
+                          gradient: isSelected
+                              ? LinearGradient(colors: [
+                                  Colors.blue[400]!,
+                                  Colors.blue[600]!
+                                ])
+                              : LinearGradient(colors: [
+                                  Colors.grey[300]!,
+                                  Colors.grey[400]!
+                                ]),
+                          borderRadius: BorderRadius.circular(8),
+                        ),
+                        child: Icon(
+                          Icons.directions_car,
+                          color: Colors.white,
+                          size: 24,
+                        ),
                       ),
-                      child: Icon(
-                        Icons.directions_car,
-                        color: isSelected ? Colors.blue[700] : Colors.grey[600],
-                        size: 20,
-                      ),
-                    ),
-                    SizedBox(width: 12),
-                    Expanded(
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          Text(
-                            '${vehicle.vehicleType} ${vehicle.vehicleModel}',
-                            style: TextStyle(
-                              fontSize: 15,
-                              fontWeight: FontWeight.bold,
-                              color: isSelected
-                                  ? Colors.blue[700]
-                                  : Colors.grey[800],
+                      SizedBox(width: 16),
+                      Expanded(
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Text(
+                              '${vehicle.vehicleType} ${vehicle.vehicleModel}',
+                              style: TextStyle(
+                                fontSize: 16,
+                                fontWeight: FontWeight.bold,
+                                color: isSelected
+                                    ? Colors.blue[700]
+                                    : Colors.grey[800],
+                              ),
                             ),
-                          ),
-                          SizedBox(height: 2),
-                          Row(
-                            children: [
-                              Text(
-                                'License: ${vehicle.licensePlate}',
-                                style: TextStyle(
-                                  fontSize: 13,
-                                  color: Colors.grey[600],
+                            SizedBox(height: 4),
+                            Row(
+                              children: [
+                                Icon(Icons.confirmation_number,
+                                    size: 14, color: Colors.grey[600]),
+                                SizedBox(width: 4),
+                                Text(
+                                  vehicle.licensePlate,
+                                  style: TextStyle(
+                                    fontSize: 14,
+                                    color: Colors.grey[600],
+                                    fontWeight: FontWeight.w500,
+                                  ),
                                 ),
-                              ),
-                              SizedBox(width: 12),
-                              Text(
-                                'Color: ${vehicle.color}',
-                                style: TextStyle(
-                                  fontSize: 13,
-                                  color: Colors.grey[600],
+                                SizedBox(width: 16),
+                                Icon(Icons.color_lens,
+                                    size: 14, color: Colors.grey[600]),
+                                SizedBox(width: 4),
+                                Text(
+                                  vehicle.color,
+                                  style: TextStyle(
+                                    fontSize: 14,
+                                    color: Colors.grey[600],
+                                  ),
                                 ),
-                              ),
-                            ],
-                          ),
-                        ],
+                              ],
+                            ),
+                          ],
+                        ),
                       ),
-                    ),
-                    isSelected
-                        ? Icon(Icons.check_circle,
-                            color: Colors.blue[700], size: 20)
-                        : Icon(Icons.radio_button_unchecked,
-                            color: Colors.grey[400], size: 20),
-                  ],
+                      Container(
+                        width: 24,
+                        height: 24,
+                        decoration: BoxDecoration(
+                          color: isSelected
+                              ? Colors.blue[700]
+                              : Colors.transparent,
+                          border: Border.all(
+                            color: isSelected
+                                ? Colors.blue[700]!
+                                : Colors.grey[400]!,
+                            width: 2,
+                          ),
+                          borderRadius: BorderRadius.circular(12),
+                        ),
+                        child: isSelected
+                            ? Icon(Icons.check, color: Colors.white, size: 16)
+                            : null,
+                      ),
+                    ],
+                  ),
                 ),
               ),
             ),
@@ -652,29 +855,129 @@ class _AssignDriverVehicleScreenState extends State<AssignDriverVehicleScreen> {
     );
   }
 
-  Widget _buildSummaryRow(String label, String value) {
-    return Padding(
-      padding: EdgeInsets.symmetric(vertical: 2),
-      child: Row(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          SizedBox(
-            width: 70,
-            child: Text(
-              '$label:',
-              style: TextStyle(
-                fontWeight: FontWeight.w600,
-                color: Colors.blue[700],
-              ),
-            ),
-          ),
-          Expanded(
-            child: Text(
-              value,
-              style: TextStyle(color: Colors.blue[600]),
-            ),
+  Widget _buildEmptyState({
+    required IconData icon,
+    required String title,
+    required String subtitle,
+  }) {
+    return Container(
+      height: 200,
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(12),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withOpacity(0.05),
+            blurRadius: 8,
+            offset: Offset(0, 2),
           ),
         ],
+      ),
+      child: Center(
+        child: Column(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            Container(
+              padding: EdgeInsets.all(16),
+              decoration: BoxDecoration(
+                color: Colors.grey[100],
+                borderRadius: BorderRadius.circular(12),
+              ),
+              child: Icon(icon, size: 48, color: Colors.grey[400]),
+            ),
+            SizedBox(height: 16),
+            Text(
+              title,
+              style: TextStyle(
+                fontSize: 18,
+                fontWeight: FontWeight.bold,
+                color: Colors.grey[700],
+              ),
+            ),
+            SizedBox(height: 8),
+            Text(
+              subtitle,
+              style: TextStyle(
+                color: Colors.grey[500],
+                fontSize: 14,
+              ),
+              textAlign: TextAlign.center,
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _buildAssignButton() {
+    final canAssign = _selectedTechnician != null && _selectedVehicle != null;
+
+    return Container(
+      width: double.infinity,
+      height: 56,
+      decoration: BoxDecoration(
+        gradient: canAssign
+            ? LinearGradient(
+                colors: [Colors.green[600]!, Colors.green[700]!],
+                begin: Alignment.centerLeft,
+                end: Alignment.centerRight,
+              )
+            : LinearGradient(
+                colors: [Colors.grey[300]!, Colors.grey[400]!],
+                begin: Alignment.centerLeft,
+                end: Alignment.centerRight,
+              ),
+        borderRadius: BorderRadius.circular(16),
+        boxShadow: canAssign
+            ? [
+                BoxShadow(
+                  color: Colors.green.withOpacity(0.3),
+                  blurRadius: 8,
+                  offset: Offset(0, 4),
+                ),
+              ]
+            : [],
+      ),
+      child: Material(
+        color: Colors.transparent,
+        child: InkWell(
+          onTap: canAssign ? _assignDriverAndVehicle : null,
+          borderRadius: BorderRadius.circular(16),
+          child: Padding(
+            padding: EdgeInsets.symmetric(horizontal: 24),
+            child: Row(
+              mainAxisAlignment: MainAxisAlignment.center,
+              children: [
+                if (_isAssigning) ...[
+                  SizedBox(
+                    width: 20,
+                    height: 20,
+                    child: CircularProgressIndicator(
+                      strokeWidth: 2,
+                      valueColor: AlwaysStoppedAnimation<Color>(Colors.white),
+                    ),
+                  ),
+                  SizedBox(width: 12),
+                ] else ...[
+                  Icon(
+                    Icons.assignment_turned_in,
+                    color: Colors.white,
+                    size: 24,
+                  ),
+                  SizedBox(width: 12),
+                ],
+                Text(
+                  _isAssigning ? 'Assigning...' : 'Assign Driver & Vehicle',
+                  style: TextStyle(
+                    color: Colors.white,
+                    fontSize: 16,
+                    fontWeight: FontWeight.bold,
+                  ),
+                ),
+              ],
+            ),
+          ),
+        ),
       ),
     );
   }
