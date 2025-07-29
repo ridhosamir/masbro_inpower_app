@@ -253,8 +253,7 @@ class FirestoreService {
     try {
       Map<String, dynamic> dataToUpdate = {'status': newStatus};
 
-      // DISESUAIKAN: Logika sekarang berlaku untuk status 'cancelled'
-      if (newStatus == 'cancelled') {
+      if (newStatus == 'approved' || newStatus == 'cancelled') {
         dataToUpdate['completionDate'] = Timestamp.now();
         if (reason != null) {
           dataToUpdate['completionReason'] = reason;

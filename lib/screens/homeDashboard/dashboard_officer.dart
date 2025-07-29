@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
 import 'package:masbro_inpower_app/models/user_model.dart';
+import 'package:masbro_inpower_app/screens/officer/bookingroomApp/officer_dahboard.dart';
 import 'package:masbro_inpower_app/screens/officer/maintenanceApp/officer_dashboard.dart';
 import 'package:masbro_inpower_app/screens/officer/operasionalApp/officer_dashboard.dart';
 import 'package:masbro_inpower_app/screens/officer/resourceApp/officer_dashboard.dart';
@@ -245,7 +246,7 @@ class _HomeDashboardOfficerState extends State<HomeDashboardOfficer> {
             );
           },
         ),
-       _buildAppCard(
+        _buildAppCard(
           context: context,
           title: 'Operational',
           icon: Icons.directions_car,
@@ -264,11 +265,10 @@ class _HomeDashboardOfficerState extends State<HomeDashboardOfficer> {
           icon: Icons.meeting_room,
           color: Colors.teal,
           onTap: () {
-            ScaffoldMessenger.of(context).showSnackBar(
-              const SnackBar(
-                content: Text('Aplikasi Booking Room akan segera tersedia!'),
-                backgroundColor: Colors.blue,
-              ),
+            Navigator.push(
+              context,
+              MaterialPageRoute(
+                  builder: (context) => OfficerDashboardBookingRoom()),
             );
           },
         ),
