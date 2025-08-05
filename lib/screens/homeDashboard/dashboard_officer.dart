@@ -28,6 +28,7 @@ import 'package:masbro_inpower_app/services/operasionalApp/firestore_service.dar
 import 'package:masbro_inpower_app/services/bookingroomApp/firestore_service.dart'
     as booking_service;
 import 'package:masbro_inpower_app/services/user_service.dart';
+import 'package:masbro_inpower_app/utils/firebase_storage_image.dart';
 import 'package:provider/provider.dart';
 
 enum BookingType { harian, beberapaHari }
@@ -2139,6 +2140,35 @@ class _OfficerStatusTabState extends State<OfficerStatusTab>
                     _buildStatusChip(request.status),
                   ],
                 ),
+                if (!isResourceRequest && request.hasValidImage()) ...[
+                  const SizedBox(height: 12),
+                  SizedBox(
+                    width: double.infinity,
+                    height: 150,
+                    child: ClipRRect(
+                      borderRadius: BorderRadius.circular(12),
+                      child: FirebaseStorageImage(
+                        imageUrl: request.getNormalizedImageUrl(),
+                        fit: BoxFit.cover,
+                        placeholder: Container(
+                          color: Colors.grey[200],
+                          child:
+                              const Center(child: CircularProgressIndicator()),
+                        ),
+                        errorWidget: Container(
+                          color: Colors.grey[200],
+                          child: Center(
+                            child: Icon(
+                              Icons.image_not_supported_outlined,
+                              color: Colors.grey[400],
+                              size: 40,
+                            ),
+                          ),
+                        ),
+                      ),
+                    ),
+                  ),
+                ],
                 const SizedBox(height: 12),
                 Text(
                   'Permintaan:',

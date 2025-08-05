@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'package:intl/intl.dart';
+import 'package:masbro_inpower_app/utils/firebase_storage_image.dart';
 import '../../../services/resourceApp/firestore_service.dart';
 import '../../../models/resourceApp/request_model.dart';
 import '../../../services/auth_service.dart';
@@ -652,6 +653,34 @@ class _OfficerDashboardResourceState extends State<OfficerDashboardResource>
                   _buildStatusChip(request.status),
                 ],
               ),
+              if (!isResourceRequest && request.hasValidImage()) ...[
+                const SizedBox(height: 12),
+                SizedBox(
+                  width: double.infinity,
+                  height: 150,
+                  child: ClipRRect(
+                    borderRadius: BorderRadius.circular(12),
+                    child: FirebaseStorageImage(
+                      imageUrl: request.getNormalizedImageUrl(),
+                      fit: BoxFit.cover,
+                      placeholder: Container(
+                        color: Colors.grey[200],
+                        child: const Center(child: CircularProgressIndicator()),
+                      ),
+                      errorWidget: Container(
+                        color: Colors.grey[200],
+                        child: Center(
+                          child: Icon(
+                            Icons.image_not_supported_outlined,
+                            color: Colors.grey[400],
+                            size: 40,
+                          ),
+                        ),
+                      ),
+                    ),
+                  ),
+                ),
+              ],
               const SizedBox(height: 12),
               Text(
                 'Permintaan:',
