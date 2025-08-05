@@ -8,6 +8,7 @@ import '../../../services/user_service.dart';
 import '../../../models/user_model.dart';
 import '../../../widgets/custom_button.dart';
 import '../../../widgets/custom_text_field.dart';
+import 'package:masbro_inpower_app/utils/firebase_storage_image.dart';
 
 class TechnicianDashboardResource extends StatefulWidget {
   const TechnicianDashboardResource({super.key});
@@ -541,6 +542,7 @@ class _TechnicianDashboardResourceState
   }
 
   void _showTaskDetail(TaskModel task) {
+    final bool isResourceRequest = task.request == 'resource';
     showModalBottomSheet(
       context: context,
       isScrollControlled: true,
@@ -622,6 +624,62 @@ class _TechnicianDashboardResourceState
                         ],
                       ),
                     ),
+                    // Tampilkan foto jika ini adalah permintaan item
+                    if (!isResourceRequest && task.hasValidImage()) ...[
+                      const SizedBox(height: 24),
+                      const Text('Foto Item',
+                          style: TextStyle(
+                              fontSize: 16, fontWeight: FontWeight.bold)),
+                      const SizedBox(height: 12),
+                      GestureDetector(
+                        onTap: () {
+                          // Panggil fungsi untuk menampilkan gambar fullscreen
+                          _showFullScreenImage(
+                              context, task.getNormalizedImageUrl()!);
+                        },
+                        child: Stack(
+                          alignment: Alignment.center,
+                          children: [
+                            Container(
+                              height: 250,
+                              width: double.infinity,
+                              decoration: BoxDecoration(
+                                color: Colors.grey[200],
+                                borderRadius: BorderRadius.circular(12),
+                              ),
+                              child: ClipRRect(
+                                borderRadius: BorderRadius.circular(12),
+                                child: FirebaseStorageImage(
+                                  imageUrl: task.getNormalizedImageUrl(),
+                                  fit: BoxFit.cover,
+                                  placeholder: Container(
+                                    color: Colors.grey[200],
+                                    child: const Center(
+                                        child: CircularProgressIndicator()),
+                                  ),
+                                  errorWidget: Container(
+                                    color: Colors.grey[200],
+                                    child: Center(
+                                      child: Icon(Icons.broken_image,
+                                          color: Colors.grey[400]),
+                                    ),
+                                  ),
+                                ),
+                              ),
+                            ),
+                            Container(
+                              padding: const EdgeInsets.all(8),
+                              decoration: BoxDecoration(
+                                color: Colors.black.withOpacity(0.5),
+                                shape: BoxShape.circle,
+                              ),
+                              child: const Icon(Icons.zoom_in,
+                                  color: Colors.white, size: 32),
+                            ),
+                          ],
+                        ),
+                      ),
+                    ],
                     const SizedBox(height: 20),
                     const Text(
                       'Deskripsi Tugas',
@@ -730,7 +788,35 @@ class _TechnicianDashboardResourceState
               if (task.timeRequired != null && task.timeRequired!.isNotEmpty)
                 _buildInfoRow(
                     Icons.calendar_today, 'Waktu', task.timeRequired!),
-              const SizedBox(height: 6),
+              if (!isResourceRequest && task.hasValidImage()) ...[
+                const SizedBox(height: 12),
+                SizedBox(
+                  width: double.infinity,
+                  height: 150,
+                  child: ClipRRect(
+                    borderRadius: BorderRadius.circular(12),
+                    child: FirebaseStorageImage(
+                      imageUrl: task.getNormalizedImageUrl(),
+                      fit: BoxFit.cover,
+                      placeholder: Container(
+                        color: Colors.grey[200],
+                        child: const Center(child: CircularProgressIndicator()),
+                      ),
+                      errorWidget: Container(
+                        color: Colors.grey[200],
+                        child: Center(
+                          child: Icon(
+                            Icons.image_not_supported_outlined,
+                            color: Colors.grey[400],
+                            size: 40,
+                          ),
+                        ),
+                      ),
+                    ),
+                  ),
+                ),
+              ],
+              const SizedBox(height: 12),
               Container(
                 width: double.infinity,
                 padding: const EdgeInsets.all(12),
@@ -881,6 +967,44 @@ class _TechnicianDashboardResourceState
             ),
           ),
         ],
+      ),
+    );
+  }
+
+  void _showFullScreenImage(BuildContext context, String imageUrl) {
+    Navigator.of(context).push(
+      MaterialPageRoute(
+        builder: (context) => Scaffold(
+          backgroundColor: Colors.black,
+          appBar: AppBar(
+            backgroundColor: Colors.black,
+            elevation: 0,
+            leading: IconButton(
+              icon: const Icon(Icons.close, color: Colors.white),
+              onPressed: () => Navigator.of(context).pop(),
+            ),
+          ),
+          body: Center(
+            child: InteractiveViewer(
+              panEnabled: true,
+              minScale: 0.5,
+              maxScale: 4.0,
+              child: FirebaseStorageImage(
+                imageUrl: imageUrl,
+                fit: BoxFit.contain, // Agar seluruh gambar terlihat saat dibuka
+                placeholder: const Center(
+                    child: CircularProgressIndicator(color: Colors.white)),
+                errorWidget: const Center(
+                  child: Icon(
+                    Icons.broken_image,
+                    color: Colors.white,
+                    size: 50,
+                  ),
+                ),
+              ),
+            ),
+          ),
+        ),
       ),
     );
   }

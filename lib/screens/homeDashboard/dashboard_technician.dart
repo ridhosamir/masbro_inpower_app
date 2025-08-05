@@ -18,6 +18,7 @@ import 'package:masbro_inpower_app/services/operasionalApp/firestore_service.dar
 import 'package:masbro_inpower_app/services/resourceApp/firestore_service.dart'
     as resource_service;
 import 'package:masbro_inpower_app/services/user_service.dart';
+import 'package:masbro_inpower_app/utils/firebase_storage_image.dart';
 import 'package:provider/provider.dart';
 
 class HomeDashboardTechnician extends StatefulWidget {
@@ -932,19 +933,6 @@ class _TechnicianStatusTabState extends State<TechnicianStatusTab>
       child: ListView(
         padding: EdgeInsets.zero,
         children: [
-          if (_isSearching)
-            Container(
-              width: double.infinity,
-              padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
-              color: Colors.blue.withOpacity(0.1),
-              child: Text(
-                '${_filteredList.length} hasil untuk "${_searchController.text}"',
-                style: TextStyle(
-                  color: Colors.blue[800],
-                  fontWeight: FontWeight.w600,
-                ),
-              ),
-            ),
           Container(
             decoration: BoxDecoration(
               color: Colors.white,
@@ -977,6 +965,19 @@ class _TechnicianStatusTabState extends State<TechnicianStatusTab>
               ],
             ),
           ),
+          if (_isSearching)
+            Container(
+              width: double.infinity,
+              padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+              color: Colors.blue.withOpacity(0.1),
+              child: Text(
+                '${_filteredList.length} hasil untuk "${_searchController.text}"',
+                style: TextStyle(
+                  color: Colors.blue[800],
+                  fontWeight: FontWeight.w600,
+                ),
+              ),
+            ),
           if (paginatedList.isEmpty)
             SizedBox(
               height: MediaQuery.of(context).size.height * 0.4,
@@ -1577,6 +1578,7 @@ class _TechnicianStatusTabState extends State<TechnicianStatusTab>
   }
 
   void _showTaskDetailResource(resource_task.TaskModel task) {
+    final bool isResourceRequest = task.request == 'resource';
     showModalBottomSheet(
       context: context,
       isScrollControlled: true,
@@ -1658,6 +1660,62 @@ class _TechnicianStatusTabState extends State<TechnicianStatusTab>
                         ],
                       ),
                     ),
+                    // Tampilkan foto jika ini adalah permintaan item
+                    if (!isResourceRequest && task.hasValidImage()) ...[
+                      const SizedBox(height: 24),
+                      const Text('Foto Item',
+                          style: TextStyle(
+                              fontSize: 16, fontWeight: FontWeight.bold)),
+                      const SizedBox(height: 12),
+                      GestureDetector(
+                        onTap: () {
+                          // Panggil fungsi untuk menampilkan gambar fullscreen
+                          _showFullScreenImage(
+                              context, task.getNormalizedImageUrl()!);
+                        },
+                        child: Stack(
+                          alignment: Alignment.center,
+                          children: [
+                            Container(
+                              height: 250,
+                              width: double.infinity,
+                              decoration: BoxDecoration(
+                                color: Colors.grey[200],
+                                borderRadius: BorderRadius.circular(12),
+                              ),
+                              child: ClipRRect(
+                                borderRadius: BorderRadius.circular(12),
+                                child: FirebaseStorageImage(
+                                  imageUrl: task.getNormalizedImageUrl(),
+                                  fit: BoxFit.cover,
+                                  placeholder: Container(
+                                    color: Colors.grey[200],
+                                    child: const Center(
+                                        child: CircularProgressIndicator()),
+                                  ),
+                                  errorWidget: Container(
+                                    color: Colors.grey[200],
+                                    child: Center(
+                                      child: Icon(Icons.broken_image,
+                                          color: Colors.grey[400]),
+                                    ),
+                                  ),
+                                ),
+                              ),
+                            ),
+                            Container(
+                              padding: const EdgeInsets.all(8),
+                              decoration: BoxDecoration(
+                                color: Colors.black.withOpacity(0.5),
+                                shape: BoxShape.circle,
+                              ),
+                              child: const Icon(Icons.zoom_in,
+                                  color: Colors.white, size: 32),
+                            ),
+                          ],
+                        ),
+                      ),
+                    ],
                     const SizedBox(height: 20),
                     const Text(
                       'Deskripsi Tugas',
@@ -2519,6 +2577,35 @@ class _TechnicianStatusTabState extends State<TechnicianStatusTab>
                     _buildStatusChip(task.status),
                   ],
                 ),
+                if (!isResourceRequest && task.hasValidImage()) ...[
+                  const SizedBox(height: 12),
+                  SizedBox(
+                    width: double.infinity,
+                    height: 150,
+                    child: ClipRRect(
+                      borderRadius: BorderRadius.circular(12),
+                      child: FirebaseStorageImage(
+                        imageUrl: task.getNormalizedImageUrl(),
+                        fit: BoxFit.cover,
+                        placeholder: Container(
+                          color: Colors.grey[200],
+                          child:
+                              const Center(child: CircularProgressIndicator()),
+                        ),
+                        errorWidget: Container(
+                          color: Colors.grey[200],
+                          child: Center(
+                            child: Icon(
+                              Icons.image_not_supported_outlined,
+                              color: Colors.grey[400],
+                              size: 40,
+                            ),
+                          ),
+                        ),
+                      ),
+                    ),
+                  ),
+                ],
                 const SizedBox(height: 12),
                 Container(
                   width: double.infinity,
