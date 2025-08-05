@@ -9,6 +9,7 @@ import '../../../services/resourceApp/firestore_service.dart';
 import '../../../widgets/custom_button.dart';
 import '../../../widgets/custom_text_field.dart';
 import 'assign_technician_screen.dart';
+import 'package:masbro_inpower_app/utils/firebase_storage_image.dart';
 
 class RequestDetailScreenResource extends StatefulWidget {
   final RequestModel request;
@@ -243,6 +244,80 @@ class _RequestDetailScreenResourceState
                     .format(widget.request.createdAt),
               ),
             ]),
+            // Tampilkan foto jika ini adalah permintaan item
+            if (!isResourceRequest && widget.request.hasValidImage()) ...[
+              const SizedBox(height: 24),
+              _buildSectionTitle('Foto Item'),
+              const SizedBox(height: 12),
+              GestureDetector(
+                onTap: () {
+                  // Panggil fungsi untuk menampilkan gambar fullscreen
+                  _showFullScreenImage(
+                      context, widget.request.getNormalizedImageUrl()!);
+                },
+                child: Stack(
+                  alignment: Alignment.center,
+                  children: [
+                    // Container gambar yang sudah ada
+                    Container(
+                      height: 250,
+                      width: double.infinity,
+                      decoration: BoxDecoration(
+                        color: Colors.grey[200],
+                        borderRadius: BorderRadius.circular(12),
+                      ),
+                      child: ClipRRect(
+                        borderRadius: BorderRadius.circular(12),
+                        child: FirebaseStorageImage(
+                          imageUrl: widget.request.getNormalizedImageUrl(),
+                          fit: BoxFit.cover,
+                          placeholder: Container(
+                            color: Colors.grey[200],
+                            child: const Center(
+                                child: CircularProgressIndicator()),
+                          ),
+                          errorWidget: Container(
+                            color: Colors.grey[200],
+                            child: Center(
+                              child: Column(
+                                mainAxisAlignment: MainAxisAlignment.center,
+                                children: [
+                                  const Icon(Icons.error_outline,
+                                      color: Colors.red, size: 40),
+                                  const SizedBox(height: 8),
+                                  const Text('Gagal memuat gambar'),
+                                  const SizedBox(height: 8),
+                                  ElevatedButton.icon(
+                                    onPressed: () {
+                                      setState(() {});
+                                    },
+                                    icon: const Icon(Icons.refresh),
+                                    label: const Text('Coba Lagi'),
+                                  ),
+                                ],
+                              ),
+                            ),
+                          ),
+                        ),
+                      ),
+                    ),
+                    // Tambahkan ikon sebagai petunjuk visual
+                    Container(
+                      padding: const EdgeInsets.all(8),
+                      decoration: BoxDecoration(
+                        color: Colors.black.withOpacity(0.5),
+                        shape: BoxShape.circle,
+                      ),
+                      child: const Icon(
+                        Icons.zoom_in,
+                        color: Colors.white,
+                        size: 32,
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            ],
             const SizedBox(height: 24),
             _buildSectionTitle('Deskripsi Kebutuhan'),
             const SizedBox(height: 12),
@@ -384,6 +459,44 @@ class _RequestDetailScreenResourceState
         ],
       ),
       child: Column(children: children),
+    );
+  }
+
+  void _showFullScreenImage(BuildContext context, String imageUrl) {
+    Navigator.of(context).push(
+      MaterialPageRoute(
+        builder: (context) => Scaffold(
+          backgroundColor: Colors.black,
+          appBar: AppBar(
+            backgroundColor: Colors.black,
+            elevation: 0,
+            leading: IconButton(
+              icon: const Icon(Icons.close, color: Colors.white),
+              onPressed: () => Navigator.of(context).pop(),
+            ),
+          ),
+          body: Center(
+            child: InteractiveViewer(
+              panEnabled: true,
+              minScale: 0.5,
+              maxScale: 4.0,
+              child: FirebaseStorageImage(
+                imageUrl: imageUrl,
+                fit: BoxFit.contain, // Agar seluruh gambar terlihat saat dibuka
+                placeholder: const Center(
+                    child: CircularProgressIndicator(color: Colors.white)),
+                errorWidget: const Center(
+                  child: Icon(
+                    Icons.broken_image,
+                    color: Colors.white,
+                    size: 50,
+                  ),
+                ),
+              ),
+            ),
+          ),
+        ),
+      ),
     );
   }
 
