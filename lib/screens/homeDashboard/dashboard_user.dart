@@ -1433,6 +1433,8 @@ class _StatusTabState extends State<StatusTab>
   }
 
   Widget _buildUnifiedRequestCard(RequestModel request) {
+    final bool isResourceRequest = request.request == 'resource';
+
     return Card(
       margin: const EdgeInsets.only(bottom: 16),
       elevation: 4,
@@ -1466,8 +1468,13 @@ class _StatusTabState extends State<StatusTab>
                         color: Colors.cyan.withOpacity(0.1),
                         borderRadius: BorderRadius.circular(8),
                       ),
-                      child:
-                          Icon(Icons.groups, color: Colors.cyan[700], size: 20),
+                      child: Icon(
+                        isResourceRequest
+                            ? Icons.supervisor_account
+                            : Icons.inventory,
+                        size: 16,
+                        color: Colors.grey[600],
+                      ),
                     ),
                     const SizedBox(width: 12),
                     Expanded(
@@ -1509,6 +1516,35 @@ class _StatusTabState extends State<StatusTab>
                         size: 16, color: Colors.grey[400]),
                   ],
                 ),
+                if (!isResourceRequest && request.hasValidImage()) ...[
+                  const SizedBox(height: 12),
+                  SizedBox(
+                    width: double.infinity,
+                    height: 150,
+                    child: ClipRRect(
+                      borderRadius: BorderRadius.circular(12),
+                      child: FirebaseStorageImage(
+                        imageUrl: request.getNormalizedImageUrl(),
+                        fit: BoxFit.cover,
+                        placeholder: Container(
+                          color: Colors.grey[200],
+                          child:
+                              const Center(child: CircularProgressIndicator()),
+                        ),
+                        errorWidget: Container(
+                          color: Colors.grey[200],
+                          child: Center(
+                            child: Icon(
+                              Icons.image_not_supported_outlined,
+                              color: Colors.grey[400],
+                              size: 40,
+                            ),
+                          ),
+                        ),
+                      ),
+                    ),
+                  ),
+                ],
                 const SizedBox(height: 16),
                 Text(
                   'Permintaan:',

@@ -1,15 +1,21 @@
 import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
+import 'package:masbro_inpower_app/utils/firebase_storage_image.dart';
 import '../../../models/resourceApp/request_model.dart';
 
-class RequestDetailScreen extends StatelessWidget {
+class RequestDetailScreen extends StatefulWidget {
   final RequestModel request;
 
   const RequestDetailScreen({super.key, required this.request});
 
   @override
+  State<RequestDetailScreen> createState() => _RequestDetailScreenState();
+}
+
+class _RequestDetailScreenState extends State<RequestDetailScreen> {
+  @override
   Widget build(BuildContext context) {
-    final bool isResourceRequest = request.request == 'resource';
+    final bool isResourceRequest = widget.request.request == 'resource';
     return Scaffold(
       appBar: AppBar(
         title: const Text('Detail Permintaan'),
@@ -26,39 +32,39 @@ class RequestDetailScreen extends StatelessWidget {
               width: double.infinity,
               padding: const EdgeInsets.all(20),
               decoration: BoxDecoration(
-                color: request.getStatusColor().withOpacity(0.1),
+                color: widget.request.getStatusColor().withOpacity(0.1),
                 borderRadius: BorderRadius.circular(12),
-                border: Border.all(color: request.getStatusColor()),
+                border: Border.all(color: widget.request.getStatusColor()),
               ),
               child: Column(
                 children: [
                   Icon(
-                    request.getStatusIcon(),
-                    color: request.getStatusColor(),
+                    widget.request.getStatusIcon(),
+                    color: widget.request.getStatusColor(),
                     size: 48,
                   ),
                   const SizedBox(height: 12),
                   Text(
-                    'Status: ${request.getStatusDisplayName()}',
+                    'Status: ${widget.request.getStatusDisplayName()}',
                     style: TextStyle(
                       fontSize: 18,
                       fontWeight: FontWeight.bold,
-                      color: request.getStatusColor(),
+                      color: widget.request.getStatusColor(),
                     ),
                   ),
                   const SizedBox(height: 8),
                   Text(
-                    'Dibuat pada ${DateFormat('d MMMM yyyy, HH:mm').format(request.createdAt)}',
+                    'Dibuat pada ${DateFormat('d MMMM yyyy, HH:mm').format(widget.request.createdAt)}',
                     style: TextStyle(
                       color: Colors.grey[600],
                       fontSize: 14,
                     ),
                   ),
-                  if (request.status == 'completed' &&
-                      request.completionDate != null) ...[
+                  if (widget.request.status == 'completed' &&
+                      widget.request.completionDate != null) ...[
                     const SizedBox(height: 8),
                     Text(
-                      'Diselesaikan pada ${DateFormat('dd MMM yyyy, HH:mm').format(request.completionDate!)}',
+                      'Diselesaikan pada ${DateFormat('dd MMM yyyy, HH:mm').format(widget.request.completionDate!)}',
                       style: TextStyle(
                         color: Colors.green[700],
                         fontSize: 14,
@@ -78,21 +84,95 @@ class RequestDetailScreen extends StatelessWidget {
               _buildInfoRow(
                 Icons.person,
                 'Pemohon',
-                request.employeeName,
+                widget.request.employeeName,
               ),
               _buildInfoRow(
                 isResourceRequest ? Icons.supervisor_account : Icons.inventory,
                 'Kebutuhan',
-                '${request.request[0].toUpperCase()}${request.request.substring(1)}',
+                '${widget.request.request[0].toUpperCase()}${widget.request.request.substring(1)}',
               ),
-              if (request.timeRequired != null &&
-                  request.timeRequired!.isNotEmpty)
+              if (widget.request.timeRequired != null &&
+                  widget.request.timeRequired!.isNotEmpty)
                 _buildInfoRow(
                   Icons.calendar_today,
                   'Waktu\nDibutuhkan',
-                  _formatDisplayDate(request.timeRequired!),
+                  _formatDisplayDate(widget.request.timeRequired!),
                 ),
             ]),
+            // Tampilkan foto jika ini adalah permintaan item
+            if (!isResourceRequest && widget.request.hasValidImage()) ...[
+              const SizedBox(height: 24),
+              _buildSectionTitle('Foto Item'),
+              const SizedBox(height: 12),
+              GestureDetector(
+                onTap: () {
+                  // Panggil fungsi untuk menampilkan gambar fullscreen
+                  _showFullScreenImage(
+                      context, widget.request.getNormalizedImageUrl()!);
+                },
+                child: Stack(
+                  alignment: Alignment.center,
+                  children: [
+                    // Container gambar yang sudah ada
+                    Container(
+                      height: 250,
+                      width: double.infinity,
+                      decoration: BoxDecoration(
+                        color: Colors.grey[200],
+                        borderRadius: BorderRadius.circular(12),
+                      ),
+                      child: ClipRRect(
+                        borderRadius: BorderRadius.circular(12),
+                        child: FirebaseStorageImage(
+                          imageUrl: widget.request.getNormalizedImageUrl(),
+                          fit: BoxFit.cover,
+                          placeholder: Container(
+                            color: Colors.grey[200],
+                            child: const Center(
+                                child: CircularProgressIndicator()),
+                          ),
+                          errorWidget: Container(
+                            color: Colors.grey[200],
+                            child: Center(
+                              child: Column(
+                                mainAxisAlignment: MainAxisAlignment.center,
+                                children: [
+                                  const Icon(Icons.error_outline,
+                                      color: Colors.red, size: 40),
+                                  const SizedBox(height: 8),
+                                  const Text('Gagal memuat gambar'),
+                                  const SizedBox(height: 8),
+                                  ElevatedButton.icon(
+                                    onPressed: () {
+                                      setState(() {});
+                                    },
+                                    icon: const Icon(Icons.refresh),
+                                    label: const Text('Coba Lagi'),
+                                  ),
+                                ],
+                              ),
+                            ),
+                          ),
+                        ),
+                      ),
+                    ),
+                    // Tambahkan ikon sebagai petunjuk visual
+                    Container(
+                      padding: const EdgeInsets.all(8),
+                      decoration: BoxDecoration(
+                        color: Colors.black.withOpacity(0.5),
+                        shape: BoxShape.circle,
+                      ),
+                      child: const Icon(
+                        Icons.zoom_in,
+                        color: Colors.white,
+                        size: 32,
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            ],
             const SizedBox(height: 24),
 
             // --- Deskripsi Kebutuhan ---
@@ -107,7 +187,7 @@ class RequestDetailScreen extends StatelessWidget {
                 border: Border.all(color: Colors.grey[200]!),
               ),
               child: Text(
-                request.description,
+                widget.request.description,
                 style: TextStyle(
                   fontSize: 16,
                   height: 1.5,
@@ -117,8 +197,8 @@ class RequestDetailScreen extends StatelessWidget {
             ),
 
             // --- Teknisi yang Ditugaskan ---
-            if (request.technicianName != null &&
-                request.technicianName!.isNotEmpty) ...[
+            if (widget.request.technicianName != null &&
+                widget.request.technicianName!.isNotEmpty) ...[
               const SizedBox(height: 24),
               _buildSectionTitle('Resource yang Ditugaskan'),
               const SizedBox(height: 12),
@@ -151,7 +231,7 @@ class RequestDetailScreen extends StatelessWidget {
                         crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
                           Text(
-                            request.technicianName!,
+                            widget.request.technicianName!,
                             style: TextStyle(
                               fontSize: 16,
                               fontWeight: FontWeight.bold,
@@ -160,7 +240,7 @@ class RequestDetailScreen extends StatelessWidget {
                           ),
                           const SizedBox(height: 4),
                           Text(
-                            request.status == 'inProgress'
+                            widget.request.status == 'inProgress'
                                 ? 'Sedang menangani permintaan Anda.'
                                 : 'Menyelesaikan permintaan ini.',
                             style: TextStyle(
@@ -177,8 +257,8 @@ class RequestDetailScreen extends StatelessWidget {
             ],
 
             // --- Catatan Penyelesaian ---
-            if (request.status == 'completed' &&
-                request.completionReason != null) ...[
+            if (widget.request.status == 'completed' &&
+                widget.request.completionReason != null) ...[
               const SizedBox(height: 24),
               _buildSectionTitle('Catatan Penyelesaian'),
               const SizedBox(height: 12),
@@ -193,11 +273,11 @@ class RequestDetailScreen extends StatelessWidget {
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    if (request.completionDate != null)
+                    if (widget.request.completionDate != null)
                       Padding(
                         padding: const EdgeInsets.only(bottom: 8.0),
                         child: Text(
-                          'Diselesaikan pada: ${DateFormat('d MMMM yyyy, HH:mm').format(request.completionDate!)}',
+                          'Diselesaikan pada: ${DateFormat('d MMMM yyyy, HH:mm').format(widget.request.completionDate!)}',
                           style: TextStyle(
                             fontSize: 14,
                             color: Colors.green[700],
@@ -206,7 +286,7 @@ class RequestDetailScreen extends StatelessWidget {
                         ),
                       ),
                     Text(
-                      request.completionReason!,
+                      widget.request.completionReason!,
                       style: TextStyle(
                         fontSize: 16,
                         height: 1.5,
@@ -244,6 +324,44 @@ class RequestDetailScreen extends StatelessWidget {
             ),
             SizedBox(height: 20),
           ],
+        ),
+      ),
+    );
+  }
+
+  void _showFullScreenImage(BuildContext context, String imageUrl) {
+    Navigator.of(context).push(
+      MaterialPageRoute(
+        builder: (context) => Scaffold(
+          backgroundColor: Colors.black,
+          appBar: AppBar(
+            backgroundColor: Colors.black,
+            elevation: 0,
+            leading: IconButton(
+              icon: const Icon(Icons.close, color: Colors.white),
+              onPressed: () => Navigator.of(context).pop(),
+            ),
+          ),
+          body: Center(
+            child: InteractiveViewer(
+              panEnabled: true,
+              minScale: 0.5,
+              maxScale: 4.0,
+              child: FirebaseStorageImage(
+                imageUrl: imageUrl,
+                fit: BoxFit.contain, // Agar seluruh gambar terlihat saat dibuka
+                placeholder: const Center(
+                    child: CircularProgressIndicator(color: Colors.white)),
+                errorWidget: const Center(
+                  child: Icon(
+                    Icons.broken_image,
+                    color: Colors.white,
+                    size: 50,
+                  ),
+                ),
+              ),
+            ),
+          ),
         ),
       ),
     );

@@ -14,6 +14,7 @@ class TaskModel {
   final String? timeRequired;
   final DateTime? completedAt;
   final String? completionNote;
+  final String? imageUrl;
 
   TaskModel({
     required this.id,
@@ -28,6 +29,7 @@ class TaskModel {
     this.timeRequired,
     this.completedAt,
     this.completionNote,
+    this.imageUrl,
   });
 
   factory TaskModel.fromFirestore(DocumentSnapshot doc) {
@@ -47,6 +49,7 @@ class TaskModel {
           ? (data['completedAt'] as Timestamp).toDate()
           : null,
       completionNote: data['completionNote'],
+      imageUrl: data['imageUrl'],
     );
   }
 
@@ -64,6 +67,7 @@ class TaskModel {
       'completedAt':
           completedAt != null ? Timestamp.fromDate(completedAt!) : null,
       'completionNote': completionNote,
+      'imageUrl': imageUrl,
     };
   }
 

@@ -7,7 +7,7 @@ import 'package:image_picker/image_picker.dart';
 import 'package:image/image.dart' as img;
 import '../../../services/auth_service.dart';
 import '../../../services/maintenanceApp/firestore_service.dart';
-import '../../../services/maintenanceApp/storage_service.dart';
+import '../../../services/storage_service.dart';
 import '../../../services/user_service.dart';
 import '../../../models/maintenanceApp/report_model.dart';
 import '../../../models/maintenanceApp/building_model.dart';
