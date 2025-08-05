@@ -133,6 +133,7 @@ class _OfficerDashboardBookingRoomState
         contentPadding:
             const EdgeInsets.symmetric(horizontal: 12, vertical: 15),
       ),
+      menuMaxHeight: 200,
       hint: times.isEmpty ? const Text('Pilih Jam Mulai') : null,
       items: times.map((time) {
         return DropdownMenuItem<TimeOfDay>(
