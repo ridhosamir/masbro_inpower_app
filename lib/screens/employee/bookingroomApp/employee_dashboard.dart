@@ -477,7 +477,7 @@ class _EmployeeDashboardBookingRoomState
           }).toList();
         }
 
-        bookings.sort((a, b) => b.usageStartDate.compareTo(a.usageStartDate));
+        bookings.sort((a, b) => b.createdAt.compareTo(a.createdAt));
 
         if (bookings.isEmpty) {
           if (_searchQuery.isNotEmpty) {
