@@ -14,7 +14,25 @@ class FirestoreServiceResource {
   // Membuat laporan resource baru
   Future<void> createRequest(RequestModel request) async {
     try {
-      await _requestsCollection.add(request.toMap());
+      // Log untuk debugging gambar
+      if (request.imageUrl != null && request.imageUrl!.isNotEmpty) {
+        print('Creating resource request with image URL: ${request.imageUrl}');
+      } else {
+        print('Creating resource request without image URL');
+      }
+
+      final docRef = await _requestsCollection.add(request.toMap());
+      print('Resource request created with ID: ${docRef.id}');
+
+      // Verifikasi apakah imageUrl tersimpan dengan benar
+      final savedRequest = await docRef.get();
+      final savedData = savedRequest.data() as Map<String, dynamic>?;
+      if (savedData != null && savedData['imageUrl'] != null) {
+        print('Verified image URL saved: ${savedData['imageUrl']}');
+      } else if (request.imageUrl != null && request.imageUrl!.isNotEmpty) {
+        print(
+            'Warning: Image URL may not have been saved correctly for request ${docRef.id}');
+      }
     } catch (e) {
       print('Error creating resource request: $e');
       rethrow;
@@ -27,9 +45,15 @@ class FirestoreServiceResource {
         .orderBy('createdAt', descending: true)
         .snapshots()
         .map((snapshot) {
-      return snapshot.docs
-          .map((doc) => RequestModel.fromFirestore(doc))
-          .toList();
+      return snapshot.docs.map((doc) {
+        final request = RequestModel.fromFirestore(doc);
+        // Log untuk debugging gambar
+        if (request.hasValidImage()) {
+          print(
+              'Retrieved request ${request.id} with image URL: ${request.imageUrl}');
+        }
+        return request;
+      }).toList();
     });
   }
 
@@ -40,9 +64,15 @@ class FirestoreServiceResource {
         .orderBy('createdAt', descending: true)
         .snapshots()
         .map((snapshot) {
-      return snapshot.docs
-          .map((doc) => RequestModel.fromFirestore(doc))
-          .toList();
+      return snapshot.docs.map((doc) {
+        final request = RequestModel.fromFirestore(doc);
+        // Log untuk debugging gambar
+        if (request.hasValidImage()) {
+          print(
+              'Retrieved employee request ${request.id} with image URL: ${request.imageUrl}');
+        }
+        return request;
+      }).toList();
     });
   }
 
@@ -87,10 +117,18 @@ class FirestoreServiceResource {
         assignedAt: DateTime.now(),
         timeRequired: request.timeRequired,
         request: request.request,
+        imageUrl: request.imageUrl,
       );
       batch.set(taskRef, task.toMap());
 
       await batch.commit();
+      print(
+          'Technician $technicianName assigned to resource request ${request.id}');
+
+      // Log untuk image URL
+      if (request.hasValidImage()) {
+        print('Task created with image URL from request: ${request.imageUrl}');
+      }
     } catch (e) {
       print('Error assigning technician for resource: $e');
       rethrow;
@@ -129,10 +167,17 @@ class FirestoreServiceResource {
           completionNote: reason,
           timeRequired: request.timeRequired,
           request: request.request,
+          imageUrl: request.imageUrl,
         );
         batch.set(taskRef, task.toMap());
+
+        // Log untuk image URL
+        if (request.hasValidImage()) {
+          print(
+              'Direct completion task created with image URL: ${request.imageUrl}');
+        }
       } else {
-        // Jika task sudah ada, update statusnya
+        // ... (sisa logika tidak berubah)
         final taskQuery = await _tasksCollection
             .where('requestId', isEqualTo: requestId)
             .limit(1)
@@ -147,6 +192,7 @@ class FirestoreServiceResource {
         }
       }
       await batch.commit();
+      print('Resource request $requestId marked as completed');
     } catch (e) {
       print('Error completing resource request: $e');
       rethrow;
@@ -160,7 +206,14 @@ class FirestoreServiceResource {
         .orderBy('assignedAt', descending: true)
         .snapshots()
         .map((snapshot) {
-      return snapshot.docs.map((doc) => TaskModel.fromFirestore(doc)).toList();
+      return snapshot.docs.map((doc) {
+        final task = TaskModel.fromFirestore(doc);
+        // Log untuk debugging gambar
+        if (task.imageUrl != null && task.imageUrl!.isNotEmpty) {
+          print('Retrieved task ${task.id} with image URL: ${task.imageUrl}');
+        }
+        return task;
+      }).toList();
     });
   }
 

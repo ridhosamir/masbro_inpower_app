@@ -1,7 +1,13 @@
+import 'dart:io';
+import 'dart:typed_data';
+import 'package:flutter/foundation.dart' show kIsWeb;
+import 'package:image_picker/image_picker.dart';
+import 'package:image/image.dart' as img;
 import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
 import 'package:provider/provider.dart';
 import '../../../services/resourceApp/firestore_service.dart';
+import '../../../services/storage_service.dart';
 import '../../../models/resourceApp/request_model.dart';
 import '../../../services/auth_service.dart';
 import '../../../services/user_service.dart';
@@ -23,6 +29,8 @@ class _CreateRequestScreenState extends State<CreateRequestScreen>
   final _timeRequiredController = TextEditingController();
   final FirestoreServiceResource _firestoreService = FirestoreServiceResource();
   final _descriptionFocusNode = FocusNode();
+  final StorageService _storageService = StorageService();
+  final ImagePicker _imagePicker = ImagePicker();
   bool _isDescriptionFocused = false;
 
   late TabController _tabController;
@@ -31,6 +39,11 @@ class _CreateRequestScreenState extends State<CreateRequestScreen>
 
   DateTime? _selectedDate;
   TimeOfDay? _selectedTime;
+
+  File? _imageFile;
+  Uint8List? _webImageBytes;
+  String? _imageUrl;
+  String? _imageError;
 
   @override
   void initState() {
@@ -53,6 +66,10 @@ class _CreateRequestScreenState extends State<CreateRequestScreen>
       _timeRequiredController.clear();
       _selectedDate = null;
       _selectedTime = null;
+      _imageFile = null;
+      _webImageBytes = null;
+      _imageUrl = null;
+      _imageError = null;
       setState(() {});
     }
   }
@@ -79,6 +96,122 @@ class _CreateRequestScreenState extends State<CreateRequestScreen>
     _timeRequiredController.dispose();
     _descriptionFocusNode.dispose();
     super.dispose();
+  }
+
+  Future<bool> _validateImage(dynamic image) async {
+    try {
+      Uint8List bytes;
+      if (kIsWeb && image is Uint8List) {
+        bytes = image;
+      } else if (!kIsWeb && image is File) {
+        bytes = await image.readAsBytes();
+      } else {
+        throw Exception('Format gambar tidak valid');
+      }
+      final decodedImage = img.decodeImage(bytes);
+      if (decodedImage == null) {
+        throw Exception('File bukan gambar yang valid');
+      }
+      print('[CREATE_REQUEST] Gambar valid: ${decodedImage.format}');
+      return true;
+    } catch (e) {
+      print('[CREATE_REQUEST] Gagal validasi gambar: $e');
+      return false;
+    }
+  }
+
+  Future<void> _takePicture() async {
+    try {
+      final XFile? image = await _imagePicker.pickImage(
+        source: ImageSource.camera,
+        imageQuality: 80,
+        maxWidth: 1000,
+      );
+
+      if (image != null) {
+        if (kIsWeb) {
+          final bytes = await image.readAsBytes();
+          if (await _validateImage(bytes)) {
+            setState(() {
+              _webImageBytes = bytes;
+              _imageFile = null;
+              _imageError = null;
+            });
+          } else {
+            throw Exception('File bukan gambar yang valid');
+          }
+        } else {
+          final file = File(image.path);
+          if (await _validateImage(file)) {
+            setState(() {
+              _imageFile = file;
+              _webImageBytes = null;
+              _imageError = null;
+            });
+          } else {
+            throw Exception('File bukan gambar yang valid');
+          }
+        }
+      }
+    } catch (e) {
+      setState(() {
+        _imageError = 'Error mengakses kamera: $e';
+      });
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text('Error mengakses kamera: $e'),
+          backgroundColor: Colors.red,
+          behavior: SnackBarBehavior.floating,
+        ),
+      );
+    }
+  }
+
+  Future<void> _pickImageFromGallery() async {
+    try {
+      final XFile? image = await _imagePicker.pickImage(
+        source: ImageSource.gallery,
+        imageQuality: 80,
+        maxWidth: 1000,
+      );
+
+      if (image != null) {
+        if (kIsWeb) {
+          final bytes = await image.readAsBytes();
+          if (await _validateImage(bytes)) {
+            setState(() {
+              _webImageBytes = bytes;
+              _imageFile = null;
+              _imageError = null;
+            });
+          } else {
+            throw Exception('File bukan gambar yang valid');
+          }
+        } else {
+          final file = File(image.path);
+          if (await _validateImage(file)) {
+            setState(() {
+              _imageFile = file;
+              _webImageBytes = null;
+              _imageError = null;
+            });
+          } else {
+            throw Exception('File bukan gambar yang valid');
+          }
+        }
+      }
+    } catch (e) {
+      setState(() {
+        _imageError = 'Error mengakses galeri: $e';
+      });
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text('Error mengakses galeri: $e'),
+          backgroundColor: Colors.red,
+          behavior: SnackBarBehavior.floating,
+        ),
+      );
+    }
   }
 
   Future<void> _selectDateTime() async {
@@ -120,6 +253,19 @@ class _CreateRequestScreenState extends State<CreateRequestScreen>
       final authService = Provider.of<AuthService>(context, listen: false);
       final requestType = _tabController.index == 0 ? 'resource' : 'item';
 
+      if (requestType == 'item') {
+        if (_imageFile != null && !kIsWeb) {
+          final timestamp = DateTime.now().millisecondsSinceEpoch;
+          final fileName = 'requests/${authService.user!.uid}_$timestamp.jpg';
+          _imageUrl = await _storageService.uploadFile(_imageFile!, fileName);
+        } else if (_webImageBytes != null && kIsWeb) {
+          final timestamp = DateTime.now().millisecondsSinceEpoch;
+          final fileName = 'requests/${authService.user!.uid}_$timestamp.jpg';
+          _imageUrl =
+              await _storageService.uploadWebFile(_webImageBytes!, fileName);
+        }
+      }
+
       String? timeRequiredString;
       if (requestType == 'resource' &&
           _selectedDate != null &&
@@ -144,6 +290,7 @@ class _CreateRequestScreenState extends State<CreateRequestScreen>
         createdAt: DateTime.now(),
         request: requestType,
         timeRequired: timeRequiredString,
+        imageUrl: _imageUrl,
       );
 
       await _firestoreService.createRequest(request);
@@ -170,6 +317,101 @@ class _CreateRequestScreenState extends State<CreateRequestScreen>
           ),
         );
       }
+    }
+  }
+
+  Widget _buildImageSection() {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        _buildLabel('Foto Item (Opsional)'),
+        Container(
+          height: 200,
+          width: double.infinity,
+          decoration: BoxDecoration(
+            color: Colors.grey[100],
+            borderRadius: BorderRadius.circular(12),
+            border: Border.all(color: Colors.grey[300]!),
+          ),
+          child: _getImageWidget(),
+        ),
+        const SizedBox(height: 12),
+        Row(
+          children: [
+            Expanded(
+              child: ElevatedButton.icon(
+                onPressed: _takePicture,
+                icon: const Icon(Icons.camera_alt),
+                label: const Text('Kamera'),
+                style: ElevatedButton.styleFrom(
+                  padding: const EdgeInsets.symmetric(vertical: 12),
+                ),
+              ),
+            ),
+            const SizedBox(width: 12),
+            Expanded(
+              child: ElevatedButton.icon(
+                onPressed: _pickImageFromGallery,
+                icon: const Icon(Icons.photo_library),
+                label: const Text('Galeri'),
+                style: ElevatedButton.styleFrom(
+                  padding: const EdgeInsets.symmetric(vertical: 12),
+                ),
+              ),
+            ),
+          ],
+        ),
+        if (_imageFile != null || _webImageBytes != null) ...[
+          const SizedBox(height: 8),
+          Center(
+            child: TextButton.icon(
+              onPressed: () {
+                setState(() {
+                  _imageFile = null;
+                  _webImageBytes = null;
+                  _imageError = null;
+                });
+              },
+              icon: const Icon(Icons.delete, color: Colors.red),
+              label: const Text('Hapus Gambar',
+                  style: TextStyle(color: Colors.red)),
+            ),
+          ),
+        ],
+      ],
+    );
+  }
+
+  Widget _getImageWidget() {
+    if (_imageFile != null && !kIsWeb) {
+      return ClipRRect(
+        borderRadius: BorderRadius.circular(11),
+        child: Image.file(_imageFile!, fit: BoxFit.cover),
+      );
+    } else if (_webImageBytes != null && kIsWeb) {
+      return ClipRRect(
+        borderRadius: BorderRadius.circular(11),
+        child: Image.memory(_webImageBytes!, fit: BoxFit.cover),
+      );
+    } else {
+      return Center(
+        child: Column(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            Icon(Icons.add_a_photo, size: 48, color: Colors.grey[400]),
+            const SizedBox(height: 8),
+            Text('Tambah Foto', style: TextStyle(color: Colors.grey[500])),
+            if (_imageError != null) ...[
+              const SizedBox(height: 8),
+              Text(
+                _imageError!,
+                style: const TextStyle(color: Colors.red, fontSize: 12),
+                textAlign: TextAlign.center,
+              ),
+            ],
+          ],
+        ),
+      );
     }
   }
 
@@ -296,6 +538,10 @@ class _CreateRequestScreenState extends State<CreateRequestScreen>
                         return null;
                       },
                     ),
+                    if (!isResourceRequest) ...[
+                      const SizedBox(height: 24),
+                      _buildImageSection(),
+                    ],
                     const SizedBox(height: 32),
                     CustomButton(
                       text: 'Kirim Permintaan',
