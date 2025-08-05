@@ -106,4 +106,28 @@ class TaskModel {
         return Icons.help;
     }
   }
+
+  bool hasValidImage() {
+    if (imageUrl == null || imageUrl!.isEmpty) {
+      return false;
+    }
+    if (!imageUrl!.startsWith('http') &&
+        !imageUrl!.startsWith('https') &&
+        !imageUrl!.startsWith('gs://')) {
+      return false;
+    }
+    if (imageUrl!.toLowerCase().contains('undefined') ||
+        imageUrl!.toLowerCase().contains('null')) {
+      return false;
+    }
+    return true;
+  }
+
+  /// Menormalkan URL gambar untuk ditampilkan
+  String? getNormalizedImageUrl() {
+    if (!hasValidImage()) {
+      return null;
+    }
+    return imageUrl;
+  }
 }
