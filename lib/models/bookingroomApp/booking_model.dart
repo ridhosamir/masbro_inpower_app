@@ -11,6 +11,7 @@ class BookingModel {
   final DateTime usageStartDate;
   final DateTime usageEndDate;
   final String needs;
+  final String activityType;
   final int numberOfParticipants;
   final String status;
   final DateTime createdAt;
@@ -27,6 +28,7 @@ class BookingModel {
     required this.usageStartDate,
     required this.usageEndDate,
     required this.needs,
+    required this.activityType,
     required this.numberOfParticipants,
     required this.status,
     required this.createdAt,
@@ -47,6 +49,7 @@ class BookingModel {
       usageStartDate: (data['usageStartDate'] as Timestamp).toDate(),
       usageEndDate: (data['usageEndDate'] as Timestamp).toDate(),
       needs: data['needs'] ?? '',
+      activityType: data['activityType'] ?? '',
       numberOfParticipants: data['numberOfParticipants'] ?? 0,
       status: data['status'] ?? 'open',
       createdAt: (data['createdAt'] as Timestamp).toDate(),
@@ -67,6 +70,7 @@ class BookingModel {
       'usageStartDate': Timestamp.fromDate(usageStartDate),
       'usageEndDate': Timestamp.fromDate(usageEndDate),
       'needs': needs,
+      'activityType': activityType,
       'numberOfParticipants': numberOfParticipants,
       'status': status,
       'createdAt': Timestamp.fromDate(createdAt),
@@ -122,8 +126,10 @@ class BookingModel {
     String? roomId,
     String? roomName,
     String? eventAgenda,
-    DateTime? usageDateTime,
+    DateTime? usageStartDate,
+    DateTime? usageEndDate,
     String? needs,
+    String? activityType,
     int? numberOfParticipants,
     String? status,
     DateTime? createdAt,
@@ -140,6 +146,7 @@ class BookingModel {
       usageStartDate: usageStartDate ?? this.usageStartDate,
       usageEndDate: usageEndDate ?? this.usageEndDate,
       needs: needs ?? this.needs,
+      activityType: activityType ?? this.activityType,
       numberOfParticipants: numberOfParticipants ?? this.numberOfParticipants,
       status: status ?? this.status,
       createdAt: createdAt ?? this.createdAt,
