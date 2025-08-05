@@ -1,13 +1,22 @@
+import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
 import 'package:provider/provider.dart';
 import '../../../models/bookingroomApp/booking_model.dart';
+import '../../../models/bookingroomApp/room_model.dart';
 import '../../../models/user_model.dart';
 import '../../../services/auth_service.dart';
 import '../../../services/bookingroomApp/firestore_service.dart';
 import '../../../services/user_service.dart';
 import '../../../widgets/custom_button.dart';
 import '../../../widgets/custom_text_field.dart';
+
+class AvailableRoom {
+  final RoomModel room;
+  final bool isAvailable;
+
+  AvailableRoom({required this.room, required this.isAvailable});
+}
 
 enum BookingType { harian, beberapaHari }
 
@@ -47,11 +56,99 @@ class _CreateBookingScreenState extends State<CreateBookingScreen> {
   ];
   final Set<String> _selectedNeeds = {};
   bool _showOtherNeedsField = false;
+  String? _selectedMainType;
+  String? _selectedSubType;
+
+  List<AvailableRoom> _availableRooms = [];
+  String? _selectedRoomId;
+  RoomModel? _selectedRoom;
+  bool _isSearchingRooms = false;
+
+  Timer? _debounce;
 
   @override
   void initState() {
     super.initState();
     _loadUserData();
+    _participantsController.addListener(_onFormChanged);
+  }
+
+  void _onFormChanged() {
+    if (_debounce?.isActive ?? false) _debounce!.cancel();
+    _debounce = Timer(const Duration(milliseconds: 500), () {
+      _findAvailableRooms();
+    });
+  }
+
+  // Method untuk mendapatkan rentang waktu booking
+  DateTime? get _finalStartDate {
+    if (_bookingType == BookingType.harian &&
+        _selectedDate != null &&
+        _startTime != null) {
+      return DateTime(_selectedDate!.year, _selectedDate!.month,
+          _selectedDate!.day, _startTime!.hour, _startTime!.minute);
+    } else if (_bookingType == BookingType.beberapaHari &&
+        _startDateMulti != null) {
+      return _startDateMulti;
+    }
+    return null;
+  }
+
+  DateTime? get _finalEndDate {
+    if (_bookingType == BookingType.harian &&
+        _selectedDate != null &&
+        _endTime != null) {
+      return DateTime(_selectedDate!.year, _selectedDate!.month,
+          _selectedDate!.day, _endTime!.hour, _endTime!.minute);
+    } else if (_bookingType == BookingType.beberapaHari &&
+        _endDateMulti != null) {
+      return _endDateMulti;
+    }
+    return null;
+  }
+
+  // Method utama untuk mencari ruangan
+  Future<void> _findAvailableRooms() async {
+    final participants = int.tryParse(_participantsController.text) ?? 0;
+    final startDate = _finalStartDate;
+    final endDate = _finalEndDate;
+
+    if (participants > 0 &&
+        startDate != null &&
+        endDate != null &&
+        endDate.isAfter(startDate)) {
+      setState(() {
+        _isSearchingRooms = true;
+        _availableRooms = [];
+        _selectedRoomId = null;
+        _selectedRoom = null;
+      });
+
+      try {
+        final results = await _firestoreService.getFilteredAndCheckedRooms(
+          participants: participants,
+          startDate: startDate,
+          endDate: endDate,
+        );
+
+        setState(() {
+          _availableRooms = results
+              .map((res) => AvailableRoom(
+                    room: res['room'],
+                    isAvailable: res['isAvailable'],
+                  ))
+              .toList();
+        });
+      } catch (e) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+              content: Text('Gagal mencari ruangan: $e'),
+              backgroundColor: Colors.red),
+        );
+      } finally {
+        setState(() => _isSearchingRooms = false);
+      }
+    }
   }
 
   Future<void> _loadUserData() async {
@@ -71,6 +168,8 @@ class _CreateBookingScreenState extends State<CreateBookingScreen> {
     _agendaController.dispose();
     _participantsController.dispose();
     _otherNeedsController.dispose();
+    _participantsController.removeListener(_onFormChanged);
+    _debounce?.cancel();
     super.dispose();
   }
 
@@ -126,16 +225,31 @@ class _CreateBookingScreenState extends State<CreateBookingScreen> {
             _otherNeedsController.text.trim();
       }
 
+      String finalActivityType;
+      if (_selectedMainType == 'Internal') {
+        finalActivityType = 'Internal';
+      } else {
+        finalActivityType = 'Eksternal - $_selectedSubType';
+      }
+
+      if (_selectedRoom == null) {
+        ScaffoldMessenger.of(context).showSnackBar(const SnackBar(
+            content: Text('Terjadi kesalahan, ruangan belum dipilih.'),
+            backgroundColor: Colors.red));
+        return;
+      }
+
       final booking = BookingModel(
         id: '',
         employeeId: currentUser!.uid,
         employeeName: currentUser!.name,
-        roomId: '',
-        roomName: 'Belum Ditentukan',
+        roomId: _selectedRoom!.id,
+        roomName: _selectedRoom!.name,
         eventAgenda: _agendaController.text.trim(),
         usageStartDate: finalStartDate!,
         usageEndDate: finalEndDate!,
         needs: finalNeeds.isEmpty ? 'Tidak ada' : finalNeeds,
+        activityType: finalActivityType,
         numberOfParticipants: int.parse(_participantsController.text),
         status: 'open',
         createdAt: DateTime.now(),
@@ -197,8 +311,12 @@ class _CreateBookingScreenState extends State<CreateBookingScreen> {
                 _buildSingleDayInputs()
               else
                 _buildMultiDayInputs(),
-
               const SizedBox(height: 24),
+
+              _buildSectionTitle('Jenis Kegiatan'),
+              _buildActivityTypeSection(),
+              const SizedBox(height: 24),
+
               _buildSectionTitle('Kebutuhan'),
               _buildNeedsSection(),
               if (_showOtherNeedsField) ...[
@@ -224,6 +342,10 @@ class _CreateBookingScreenState extends State<CreateBookingScreen> {
                   return null;
                 },
               ),
+              const SizedBox(height: 24),
+
+              _buildSectionTitle('Pilih Ruangan'),
+              _buildRoomSelectionSection(),
               const SizedBox(height: 32),
 
               CustomButton(
@@ -359,6 +481,7 @@ class _CreateBookingScreenState extends State<CreateBookingScreen> {
             if (pickedDate != null) {
               onPicked(pickedDate);
               state.didChange(pickedDate);
+              _findAvailableRooms();
             }
           },
           child: InputDecorator(
@@ -424,6 +547,7 @@ class _CreateBookingScreenState extends State<CreateBookingScreen> {
       onChanged: (newValue) {
         if (newValue != null) {
           onPicked(newValue);
+          _findAvailableRooms();
         }
       },
       validator: (val) => val == null ? 'Wajib diisi' : null,
@@ -456,6 +580,180 @@ class _CreateBookingScreenState extends State<CreateBookingScreen> {
           },
         ),
       ],
+    );
+  }
+
+  Widget _buildActivityTypeSection() {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        DropdownButtonFormField<String>(
+          value: _selectedMainType,
+          decoration: const InputDecoration(
+            border: OutlineInputBorder(),
+            contentPadding: EdgeInsets.symmetric(horizontal: 12, vertical: 15),
+          ),
+          hint: const Text('Pilih jenis kegiatan'),
+          items: ['Internal', 'Eksternal'].map((String value) {
+            return DropdownMenuItem<String>(
+              value: value,
+              child: Text(value),
+            );
+          }).toList(),
+          onChanged: (String? newValue) {
+            setState(() {
+              _selectedMainType = newValue;
+              _selectedSubType = null;
+            });
+          },
+          validator: (value) =>
+              value == null ? 'Jenis kegiatan wajib diisi' : null,
+        ),
+
+        // Tampilkan dropdown kedua jika 'Eksternal' dipilih
+        if (_selectedMainType == 'Eksternal') ...[
+          const SizedBox(height: 16),
+          DropdownButtonFormField<String>(
+            value: _selectedSubType,
+            decoration: const InputDecoration(
+              labelText: 'Tipe Kegiatan Eksternal',
+              border: OutlineInputBorder(),
+              contentPadding:
+                  EdgeInsets.symmetric(horizontal: 12, vertical: 15),
+            ),
+            hint: const Text('Pilih tipe'),
+            items: ['Standard', 'VIP'].map((String value) {
+              return DropdownMenuItem<String>(
+                value: value,
+                child: Text(value),
+              );
+            }).toList(),
+            onChanged: (String? newValue) {
+              setState(() {
+                _selectedSubType = newValue;
+              });
+            },
+            validator: (value) =>
+                value == null ? 'Tipe eksternal wajib diisi' : null,
+          ),
+        ],
+      ],
+    );
+  }
+
+  Widget _buildRoomSelectionSection() {
+    final participants = int.tryParse(_participantsController.text) ?? 0;
+    if (participants == 0 || _finalStartDate == null || _finalEndDate == null) {
+      return Container(
+        padding: const EdgeInsets.all(16),
+        decoration: BoxDecoration(
+          color: Colors.grey[200],
+          borderRadius: BorderRadius.circular(8),
+        ),
+        child: const Text(
+          'Harap isi jumlah peserta dan durasi penggunaan untuk melihat ruangan yang tersedia.',
+          textAlign: TextAlign.center,
+          style: TextStyle(color: Colors.black54),
+        ),
+      );
+    }
+
+    if (_isSearchingRooms) {
+      return const Center(child: CircularProgressIndicator());
+    }
+
+    if (_availableRooms.isEmpty && !_isSearchingRooms) {
+      return Container(
+        padding: const EdgeInsets.all(16),
+        decoration: BoxDecoration(
+            color: Colors.orange.withOpacity(0.1),
+            borderRadius: BorderRadius.circular(8),
+            border: Border.all(color: Colors.orange)),
+        child: const Text(
+          'Tidak ada ruangan yang tersedia dengan kapasitas yang mencukupi.',
+          textAlign: TextAlign.center,
+          style: TextStyle(color: Colors.orange),
+        ),
+      );
+    }
+
+    // Tampilkan daftar ruangan
+    return FormField<String>(
+      initialValue: _selectedRoomId,
+      validator: (value) {
+        if (_selectedRoomId == null) {
+          return 'Anda harus memilih satu ruangan';
+        }
+        return null;
+      },
+      builder: (FormFieldState<String> state) {
+        return Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            ..._availableRooms.map((availableRoom) {
+              final room = availableRoom.room;
+              final bool isAvailable = availableRoom.isAvailable;
+              return Card(
+                elevation: 2,
+                margin: const EdgeInsets.symmetric(vertical: 4),
+                color: Colors.white,
+                child: RadioListTile<String>(
+                  value: room.id,
+                  groupValue: _selectedRoomId,
+                  title: Text(
+                    room.name,
+                    style: TextStyle(
+                      fontWeight: FontWeight.bold,
+                      color: Colors.black87,
+                    ),
+                  ),
+                  subtitle: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        'Kapasitas: ${room.capacity} orang',
+                        style: TextStyle(
+                            color: isAvailable
+                                ? Colors.black54
+                                : Colors.grey[600]),
+                      ),
+                      if (!isAvailable)
+                        Padding(
+                          padding: const EdgeInsets.only(top: 4.0),
+                          child: Text(
+                            'Bentrok dengan jadwal lain!',
+                            style: TextStyle(
+                              color: Colors.orange[800],
+                              fontSize: 12,
+                              fontWeight: FontWeight.w500,
+                            ),
+                          ),
+                        ),
+                    ],
+                  ),
+                  onChanged: (value) {
+                    setState(() {
+                      _selectedRoomId = value;
+                      _selectedRoom = room;
+                      state.didChange(value);
+                    });
+                  },
+                  activeColor: Theme.of(context).primaryColor,
+                ),
+              );
+            }).toList(),
+            if (state.hasError)
+              Padding(
+                padding: const EdgeInsets.only(left: 16.0, top: 8.0),
+                child: Text(
+                  state.errorText!,
+                  style: TextStyle(
+                      color: Theme.of(context).colorScheme.error, fontSize: 12),
+                ),
+              ),
+          ],
+        );
+      },
     );
   }
 }

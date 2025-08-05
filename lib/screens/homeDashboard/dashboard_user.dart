@@ -1782,13 +1782,6 @@ class _StatusTabState extends State<StatusTab>
                   ],
                 ),
                 const SizedBox(height: 16),
-                _buildInfoRow(
-                  Icons.location_on_outlined,
-                  booking.roomName.isEmpty
-                      ? 'Belum ditentukan'
-                      : booking.roomName,
-                ),
-                const SizedBox(height: 12),
                 Text(
                   'Agenda Acara:',
                   style: TextStyle(
@@ -1817,6 +1810,13 @@ class _StatusTabState extends State<StatusTab>
                   ),
                 ),
                 const SizedBox(height: 12),
+                _buildInfoRow(
+                  Icons.meeting_room_outlined,
+                  booking.roomName.isEmpty
+                      ? 'Belum ditentukan'
+                      : booking.roomName,
+                ),
+                const SizedBox(height: 8),
                 _buildInfoRow(
                   Icons.calendar_today_outlined,
                   _formatBookingDuration(

@@ -200,6 +200,38 @@ class FirestoreService {
     }
   }
 
+  /// Mendapatkan daftar ruangan yang sesuai dengan jumlah peserta dan tanggal
+  Future<List<Map<String, dynamic>>> getFilteredAndCheckedRooms({
+    required int participants,
+    required DateTime startDate,
+    required DateTime endDate,
+  }) async {
+    try {
+      final roomQuery = _roomsCollection.where('capacity',
+          isGreaterThanOrEqualTo: participants);
+      final roomSnapshot = await roomQuery.get();
+      final allSuitableRooms =
+          roomSnapshot.docs.map((doc) => RoomModel.fromFirestore(doc)).toList();
+
+      allSuitableRooms.sort((a, b) => a.capacity.compareTo(b.capacity));
+
+      List<Map<String, dynamic>> checkedRooms = [];
+      for (var room in allSuitableRooms) {
+        final isConflict =
+            await checkBookingConflict(room.id, startDate, endDate);
+        checkedRooms.add({
+          'room': room,
+          'isAvailable': !isConflict,
+        });
+      }
+
+      return checkedRooms;
+    } catch (e) {
+      debugPrint('Error getting and checking rooms: $e');
+      rethrow;
+    }
+  }
+
   /// Membuat booking baru.
   Future<void> createBooking(BookingModel booking) async {
     try {

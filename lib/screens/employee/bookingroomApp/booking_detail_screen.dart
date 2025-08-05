@@ -56,6 +56,8 @@ class BookingDetailScreen extends StatelessWidget {
                   'Jadwal Acara',
                   _formatBookingDuration(
                       booking.usageStartDate, booking.usageEndDate)),
+              _buildInfoRow(Icons.local_activity_outlined, 'Jenis Kegiatan',
+                  booking.activityType),
               _buildInfoRow(Icons.group_outlined, 'Jumlah Peserta',
                   '${booking.numberOfParticipants} orang'),
             ]),
