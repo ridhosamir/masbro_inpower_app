@@ -656,6 +656,27 @@ class _OfficerDashboardBookingRoomState
                   ],
                 ),
               ],
+              if (booking.status == 'approved') ...[
+                const Divider(height: 24),
+                Row(
+                  children: [
+                    Expanded(
+                      child: ElevatedButton.icon(
+                        onPressed: () => _showManageBookingSheet(booking),
+                        icon: const Icon(Icons.edit_note_outlined, size: 16),
+                        label: const Text('Edit Jadwal'),
+                        style: ElevatedButton.styleFrom(
+                          backgroundColor: Colors.orange[700],
+                          foregroundColor: Colors.white,
+                          shape: RoundedRectangleBorder(
+                            borderRadius: BorderRadius.circular(8),
+                          ),
+                        ),
+                      ),
+                    ),
+                  ],
+                ),
+              ],
             ],
           ),
         ),
@@ -804,7 +825,8 @@ class _OfficerDashboardBookingRoomState
 
     // State untuk UI
     RoomModel? selectedRoom;
-    final notesController = TextEditingController();
+    final notesController =
+        TextEditingController(text: booking.completionReason);
 
     // State untuk tipe booking & waktu (diadaptasi dari create_booking_screen.dart)
     BookingType bookingType =
@@ -897,50 +919,92 @@ class _OfficerDashboardBookingRoomState
                               'Tidak bisa menyetujui booking karena jadwal bentrok dengan agenda lain yang sudah disetujui:',
                               style: TextStyle(fontSize: 14),
                             ),
-                            SizedBox(height: 12),
-                            Container(
-                              padding: EdgeInsets.all(12),
-                              decoration: BoxDecoration(
-                                color: Colors.red.withOpacity(0.1),
-                                borderRadius: BorderRadius.circular(8),
-                                border: Border.all(
-                                    color: Colors.red.withOpacity(0.3)),
-                              ),
-                              child: Column(
-                                crossAxisAlignment: CrossAxisAlignment.start,
-                                children:
-                                    conflictingBookings.map((conflictBooking) {
-                                  return Padding(
-                                    padding: EdgeInsets.symmetric(vertical: 4),
-                                    child: Column(
-                                      crossAxisAlignment:
-                                          CrossAxisAlignment.start,
-                                      children: [
-                                        Text(
-                                          '• ${conflictBooking.eventAgenda}',
-                                          style: TextStyle(
-                                            fontWeight: FontWeight.bold,
-                                            fontSize: 13,
+                            const SizedBox(height: 12),
+                            SizedBox(
+                              width: double.infinity,
+                              child: Container(
+                                padding: const EdgeInsets.all(12),
+                                decoration: BoxDecoration(
+                                  color: Colors.red.withOpacity(0.1),
+                                  borderRadius: BorderRadius.circular(8),
+                                  border: Border.all(
+                                      color: Colors.red.withOpacity(0.3)),
+                                ),
+                                child: Column(
+                                  crossAxisAlignment: CrossAxisAlignment.start,
+                                  children: conflictingBookings
+                                      .map((conflictBooking) {
+                                    return Padding(
+                                      padding: const EdgeInsets.symmetric(
+                                          vertical: 6),
+                                      child: Column(
+                                        crossAxisAlignment:
+                                            CrossAxisAlignment.start,
+                                        children: [
+                                          Row(
+                                            crossAxisAlignment:
+                                                CrossAxisAlignment.center,
+                                            children: [
+                                              Expanded(
+                                                child: Text(
+                                                  '• ${conflictBooking.eventAgenda}',
+                                                  style: const TextStyle(
+                                                    fontWeight: FontWeight.bold,
+                                                    fontSize: 13,
+                                                  ),
+                                                  overflow:
+                                                      TextOverflow.ellipsis,
+                                                ),
+                                              ),
+                                              const SizedBox(width: 8),
+                                              SizedBox(
+                                                height: 28,
+                                                child: OutlinedButton(
+                                                  onPressed: () {
+                                                    Navigator.of(ctx).pop();
+                                                    Navigator.of(context).push(
+                                                      MaterialPageRoute(
+                                                        builder: (_) =>
+                                                            BookingDetailScreen(
+                                                                booking:
+                                                                    conflictBooking),
+                                                      ),
+                                                    );
+                                                  },
+                                                  style:
+                                                      OutlinedButton.styleFrom(
+                                                    padding: const EdgeInsets
+                                                        .symmetric(
+                                                        horizontal: 10),
+                                                    side: BorderSide.none,
+                                                  ),
+                                                  child: const Text(
+                                                      'Lihat Jadwal',
+                                                      style: TextStyle(
+                                                          fontSize: 12)),
+                                                ),
+                                              )
+                                            ],
                                           ),
-                                        ),
-                                        Text(
-                                          '  ${_formatDateRange(conflictBooking.usageStartDate, conflictBooking.usageEndDate)}',
-                                          style: TextStyle(
-                                            fontSize: 12,
-                                            color: Colors.red[700],
+                                          Text(
+                                            '  ${_formatDateRange(conflictBooking.usageStartDate, conflictBooking.usageEndDate)}',
+                                            style: TextStyle(
+                                              fontSize: 12,
+                                              color: Colors.red[700],
+                                            ),
                                           ),
-                                        ),
-                                        Text(
-                                          '  Pemesan: ${conflictBooking.employeeName}',
-                                          style: TextStyle(
-                                            fontSize: 12,
-                                            color: Colors.grey[600],
+                                          Text(
+                                            '  Pemesan: ${conflictBooking.employeeName}',
+                                            style: TextStyle(
+                                              fontSize: 12,
+                                              color: Colors.grey[600],
+                                            ),
                                           ),
-                                        ),
-                                      ],
-                                    ),
-                                  );
-                                }).toList(),
+                                        ],
+                                      ),
+                                    );
+                                  }).toList(),
+                                ),
                               ),
                             ),
                             SizedBox(height: 8),
@@ -957,8 +1021,15 @@ class _OfficerDashboardBookingRoomState
                         actions: [
                           TextButton(
                             onPressed: () => Navigator.of(ctx).pop(),
-                            child:
-                                Text('OK', style: TextStyle(color: Colors.red)),
+                            style: TextButton.styleFrom(
+                              backgroundColor: Colors.red,
+                              foregroundColor: Colors.white,
+                              side: BorderSide(color: Colors.red, width: 1),
+                              shape: RoundedRectangleBorder(
+                                borderRadius: BorderRadius.circular(4),
+                              ),
+                            ),
+                            child: Text('OK'),
                           ),
                         ],
                       ),
@@ -1105,7 +1176,7 @@ class _OfficerDashboardBookingRoomState
                   _buildDatePicker(context, 'Tanggal Selesai', currentEndDate,
                       (date) {
                     setState(() => onEndDateChanged(date));
-                  }, firstDate: currentStartDate?.add(const Duration(days: 1))),
+                  }, firstDate: currentStartDate),
                 ],
               );
             }
@@ -1170,6 +1241,10 @@ class _OfficerDashboardBookingRoomState
                                   children: [
                                     _buildDetailItem(Icons.event_note,
                                         'Agenda Acara', booking.eventAgenda),
+                                    _buildDetailItem(
+                                        Icons.local_activity_outlined,
+                                        'Jenis Kegiatan',
+                                        booking.activityType),
                                     _buildDetailItem(Icons.person_outline,
                                         'Pemesan', booking.employeeName),
                                     _buildDetailItem(Icons.add_box_outlined,
@@ -1211,16 +1286,69 @@ class _OfficerDashboardBookingRoomState
 
                                   return DropdownButtonFormField<String>(
                                     value: selectedRoomId,
+                                    menuMaxHeight: 300,
                                     decoration: const InputDecoration(
                                       labelText: 'Pilih Ruangan',
                                       prefixIcon:
                                           Icon(Icons.meeting_room_outlined),
                                       border: OutlineInputBorder(),
                                     ),
+                                    isExpanded: true,
+                                    itemHeight: null,
+                                    selectedItemBuilder:
+                                        (BuildContext context) {
+                                      return rooms
+                                          .map<Widget>((RoomModel room) {
+                                        return Align(
+                                          alignment: Alignment.centerLeft,
+                                          child: Text(
+                                            room.name,
+                                            overflow: TextOverflow.ellipsis,
+                                          ),
+                                        );
+                                      }).toList();
+                                    },
                                     items: rooms.map((room) {
                                       return DropdownMenuItem<String>(
                                         value: room.id,
-                                        child: Text(room.name),
+                                        child: Column(
+                                          crossAxisAlignment:
+                                              CrossAxisAlignment.start,
+                                          children: [
+                                            Padding(
+                                              padding:
+                                                  const EdgeInsets.symmetric(
+                                                      vertical: 12.0),
+                                              child: Column(
+                                                crossAxisAlignment:
+                                                    CrossAxisAlignment.start,
+                                                mainAxisAlignment:
+                                                    MainAxisAlignment.center,
+                                                children: [
+                                                  Text(
+                                                    room.name,
+                                                    style: const TextStyle(
+                                                        fontWeight:
+                                                            FontWeight.w500),
+                                                  ),
+                                                  const SizedBox(height: 4),
+                                                  Text(
+                                                    'Kapasitas: ${room.capacity} orang',
+                                                    style: TextStyle(
+                                                      fontSize: 12,
+                                                      color: Colors.grey[600],
+                                                    ),
+                                                  ),
+                                                ],
+                                              ),
+                                            ),
+                                            const Divider(
+                                              height: 1,
+                                              thickness: 1,
+                                              color: Color(0xFFEEEEEE),
+                                            ),
+                                          ],
+                                        ),
                                       );
                                     }).toList(),
                                     onChanged: (value) {
