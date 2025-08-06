@@ -37,6 +37,15 @@ class _AssignTechnicianScreenResourceState
         setState(() {
           _technicians = technicians;
           _isLoading = false;
+          if (widget.request.assignedTechnicianId != null) {
+            try {
+              _selectedTechnician = _technicians.firstWhere(
+                (tech) => tech.uid == widget.request.assignedTechnicianId,
+              );
+            } catch (e) {
+              _selectedTechnician = null;
+            }
+          }
         });
       }
     } catch (e) {
@@ -79,7 +88,7 @@ class _AssignTechnicianScreenResourceState
             backgroundColor: Colors.green,
           ),
         );
-        Navigator.of(context).pop();
+        Navigator.of(context).pop(true);
       }
     } catch (e) {
       if (mounted) {

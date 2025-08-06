@@ -2353,7 +2353,7 @@ class _OfficerStatusTabState extends State<OfficerStatusTab>
     }
   }
 
-  void _navigateToAssignTechnicianReport(ReportModel report) {
+  void _navigateToAssignTechnicianReport(ReportModel report) async {
     if (report.assignedTechnicianId != null) {
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
@@ -2366,24 +2366,32 @@ class _OfficerStatusTabState extends State<OfficerStatusTab>
       return;
     }
 
-    Navigator.push(
+    final result = await Navigator.push(
       context,
       MaterialPageRoute(
         builder: (context) => AssignTechnicianScreen(report: report),
       ),
     );
+    // Jika result tidak null dan bernilai true, refresh data
+    if (result == true && mounted) {
+      _fetchData();
+    }
   }
 
-  void _navigateToAssignTechnicianRequest(RequestModel request) {
-    Navigator.push(
+  void _navigateToAssignTechnicianRequest(RequestModel request) async {
+    final result = await Navigator.push(
       context,
       MaterialPageRoute(
         builder: (context) => AssignTechnicianScreenResource(request: request),
       ),
     );
+    // Jika result tidak null dan bernilai true, refresh data
+    if (result == true && mounted) {
+      _fetchData();
+    }
   }
 
-  void _navigateToAssignDriverVehicle(RideRequestModel request) {
+  void _navigateToAssignDriverVehicle(RideRequestModel request) async {
     // Check if request already has an assigned driver and vehicle
     if (request.driverId != null && request.vehicleId != null) {
       ScaffoldMessenger.of(context).showSnackBar(
@@ -2396,17 +2404,16 @@ class _OfficerStatusTabState extends State<OfficerStatusTab>
       return;
     }
 
-    Navigator.push(
+    final result = await Navigator.push(
       context,
       MaterialPageRoute(
         builder: (context) => AssignDriverVehicleScreen(request: request),
       ),
-    ).then((result) {
-      // Refresh the UI when returning from assignment screen
-      if (result == true) {
-        setState(() {});
-      }
-    });
+    );
+    // Jika result tidak null dan bernilai true, refresh data
+    if (result == true && mounted) {
+      _fetchData();
+    }
   }
 
   void _showCompleteDialogMaintenance(ReportModel report) {
@@ -3002,6 +3009,7 @@ class _OfficerStatusTabState extends State<OfficerStatusTab>
                   content: Text('Booking berhasil disetujui.'),
                   backgroundColor: Colors.green,
                 ));
+                _fetchData();
               } catch (e) {
                 // Tutup loading jika ada error
                 if (mounted) Navigator.pop(context);
