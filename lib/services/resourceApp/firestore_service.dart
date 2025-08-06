@@ -97,14 +97,26 @@ class FirestoreServiceResource {
     try {
       final batch = _firestore.batch();
 
-      // Update laporan
+      if (request.status == 'inProgress' &&
+          request.assignedTechnicianId != null) {
+        final oldTaskQuery = await _tasksCollection
+            .where('requestId', isEqualTo: request.id)
+            .limit(1)
+            .get();
+
+        if (oldTaskQuery.docs.isNotEmpty) {
+          final oldTaskDoc = oldTaskQuery.docs.first;
+          batch.delete(oldTaskDoc.reference);
+          print('Task lama ${oldTaskDoc.id} akan dihapus.');
+        }
+      }
+
       batch.update(_requestsCollection.doc(request.id), {
         'status': 'inProgress',
         'assignedTechnicianId': technicianId,
         'technicianName': technicianName,
       });
 
-      // Buat task baru
       final taskRef = _tasksCollection.doc();
       final task = TaskModel(
         id: taskRef.id,
@@ -123,14 +135,13 @@ class FirestoreServiceResource {
 
       await batch.commit();
       print(
-          'Technician $technicianName assigned to resource request ${request.id}');
+          'Teknisi $technicianName berhasil ditugaskan untuk request ${request.id}');
 
-      // Log untuk image URL
       if (request.hasValidImage()) {
-        print('Task created with image URL from request: ${request.imageUrl}');
+        print('Task dibuat dengan image URL dari request: ${request.imageUrl}');
       }
     } catch (e) {
-      print('Error assigning technician for resource: $e');
+      print('Error saat menugaskan teknisi untuk resource: $e');
       rethrow;
     }
   }

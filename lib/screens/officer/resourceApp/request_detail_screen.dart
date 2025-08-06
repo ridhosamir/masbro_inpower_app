@@ -10,6 +10,7 @@ import '../../../widgets/custom_button.dart';
 import '../../../widgets/custom_text_field.dart';
 import 'assign_technician_screen.dart';
 import 'package:masbro_inpower_app/utils/firebase_storage_image.dart';
+import 'package:cloud_firestore/cloud_firestore.dart';
 
 class RequestDetailScreenResource extends StatefulWidget {
   final RequestModel request;
@@ -28,10 +29,12 @@ class _RequestDetailScreenResourceState
   bool _isLoading = false;
   bool _isCompleting = false;
   UserModel? currentUser;
+  late RequestModel _currentRequest;
 
   @override
   void initState() {
     super.initState();
+    _currentRequest = widget.request;
     _loadUserData();
   }
 
@@ -41,14 +44,18 @@ class _RequestDetailScreenResourceState
     super.dispose();
   }
 
-  void _navigateToAssignTechnician() {
-    Navigator.push(
+  void _navigateToAssignTechnician() async {
+    final result = await Navigator.push(
       context,
       MaterialPageRoute(
         builder: (context) =>
-            AssignTechnicianScreenResource(request: widget.request),
+            AssignTechnicianScreenResource(request: _currentRequest),
       ),
     );
+
+    if (result == true && mounted) {
+      _refreshRequestData();
+    }
   }
 
   void _showCompleteDialog() {
@@ -125,7 +132,7 @@ class _RequestDetailScreenResourceState
 
     try {
       await _firestoreService.completeRequest(
-        widget.request.id,
+        _currentRequest.id,
         _completionReasonController.text.trim(),
         technicianId: currentUser!.uid,
         technicianName: currentUser!.name,
@@ -161,9 +168,40 @@ class _RequestDetailScreenResourceState
     }
   }
 
+  Future<void> _refreshRequestData() async {
+    setState(() {
+      _isLoading = true;
+    });
+
+    try {
+      DocumentSnapshot doc = await FirebaseFirestore.instance
+          .collection('requests_resource')
+          .doc(_currentRequest.id)
+          .get();
+
+      if (doc.exists && mounted) {
+        setState(() {
+          _currentRequest = RequestModel.fromFirestore(doc);
+        });
+      }
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('Gagal memuat data terbaru: $e')),
+        );
+      }
+    } finally {
+      if (mounted) {
+        setState(() {
+          _isLoading = false;
+        });
+      }
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
-    final bool isResourceRequest = widget.request.request == 'resource';
+    final bool isResourceRequest = _currentRequest.request == 'resource';
     return Scaffold(
       appBar: AppBar(
         title: const Text('Detail Permintaan'),
@@ -179,39 +217,39 @@ class _RequestDetailScreenResourceState
               width: double.infinity,
               padding: const EdgeInsets.all(20),
               decoration: BoxDecoration(
-                color: widget.request.getStatusColor().withOpacity(0.1),
+                color: _currentRequest.getStatusColor().withOpacity(0.1),
                 borderRadius: BorderRadius.circular(12),
-                border: Border.all(color: widget.request.getStatusColor()),
+                border: Border.all(color: _currentRequest.getStatusColor()),
               ),
               child: Column(
                 children: [
                   Icon(
-                    widget.request.getStatusIcon(),
-                    color: widget.request.getStatusColor(),
+                    _currentRequest.getStatusIcon(),
+                    color: _currentRequest.getStatusColor(),
                     size: 48,
                   ),
                   const SizedBox(height: 12),
                   Text(
-                    'Status: ${widget.request.getStatusDisplayName()}',
+                    'Status: ${_currentRequest.getStatusDisplayName()}',
                     style: TextStyle(
                       fontSize: 18,
                       fontWeight: FontWeight.bold,
-                      color: widget.request.getStatusColor(),
+                      color: _currentRequest.getStatusColor(),
                     ),
                   ),
                   const SizedBox(height: 8),
                   Text(
-                    'Dibuat pada ${DateFormat('d MMMM yyyy, HH:mm').format(widget.request.createdAt)}',
+                    'Dibuat pada ${DateFormat('d MMMM yyyy, HH:mm').format(_currentRequest.createdAt)}',
                     style: TextStyle(
                       color: Colors.grey[600],
                       fontSize: 14,
                     ),
                   ),
-                  if (widget.request.status == 'completed' &&
-                      widget.request.completionDate != null) ...[
+                  if (_currentRequest.status == 'completed' &&
+                      _currentRequest.completionDate != null) ...[
                     const SizedBox(height: 8),
                     Text(
-                      'Diselesaikan pada ${DateFormat('dd MMM yyyy, HH:mm').format(widget.request.completionDate!)}',
+                      'Diselesaikan pada ${DateFormat('dd MMM yyyy, HH:mm').format(_currentRequest.completionDate!)}',
                       style: TextStyle(
                         color: Colors.green[700],
                         fontSize: 14,
@@ -227,25 +265,25 @@ class _RequestDetailScreenResourceState
             const SizedBox(height: 12),
             _buildInfoCard([
               _buildInfoRow(
-                  Icons.person, 'Pemohon', widget.request.employeeName),
+                  Icons.person, 'Pemohon', _currentRequest.employeeName),
               _buildInfoRow(
                 isResourceRequest ? Icons.supervisor_account : Icons.inventory,
                 'Kebutuhan',
-                '${widget.request.request[0].toUpperCase()}${widget.request.request.substring(1)}',
+                '${_currentRequest.request[0].toUpperCase()}${_currentRequest.request.substring(1)}',
               ),
-              if (widget.request.timeRequired != null &&
-                  widget.request.timeRequired!.isNotEmpty)
+              if (_currentRequest.timeRequired != null &&
+                  _currentRequest.timeRequired!.isNotEmpty)
                 _buildInfoRow(Icons.calendar_today, 'Waktu\nDibutuhkan',
-                    widget.request.timeRequired!),
+                    _currentRequest.timeRequired!),
               _buildInfoRow(
                 Icons.access_time,
                 'Tanggal Dibuat',
                 DateFormat('EEEE, d MMM yyyy, HH:mm', 'id_ID')
-                    .format(widget.request.createdAt),
+                    .format(_currentRequest.createdAt),
               ),
             ]),
             // Tampilkan foto jika ini adalah permintaan item
-            if (!isResourceRequest && widget.request.hasValidImage()) ...[
+            if (!isResourceRequest && _currentRequest.hasValidImage()) ...[
               const SizedBox(height: 24),
               _buildSectionTitle('Foto Item'),
               const SizedBox(height: 12),
@@ -253,7 +291,7 @@ class _RequestDetailScreenResourceState
                 onTap: () {
                   // Panggil fungsi untuk menampilkan gambar fullscreen
                   _showFullScreenImage(
-                      context, widget.request.getNormalizedImageUrl()!);
+                      context, _currentRequest.getNormalizedImageUrl()!);
                 },
                 child: Stack(
                   alignment: Alignment.center,
@@ -269,7 +307,7 @@ class _RequestDetailScreenResourceState
                       child: ClipRRect(
                         borderRadius: BorderRadius.circular(12),
                         child: FirebaseStorageImage(
-                          imageUrl: widget.request.getNormalizedImageUrl(),
+                          imageUrl: _currentRequest.getNormalizedImageUrl(),
                           fit: BoxFit.cover,
                           placeholder: Container(
                             color: Colors.grey[200],
@@ -330,13 +368,13 @@ class _RequestDetailScreenResourceState
                 border: Border.all(color: Colors.grey[200]!),
               ),
               child: Text(
-                widget.request.description,
+                _currentRequest.description,
                 style: TextStyle(
                     fontSize: 16, height: 1.5, color: Colors.grey[800]),
               ),
             ),
-            if (widget.request.technicianName != null &&
-                widget.request.technicianName!.isNotEmpty) ...[
+            if (_currentRequest.technicianName != null &&
+                _currentRequest.technicianName!.isNotEmpty) ...[
               const SizedBox(height: 24),
               _buildSectionTitle('Resource yang Ditugaskan'),
               const SizedBox(height: 12),
@@ -357,7 +395,7 @@ class _RequestDetailScreenResourceState
                     const SizedBox(width: 12),
                     Expanded(
                       child: Text(
-                        widget.request.technicianName!,
+                        _currentRequest.technicianName!,
                         style: TextStyle(
                           fontSize: 16,
                           fontWeight: FontWeight.bold,
@@ -369,8 +407,8 @@ class _RequestDetailScreenResourceState
                 ),
               ),
             ],
-            if (widget.request.status == 'completed' &&
-                widget.request.completionReason != null) ...[
+            if (_currentRequest.status == 'completed' &&
+                _currentRequest.completionReason != null) ...[
               const SizedBox(height: 24),
               _buildSectionTitle('Catatan Penyelesaian'),
               const SizedBox(height: 12),
@@ -385,11 +423,11 @@ class _RequestDetailScreenResourceState
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    if (widget.request.completionDate != null)
+                    if (_currentRequest.completionDate != null)
                       Padding(
                         padding: const EdgeInsets.only(bottom: 8.0),
                         child: Text(
-                          'Diselesaikan pada: ${DateFormat('d MMMM yyyy, HH:mm').format(widget.request.completionDate!)}',
+                          'Diselesaikan pada: ${DateFormat('d MMMM yyyy, HH:mm').format(_currentRequest.completionDate!)}',
                           style: TextStyle(
                             fontSize: 14,
                             color: Colors.green[700],
@@ -398,7 +436,7 @@ class _RequestDetailScreenResourceState
                         ),
                       ),
                     Text(
-                      widget.request.completionReason!,
+                      _currentRequest.completionReason!,
                       style: TextStyle(
                         fontSize: 16,
                         height: 1.5,
@@ -410,11 +448,11 @@ class _RequestDetailScreenResourceState
               ),
             ],
             const SizedBox(height: 32),
-            if (widget.request.status != 'completed') ...[
+            if (_currentRequest.status != 'completed') ...[
               _buildSectionTitle('Aksi'),
               const SizedBox(height: 12),
               CustomButton(
-                text: widget.request.assignedTechnicianId == null
+                text: _currentRequest.assignedTechnicianId == null
                     ? 'Tugaskan Teknisi'
                     : 'Ubah Teknisi',
                 onPressed: _navigateToAssignTechnician,
