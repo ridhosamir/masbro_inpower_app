@@ -2341,7 +2341,16 @@ class _OfficerStatusTabState extends State<OfficerStatusTab>
   }
 
   String _formatDateRange(DateTime start, DateTime end) {
-    return "${DateFormat('dd MMM yyyy, HH:mm').format(start)} - ${DateFormat('HH:mm').format(end)}";
+    final DateFormat dayFormat = DateFormat('E, d MMM yyyy', 'id_ID');
+    final DateFormat timeFormat = DateFormat('HH:mm', 'id_ID');
+    if (DateUtils.isSameDay(start, end)) {
+      // Jika di hari yang sama: "Sen, 28 Jul 2025, 09:00 - 11:00"
+      return '${dayFormat.format(start)}, ${timeFormat.format(start)} - ${timeFormat.format(end)}';
+    } else {
+      // Jika beda hari: "28 Jul 2025, 09:00 - 29 Jul 2025, 11:00"
+      final DateFormat fullFormat = DateFormat('d MMM y', 'id_ID');
+      return '${fullFormat.format(start)} - ${fullFormat.format(end)}';
+    }
   }
 
   void _navigateToAssignTechnicianReport(ReportModel report) {
@@ -2733,7 +2742,8 @@ class _OfficerStatusTabState extends State<OfficerStatusTab>
     final formKey = GlobalKey<FormState>();
 
     RoomModel? selectedRoom;
-    final notesController = TextEditingController();
+    final notesController =
+        TextEditingController(text: booking.completionReason);
 
     BookingType bookingType =
         DateUtils.isSameDay(booking.usageStartDate, booking.usageEndDate)
@@ -2775,40 +2785,43 @@ class _OfficerStatusTabState extends State<OfficerStatusTab>
                 finalEndDate = endDateMulti;
               }
 
+              // CEK KONFLIK JADWAL TERLEBIH DAHULU
               try {
                 showDialog(
-                  context: context,
-                  builder: (context) =>
-                      const Center(child: CircularProgressIndicator()),
-                  barrierDismissible: false,
-                );
+                    context: context,
+                    builder: (context) =>
+                        const Center(child: CircularProgressIndicator()),
+                    barrierDismissible: false);
 
-                final bookingService = booking_service.FirestoreService();
-
+                // Cek apakah ada konflik dengan booking yang sudah approved
                 final hasConflict =
-                    await bookingService.checkBookingConflictForApproval(
+                    await _firestoreService.checkBookingConflictForApproval(
                   selectedRoomId!,
                   finalStartDate,
                   finalEndDate,
-                  bookingIdToExclude: booking.id,
+                  bookingIdToExclude:
+                      booking.id, // Exclude booking yang sedang diproses
                 );
 
+                // Tutup loading dialog
                 if (mounted) Navigator.pop(context);
 
                 if (hasConflict) {
+                  // Dapatkan detail booking yang bentrok untuk info lebih detail
                   final conflictingBookings =
-                      await bookingService.getConflictingBookings(
+                      await _firestoreService.getConflictingBookings(
                     selectedRoomId!,
                     finalStartDate,
                     finalEndDate,
                     bookingIdToExclude: booking.id,
                   );
 
+                  // Tampilkan popup error dengan info detail
                   if (mounted) {
                     showDialog(
                       context: context,
                       builder: (ctx) => AlertDialog(
-                        title: const Row(
+                        title: Row(
                           children: [
                             Icon(Icons.warning, color: Colors.red, size: 24),
                             SizedBox(width: 8),
@@ -2819,44 +2832,121 @@ class _OfficerStatusTabState extends State<OfficerStatusTab>
                           mainAxisSize: MainAxisSize.min,
                           crossAxisAlignment: CrossAxisAlignment.start,
                           children: [
-                            const Text(
-                              'Tidak bisa menyetujui booking karena jadwal bentrok:',
+                            Text(
+                              'Tidak bisa menyetujui booking karena jadwal bentrok dengan agenda lain yang sudah disetujui:',
                               style: TextStyle(fontSize: 14),
                             ),
                             const SizedBox(height: 12),
-                            ...conflictingBookings.map((conflict) => Column(
+                            SizedBox(
+                              width: double.infinity,
+                              child: Container(
+                                padding: const EdgeInsets.all(12),
+                                decoration: BoxDecoration(
+                                  color: Colors.red.withOpacity(0.1),
+                                  borderRadius: BorderRadius.circular(8),
+                                  border: Border.all(
+                                      color: Colors.red.withOpacity(0.3)),
+                                ),
+                                child: Column(
                                   crossAxisAlignment: CrossAxisAlignment.start,
-                                  children: [
-                                    Text('• ${conflict.eventAgenda}',
-                                        style: const TextStyle(
-                                            fontWeight: FontWeight.bold,
-                                            fontSize: 13)),
-                                    Text(
-                                        '  ${_formatBookingDuration(conflict.usageStartDate, conflict.usageEndDate)}',
-                                        style: TextStyle(
-                                            fontSize: 12,
-                                            color: Colors.red[700])),
-                                    Text('  Pemesan: ${conflict.employeeName}',
-                                        style: TextStyle(
-                                            fontSize: 12,
-                                            color: Colors.grey[600])),
-                                  ],
-                                )),
-                            const SizedBox(height: 8),
-                            const Text(
+                                  children: conflictingBookings
+                                      .map((conflictBooking) {
+                                    return Padding(
+                                      padding: const EdgeInsets.symmetric(
+                                          vertical: 6),
+                                      child: Column(
+                                        crossAxisAlignment:
+                                            CrossAxisAlignment.start,
+                                        children: [
+                                          Row(
+                                            crossAxisAlignment:
+                                                CrossAxisAlignment.center,
+                                            children: [
+                                              Expanded(
+                                                child: Text(
+                                                  '• ${conflictBooking.eventAgenda}',
+                                                  style: const TextStyle(
+                                                    fontWeight: FontWeight.bold,
+                                                    fontSize: 13,
+                                                  ),
+                                                  overflow:
+                                                      TextOverflow.ellipsis,
+                                                ),
+                                              ),
+                                              const SizedBox(width: 8),
+                                              SizedBox(
+                                                height: 28,
+                                                child: OutlinedButton(
+                                                  onPressed: () {
+                                                    Navigator.of(ctx).pop();
+                                                    Navigator.of(context).push(
+                                                      MaterialPageRoute(
+                                                        builder: (_) =>
+                                                            BookingDetailScreen(
+                                                                booking:
+                                                                    conflictBooking),
+                                                      ),
+                                                    );
+                                                  },
+                                                  style:
+                                                      OutlinedButton.styleFrom(
+                                                    padding: const EdgeInsets
+                                                        .symmetric(
+                                                        horizontal: 10),
+                                                    side: BorderSide.none,
+                                                  ),
+                                                  child: const Text(
+                                                      'Lihat Jadwal',
+                                                      style: TextStyle(
+                                                          fontSize: 12)),
+                                                ),
+                                              )
+                                            ],
+                                          ),
+                                          Text(
+                                            '  ${_formatDateRange(conflictBooking.usageStartDate, conflictBooking.usageEndDate)}',
+                                            style: TextStyle(
+                                              fontSize: 12,
+                                              color: Colors.red[700],
+                                            ),
+                                          ),
+                                          Text(
+                                            '  Pemesan: ${conflictBooking.employeeName}',
+                                            style: TextStyle(
+                                              fontSize: 12,
+                                              color: Colors.grey[600],
+                                            ),
+                                          ),
+                                        ],
+                                      ),
+                                    );
+                                  }).toList(),
+                                ),
+                              ),
+                            ),
+                            SizedBox(height: 8),
+                            Text(
                               'Silakan pilih jadwal atau ruangan lain.',
                               style: TextStyle(
-                                  fontSize: 12,
-                                  fontStyle: FontStyle.italic,
-                                  color: Colors.grey),
+                                fontSize: 12,
+                                fontStyle: FontStyle.italic,
+                                color: Colors.grey[600],
+                              ),
                             ),
                           ],
                         ),
                         actions: [
                           TextButton(
                             onPressed: () => Navigator.of(ctx).pop(),
-                            child: const Text('OK',
-                                style: TextStyle(color: Colors.red)),
+                            style: TextButton.styleFrom(
+                              backgroundColor: Colors.red,
+                              foregroundColor: Colors.white,
+                              side: BorderSide(color: Colors.red, width: 1),
+                              shape: RoundedRectangleBorder(
+                                borderRadius: BorderRadius.circular(4),
+                              ),
+                            ),
+                            child: Text('OK'),
                           ),
                         ],
                       ),
@@ -2865,7 +2955,8 @@ class _OfficerStatusTabState extends State<OfficerStatusTab>
                   return;
                 }
 
-                final confirmed = await showDialog<bool>(
+                // Jika tidak ada konflik, lanjutkan dengan konfirmasi approval
+                final bool? confirmed = await showDialog<bool>(
                   context: context,
                   builder: (ctx) => AlertDialog(
                     title: const Text('Konfirmasi Persetujuan'),
@@ -2884,15 +2975,17 @@ class _OfficerStatusTabState extends State<OfficerStatusTab>
                 );
 
                 if (confirmed != true) return;
+                if (!mounted) return;
 
+                // Tampilkan loading lagi untuk proses approval
                 showDialog(
-                  context: context,
-                  builder: (context) =>
-                      const Center(child: CircularProgressIndicator()),
-                  barrierDismissible: false,
-                );
+                    context: context,
+                    builder: (context) =>
+                        const Center(child: CircularProgressIndicator()),
+                    barrierDismissible: false);
 
-                await bookingService.updateAndApproveBooking(
+                // Proses approval
+                await _firestoreService.updateAndApproveBooking(
                   bookingId: booking.id,
                   roomId: selectedRoomId!,
                   roomName: selectedRoom!.name,
@@ -2901,27 +2994,29 @@ class _OfficerStatusTabState extends State<OfficerStatusTab>
                   notes: notesController.text.trim(),
                 );
 
-                if (mounted) {
-                  Navigator.pop(context);
-                  Navigator.pop(context);
-                  ScaffoldMessenger.of(context).showSnackBar(const SnackBar(
-                    content: Text('Booking berhasil disetujui.'),
-                    backgroundColor: Colors.green,
-                  ));
-                  _fetchData();
-                }
+                if (!mounted) return;
+
+                Navigator.pop(context);
+                Navigator.pop(context);
+                ScaffoldMessenger.of(context).showSnackBar(const SnackBar(
+                  content: Text('Booking berhasil disetujui.'),
+                  backgroundColor: Colors.green,
+                ));
               } catch (e) {
+                // Tutup loading jika ada error
                 if (mounted) Navigator.pop(context);
+
+                // Tampilkan error
                 if (mounted) {
                   showDialog(
                     context: context,
                     builder: (ctx) => AlertDialog(
-                      title: const Text('Error'),
+                      title: Text('Error'),
                       content: Text('Terjadi kesalahan: ${e.toString()}'),
                       actions: [
                         TextButton(
                           onPressed: () => Navigator.of(ctx).pop(),
-                          child: const Text('OK'),
+                          child: Text('OK'),
                         ),
                       ],
                     ),
@@ -3009,7 +3104,7 @@ class _OfficerStatusTabState extends State<OfficerStatusTab>
                     'Tanggal Selesai',
                     currentEndDate,
                     (date) => setState(() => onEndDateChanged(date)),
-                    firstDate: currentStartDate?.add(const Duration(days: 1)),
+                    firstDate: currentStartDate,
                   ),
                 ],
               );
@@ -3073,6 +3168,10 @@ class _OfficerStatusTabState extends State<OfficerStatusTab>
                                   children: [
                                     _buildDetailItem(Icons.event_note,
                                         'Agenda Acara', booking.eventAgenda),
+                                    _buildDetailItem(
+                                        Icons.local_activity_outlined,
+                                        'Jenis Kegiatan',
+                                        booking.activityType),
                                     _buildDetailItem(Icons.person_outline,
                                         'Pemesan', booking.employeeName),
                                     _buildDetailItem(Icons.add_box_outlined,
@@ -3109,16 +3208,69 @@ class _OfficerStatusTabState extends State<OfficerStatusTab>
 
                                   return DropdownButtonFormField<String>(
                                     value: selectedRoomId,
+                                    menuMaxHeight: 300,
                                     decoration: const InputDecoration(
                                       labelText: 'Pilih Ruangan',
                                       prefixIcon:
                                           Icon(Icons.meeting_room_outlined),
                                       border: OutlineInputBorder(),
                                     ),
+                                    isExpanded: true,
+                                    itemHeight: null,
+                                    selectedItemBuilder:
+                                        (BuildContext context) {
+                                      return rooms
+                                          .map<Widget>((RoomModel room) {
+                                        return Align(
+                                          alignment: Alignment.centerLeft,
+                                          child: Text(
+                                            room.name,
+                                            overflow: TextOverflow.ellipsis,
+                                          ),
+                                        );
+                                      }).toList();
+                                    },
                                     items: rooms.map((room) {
                                       return DropdownMenuItem<String>(
                                         value: room.id,
-                                        child: Text(room.name),
+                                        child: Column(
+                                          crossAxisAlignment:
+                                              CrossAxisAlignment.start,
+                                          children: [
+                                            Padding(
+                                              padding:
+                                                  const EdgeInsets.symmetric(
+                                                      vertical: 12.0),
+                                              child: Column(
+                                                crossAxisAlignment:
+                                                    CrossAxisAlignment.start,
+                                                mainAxisAlignment:
+                                                    MainAxisAlignment.center,
+                                                children: [
+                                                  Text(
+                                                    room.name,
+                                                    style: const TextStyle(
+                                                        fontWeight:
+                                                            FontWeight.w500),
+                                                  ),
+                                                  const SizedBox(height: 4),
+                                                  Text(
+                                                    'Kapasitas: ${room.capacity} orang',
+                                                    style: TextStyle(
+                                                      fontSize: 12,
+                                                      color: Colors.grey[600],
+                                                    ),
+                                                  ),
+                                                ],
+                                              ),
+                                            ),
+                                            const Divider(
+                                              height: 1,
+                                              thickness: 1,
+                                              color: Color(0xFFEEEEEE),
+                                            ),
+                                          ],
+                                        ),
                                       );
                                     }).toList(),
                                     onChanged: (value) {
