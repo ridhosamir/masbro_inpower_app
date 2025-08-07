@@ -1,0 +1,278 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+    // Helper function to check if user is admin
+    function isAdmin() {
+      return request.auth != null && 
+        get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role == 'admin';
+    }
+    
+    // Helper function to check if user is officer
+    function isOfficer() {
+      return request.auth != null && 
+        get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role == 'officer';
+    }
+    
+    // Helper function to check if user is driver (formerly technician)
+    function isDriver() {
+      return request.auth != null && 
+        get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role == 'technician';
+    }
+    
+    // Helper function to check if user is employee
+    function isEmployee() {
+      return request.auth != null && 
+        get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role == 'employee';
+    }
+    
+    // --- ATURAN UNTUK USER ---
+    
+    // Users collection
+    match /users/{userId} {
+      // Users can read and write their own data
+      allow read, write: if request.auth != null && request.auth.uid == userId;
+      
+      // Officers and drivers can read user data
+      allow read: if request.auth != null && 
+        (get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role == 'officer' ||
+         get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role == 'technician');
+      
+      // Admins can read and write all user data
+      allow read, write: if isAdmin();
+      
+      // Allow updates ONLY to averageRating and totalRatings fields from any authenticated user
+      // This is needed for the rating system - PERBAIKAN DISINI
+      allow update: if request.auth != null && 
+        request.resource.data.diff(resource.data).affectedKeys().hasOnly(['averageRating', 'totalRatings']) &&
+        (request.resource.data.averageRating is number || request.resource.data.averageRating == null) &&
+        (request.resource.data.totalRatings is number || request.resource.data.totalRatings == null);
+    }
+    
+    // --- ATURAN UNTUK MAINTENANCE APP ---
+    
+    // Technician ratings collection
+    match /technician_ratings/{ratingId} {
+      // Semua pengguna yang terautentikasi dapat membuat rating
+      allow create: if request.auth != null;
+      
+      // Semua pengguna yang terautentikasi dapat membaca rating
+      allow read: if request.auth != null;
+      
+      // Tidak ada yang dapat mengubah atau menghapus rating yang sudah ada
+      allow update, delete: if false;
+    }
+    
+    // Buildings collection
+    match /buildings/{buildingId} {
+      // All authenticated users can read buildings
+      allow read: if request.auth != null;
+      
+      // Only officers and admins can create, update, or delete buildings
+      allow create, update, delete: if isOfficer() || isAdmin();
+    }
+    
+    // Rooms collection
+    match /rooms/{roomId} {
+      // All authenticated users can read rooms
+      allow read: if request.auth != null;
+      
+      // Only officers and admins can create, update, or delete rooms
+      allow create, update, delete: if isOfficer() || isAdmin();
+    }
+    // Reports collection
+   // Updated rule for Reports collection
+   
+match /reports/{reportId} {
+  // Employees can create reports
+  allow create: if request.auth != null && 
+    get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role == 'employee';
+  
+  // All authenticated users can read reports
+  allow read: if request.auth != null;
+  
+  // Officers and technicians can update reports
+  allow update: if request.auth != null && 
+    (get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role == 'officer' ||
+     get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role == 'technician');
+  
+  // Allow updates to technicianRating and technicianReview from any authenticated user
+  // Especially important for employees to rate technicians
+  allow update: if request.auth != null && 
+                 request.resource.data.diff(resource.data).affectedKeys().hasOnly(['technicianRating', 'technicianReview']) &&
+                 (request.resource.data.technicianRating is number || request.resource.data.technicianRating == null) &&
+                 (request.resource.data.technicianReview is string || request.resource.data.technicianReview == null);
+  
+  // Admins can do everything with reports
+  allow read, write: if isAdmin();
+}
+    
+    // Tasks collection
+    match /tasks/{taskId} {
+      // Officers can create tasks
+      allow create: if request.auth != null && 
+        get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role == 'officer';
+      
+      // All authenticated users can read tasks
+      allow read: if request.auth != null;
+      
+      // Officers can update any task
+      allow update: if request.auth != null && 
+        get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role == 'officer';
+        
+      // Technicians can only update tasks assigned to them
+      allow update: if request.auth != null && 
+        get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role == 'technician' &&
+        resource.data.assignedTo == request.auth.uid;
+      
+      // Admins can do everything with tasks
+      allow read, write: if isAdmin();
+    }
+
+    // --- ATURAN UNTUK RESOURCE APP ---
+
+    match /requests_resource/{requestId} {
+      // Employees can create resource requests
+      allow create: if request.auth != null && 
+        get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role == 'employee';
+        
+      // All authenticated users can read requests
+      allow read: if request.auth != null;
+        
+      // Officers and technicians can update requests
+      allow update: if request.auth != null && 
+        (get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role == 'officer' ||
+         get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role == 'technician');
+        
+      // Admins can do everything with requests
+      allow read, write: if isAdmin();
+    }
+    
+    match /tasks_resource/{taskId} {
+      // Officers can create resource tasks
+      allow create: if request.auth != null && 
+        get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role == 'officer';
+      
+      // All authenticated users can read tasks
+      allow read: if request.auth != null;
+      
+      // Officers can update any task
+      allow update: if request.auth != null && 
+        get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role == 'officer';
+        
+      // Technicians can only update tasks assigned to them
+      allow update: if request.auth != null && 
+        get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role == 'technician' &&
+        resource.data.assignedTo == request.auth.uid;
+      
+      // Admins can do everything with tasks
+      allow read, write: if isAdmin();
+      
+      // Officers can delete resource tasks
+  		allow delete: if isOfficer();
+    }
+    
+    // --- ATURAN UNTUK OPERASIONAL APP ---
+    
+    // Vehicles collection
+    match /vehicles/{vehicleId} {
+      // All authenticated users can read vehicles
+      allow read: if request.auth != null;
+      
+      // Only officers and admins can create, update, or delete vehicles
+      allow create, delete: if isOfficer() || isAdmin();
+      
+      // Allow officers, admins, and drivers to update vehicles
+      // Drivers can only update availability status of vehicles assigned to them
+      allow update: if isOfficer() || isAdmin() || (
+        isDriver() && 
+        (resource.data.currentDriverId == request.auth.uid || 
+         request.resource.data.currentDriverId == null) &&
+        (
+          // Only specific fields can be updated by driver
+          request.resource.data.diff(resource.data).affectedKeys().hasOnly(['isAvailable', 'status', 'currentDriverId', 'currentDriverName', 'updatedAt'])
+        )
+      );
+    }
+    
+    // Drivers collection
+    match /drivers/{driverId} {
+      // All authenticated users can read drivers
+      allow read: if request.auth != null;
+      
+      // Only officers and admins can create or delete drivers
+      allow create, delete: if isOfficer() || isAdmin();
+      
+      // Allow officers, admins to update any driver
+      // Allow drivers to update their own availability status
+      allow update: if isOfficer() || isAdmin() || (
+        isDriver() && 
+        driverId == request.auth.uid &&
+        (
+          // Only specific fields can be updated by driver
+          request.resource.data.diff(resource.data).affectedKeys().hasOnly(['isAvailable', 'currentVehicleId', 'currentVehicleName', 'updatedAt'])
+        )
+      );
+    }
+    
+    // Ride Requests collection
+    match /ride_requests/{requestId} {
+      // Employees can create ride requests
+      allow create: if request.auth != null && 
+        get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role == 'employee';
+      
+      // All authenticated users can read ride requests
+      allow read: if request.auth != null;
+      
+      // Officers can update any ride request
+      allow update: if request.auth != null && 
+        get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role == 'officer';
+        
+      // Drivers can only update ride requests assigned to them
+      allow update: if request.auth != null && 
+        get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role == 'technician' &&
+        resource.data.driverId == request.auth.uid;
+      
+      // Admins can do everything with ride requests
+      allow read, write: if isAdmin();
+    }
+    
+    // --- ATURAN UNTUK BOOKINGROOM APP ---
+    
+    // Koleksi 'rooms' untuk data ruangan
+    match /rooms_booking/{roomId} {
+      // Semua pengguna yang terautentikasi (employee, officer) bisa membaca daftar ruangan
+      allow read: if request.auth != null;
+      
+      // Hanya officer dan admin yang bisa membuat, mengubah, atau menghapus data ruangan
+      allow create, update, delete: if isOfficer() || isAdmin();
+    }
+    
+    // Koleksi 'bookings' untuk data pemesanan
+    match /bookings/{bookingId} {
+      // Officer dan Admin bisa membaca semua data booking
+      // Employee hanya bisa membaca data booking yang mereka buat
+      allow read: if request.auth != null;
+      
+      // Employee bisa membuat booking baru
+      // - employeeId harus sama dengan UID pengguna yang membuat
+      // - Status awal harus 'open'
+      allow create: if request.auth != null && 
+                     get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role == 'employee' &&
+                     request.resource.data.employeeId == request.auth.uid &&
+                     request.resource.data.status == 'open';
+      
+      // Officer dan Admin bisa mengubah data booking apa pun (misal: approve/reject)
+      allow update: if isOfficer() || isAdmin();
+      
+      // Employee hanya bisa mengubah status booking miliknya menjadi 'cancelled', dan hanya jika statusnya masih 'open'
+      allow update: if request.auth != null &&
+                     resource.data.employeeId == request.auth.uid &&
+                     resource.data.status == 'open' &&
+                     request.resource.data.status == 'cancelled';
+                     
+      // Officer dan Admin bisa menghapus booking
+      // Employee bisa menghapus booking miliknya jika statusnya masih 'open'
+      allow delete: if isOfficer() || isAdmin() || (request.auth != null && resource.data.employeeId == request.auth.uid && resource.data.status == 'open');
+    }
+  }
+}
