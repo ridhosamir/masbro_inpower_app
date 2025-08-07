@@ -4,10 +4,13 @@ import 'package:flutter/material.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import '../models/user_model.dart';
+import 'package:cloud_functions/cloud_functions.dart';
 
 class UserService extends ChangeNotifier {
   final FirebaseFirestore _firestore = FirebaseFirestore.instance;
   final FirebaseAuth _auth = FirebaseAuth.instance;
+  final FirebaseFunctions _functions =
+      FirebaseFunctions.instanceFor(region: 'asia-southeast1');
 
   // Get user data from Firestore
   Future<UserModel> getUserData(String uid) async {
@@ -88,27 +91,32 @@ class UserService extends ChangeNotifier {
     }
   }
 
-  // Delete user (for admin) - UPDATED to handle driver documents
+  // Delete user (for admin)
   Future<void> deleteUser(String uid) async {
     try {
-      // Cek apakah user juga ada di collection drivers
-      DocumentSnapshot driverDoc =
-          await _firestore.collection('drivers').doc(uid).get();
-      bool hasDriverDocument = driverDoc.exists;
+      print('🚀 Memanggil Cloud Function "deleteUser" untuk UID: $uid');
 
-      // Hapus dokumen dari users collection
-      await _firestore.collection('users').doc(uid).delete();
+      // Panggil Cloud Function 'deleteUser' dengan parameter uid
+      final HttpsCallable callable = _functions.httpsCallable('deleteUser');
+      final result = await callable.call<Map<String, dynamic>>({'uid': uid});
 
-      // Jika user juga driver, hapus dari collection drivers
-      if (hasDriverDocument) {
-        await _firestore.collection('drivers').doc(uid).delete();
-        print('Driver document also deleted for: $uid');
+      // Cek hasil dari Cloud Function
+      if (result.data['success'] == true) {
+        print(
+            '✅ Cloud Function berhasil menghapus pengguna: ${result.data['message']}');
+      } else {
+        // Ini jarang terjadi jika fungsi tidak throw error, tapi baik untuk ada
+        throw Exception(
+            'Cloud Function melaporkan kegagalan: ${result.data['message']}');
       }
-
-      print('User document deleted from Firestore: $uid');
+    } on FirebaseFunctionsException catch (e) {
+      // Tangani error spesifik dari Cloud Functions (misal: permission-denied)
+      print('❌ Error dari Cloud Function: [${e.code}] ${e.message}');
+      throw Exception('Gagal menghapus pengguna: ${e.message}');
     } catch (e) {
-      print('Error deleting user: $e');
-      throw e;
+      // Tangani error umum lainnya
+      print('Error deleting user via cloud function: $e');
+      throw Exception('Terjadi kesalahan yang tidak diketahui.');
     }
   }
 
