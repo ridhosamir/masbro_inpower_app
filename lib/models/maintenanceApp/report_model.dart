@@ -18,7 +18,9 @@ class ReportModel {
   final String? technicianName;
   final String? imageUrl;
   final DateTime? completionDate;
-  final double? technicianRating; // Added technician rating field
+  final double? technicianRating; // Technician rating field
+  final String? technicianReview; // Added technician review field
+  final String? afterImageUrl; // Added after image URL field
 
   ReportModel({
     required this.id,
@@ -37,7 +39,9 @@ class ReportModel {
     this.technicianName,
     this.imageUrl,
     this.completionDate,
-    this.technicianRating, // Add to constructor
+    this.technicianRating,
+    this.technicianReview, // Add to constructor
+    this.afterImageUrl, // Add to constructor
   });
 
   /// Create ReportModel from Firestore document
@@ -79,7 +83,9 @@ class ReportModel {
       completionDate: data['completionDate'] != null
           ? (data['completionDate'] as Timestamp).toDate()
           : null,
-      technicianRating: technicianRating, // Add to return object
+      technicianRating: technicianRating,
+      technicianReview: data['technicianReview'], // Add to return object
+      afterImageUrl: data['afterImageUrl'], // Add to return object
     );
   }
 
@@ -109,7 +115,9 @@ class ReportModel {
       'imageUrl': imageUrl,
       'completionDate':
           completionDate != null ? Timestamp.fromDate(completionDate!) : null,
-      'technicianRating': technicianRating, // Add to map
+      'technicianRating': technicianRating,
+      'technicianReview': technicianReview, // Add to map
+      'afterImageUrl': afterImageUrl, // Add to map
     };
   }
 
@@ -173,7 +181,9 @@ class ReportModel {
     String? technicianName,
     String? imageUrl,
     DateTime? completionDate,
-    double? technicianRating, // Add to copyWith
+    double? technicianRating,
+    String? technicianReview,
+    String? afterImageUrl,
   }) {
     return ReportModel(
       id: id ?? this.id,
@@ -192,8 +202,9 @@ class ReportModel {
       technicianName: technicianName ?? this.technicianName,
       imageUrl: imageUrl ?? this.imageUrl,
       completionDate: completionDate ?? this.completionDate,
-      technicianRating:
-          technicianRating ?? this.technicianRating, // Add to constructor
+      technicianRating: technicianRating ?? this.technicianRating,
+      technicianReview: technicianReview ?? this.technicianReview,
+      afterImageUrl: afterImageUrl ?? this.afterImageUrl,
     );
   }
 
@@ -225,6 +236,34 @@ class ReportModel {
     return true;
   }
 
+  /// Check if after image is valid and can be displayed
+  bool hasValidAfterImage() {
+    // If URL is empty or null, image is not valid
+    if (afterImageUrl == null || afterImageUrl!.isEmpty) {
+      return false;
+    }
+
+    // URL must start with http, https, or gs://
+    if (!afterImageUrl!.startsWith('http') &&
+        !afterImageUrl!.startsWith('https') &&
+        !afterImageUrl!.startsWith('gs://')) {
+      return false;
+    }
+
+    // URL must not contain "undefined" or "null"
+    if (afterImageUrl!.toLowerCase().contains('undefined') ||
+        afterImageUrl!.toLowerCase().contains('null')) {
+      return false;
+    }
+
+    return true;
+  }
+
+  /// Check if report has technician review
+  bool hasReview() {
+    return technicianReview != null && technicianReview!.isNotEmpty;
+  }
+
   /// Normalize image URL for display
   String? getNormalizedImageUrl() {
     if (!hasValidImage()) {
@@ -239,6 +278,21 @@ class ReportModel {
     // If URL starts with gs://, this is a Firebase Storage URL
     // This URL will be handled by FirebaseStorageImage widget
     return imageUrl;
+  }
+
+  /// Normalize after image URL for display
+  String? getNormalizedAfterImageUrl() {
+    if (!hasValidAfterImage()) {
+      return null;
+    }
+
+    // If URL already starts with http/https, use directly
+    if (afterImageUrl!.startsWith('http')) {
+      return afterImageUrl;
+    }
+
+    // If URL starts with gs://, this is a Firebase Storage URL
+    return afterImageUrl;
   }
 }
 

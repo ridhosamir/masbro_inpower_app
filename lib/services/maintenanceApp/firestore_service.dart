@@ -18,6 +18,8 @@ class FirestoreService {
   CollectionReference get _usersCollection => _firestore.collection('users');
   CollectionReference get _ratingsCollection =>
       _firestore.collection('technician_ratings');
+  CollectionReference get _reviewsCollection =>
+      _firestore.collection('technician_reviews');
 
   // BUILDING MANAGEMENT
   // Cek apakah nama gedung sudah ada (tidak case sensitive)
@@ -613,35 +615,60 @@ class FirestoreService {
 
   /// METODE RATING YANG DIPERBARUI ///
 
-  /// Menambahkan rating untuk teknisi
+  /// Menambahkan rating dan review untuk teknisi
   Future<void> rateTechnician(
-      String reportId, double rating, String technicianId) async {
+      String reportId, double rating, String technicianId,
+      {String? review}) async {
     try {
       print(
           'Starting rating process for report $reportId, technician $technicianId with rating $rating');
 
-      // 1. Update rating in the report document first
+      // 1. Update rating and review in the report document first
       try {
-        await _reportsCollection.doc(reportId).update({
-          'technicianRating': rating,
-        });
-        print('Report rating updated successfully');
+        Map<String, dynamic> updateData = {'technicianRating': rating};
+
+        // Add review if provided
+        if (review != null && review.isNotEmpty) {
+          updateData['technicianReview'] = review;
+        }
+
+        await _reportsCollection.doc(reportId).update(updateData);
+        print('Report rating and review updated successfully');
       } catch (e) {
-        print('Error updating report rating: $e');
-        throw Exception('Failed to update report rating: $e');
+        print('Error updating report rating and review: $e');
+        throw Exception('Failed to update report rating and review: $e');
       }
 
       // 2. Save rating to separate collection
       try {
-        await _ratingsCollection.add({
+        Map<String, dynamic> ratingData = {
           'technicianId': technicianId,
           'reportId': reportId,
           'rating': rating,
           'timestamp': FieldValue.serverTimestamp(),
-        });
+        };
+
+        // Add review if provided
+        if (review != null && review.isNotEmpty) {
+          ratingData['review'] = review;
+        }
+
+        await _ratingsCollection.add(ratingData);
         print('Rating saved to separate collection');
+
+        // Also save to reviews collection if review is provided
+        if (review != null && review.isNotEmpty) {
+          await _reviewsCollection.add({
+            'technicianId': technicianId,
+            'reportId': reportId,
+            'review': review,
+            'rating': rating,
+            'timestamp': FieldValue.serverTimestamp(),
+          });
+          print('Review saved to separate collection');
+        }
       } catch (e) {
-        print('Error saving rating to separate collection: $e');
+        print('Error saving rating/review to separate collection: $e');
         // Continue execution even if this fails
       }
 
@@ -758,6 +785,35 @@ class FirestoreService {
     }
   }
 
+  /// Get technician reviews
+  Future<List<Map<String, dynamic>>> getTechnicianReviews(
+      String technicianId) async {
+    try {
+      final snapshot = await _reviewsCollection
+          .where('technicianId', isEqualTo: technicianId)
+          .orderBy('timestamp', descending: true)
+          .get();
+
+      return snapshot.docs.map((doc) {
+        final data = doc.data() as Map<String, dynamic>;
+        return {
+          'id': doc.id,
+          'review': data['review'] as String,
+          'rating': data['rating'] is int
+              ? (data['rating'] as int).toDouble()
+              : data['rating'] as double,
+          'timestamp': data['timestamp'] != null
+              ? (data['timestamp'] as Timestamp).toDate()
+              : DateTime.now(),
+          'reportId': data['reportId'] as String,
+        };
+      }).toList();
+    } catch (e) {
+      print('Error getting technician reviews: $e');
+      return [];
+    }
+  }
+
   /// Get report with updated rating (memastikan data rating terbaru)
   Future<ReportModel?> getReportWithRating(String reportId) async {
     try {
@@ -774,8 +830,8 @@ class FirestoreService {
       throw e;
     }
   }
-  // Add these methods to your FirestoreService class
 
+  // Complete task with after image
   Future<void> completeTaskWithImage({
     required String taskId,
     required String reportId,
@@ -803,26 +859,35 @@ class FirestoreService {
       });
 
       await batch.commit();
+      print('Task $taskId and report $reportId completed with after image');
     } catch (e) {
       print('Error completing task with image: $e');
       throw e;
     }
   }
 
-  Future<void> updateTaskWithAfterImage({
-    required String taskId,
-    required String completionNote,
-    required String afterImageUrl,
-  }) async {
+  // Add user review to a task
+  Future<void> addUserReviewToTask(
+      String taskId, double rating, String review) async {
     try {
       await _tasksCollection.doc(taskId).update({
-        'status': 'completed',
-        'completedAt': FieldValue.serverTimestamp(),
-        'completionNote': completionNote,
-        'afterImageUrl': afterImageUrl,
+        'userRating': rating,
+        'userReview': review,
       });
+
+      // Get task info to update the report and technician stats
+      final taskDoc = await _tasksCollection.doc(taskId).get();
+      if (taskDoc.exists) {
+        final task = TaskModel.fromFirestore(taskDoc);
+
+        // Also update the report with this rating and review
+        await rateTechnician(task.reportId, rating, task.assignedTo,
+            review: review);
+      }
+
+      print('User review added to task $taskId');
     } catch (e) {
-      print('Error updating task with after image: $e');
+      print('Error adding user review to task: $e');
       throw e;
     }
   }
