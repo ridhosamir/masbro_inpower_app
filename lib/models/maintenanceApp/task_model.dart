@@ -171,6 +171,11 @@ class TaskModel {
     return userRating != null;
   }
 
+  // Check if task has a review
+  bool hasReview() {
+    return userReview != null && userReview!.isNotEmpty;
+  }
+
   // Get rating display text
   String getRatingText() {
     if (userRating == null) return 'Not Rated';

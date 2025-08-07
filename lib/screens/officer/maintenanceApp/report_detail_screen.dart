@@ -28,15 +28,24 @@ class _ReportDetailScreenState extends State<ReportDetailScreen> {
     _refreshReportData();
   }
 
-  // Refresh report data to ensure we have the latest information including rating
+  // Refresh report data to ensure we have the latest information including rating and review
   Future<void> _refreshReportData() async {
     try {
+      print('Refreshing report data for ID: ${widget.report.id}');
       final updatedReport =
           await _firestoreService.getReportWithRating(widget.report.id);
+
+      // Debug print to check if the data is being fetched correctly
+      print('DEBUG: Report ID: ${widget.report.id}');
+      print('DEBUG: Fetched Rating: ${updatedReport?.technicianRating}');
+      print('DEBUG: Fetched Review: ${updatedReport?.technicianReview}');
+      print('DEBUG: After Image URL: ${updatedReport?.afterImageUrl}');
+
       if (updatedReport != null && mounted) {
         setState(() {
           _updatedReport = updatedReport;
         });
+        print('Report state updated with new data');
       }
     } catch (e) {
       print('Error refreshing report data: $e');
@@ -86,10 +95,81 @@ class _ReportDetailScreenState extends State<ReportDetailScreen> {
     return Colors.red;
   }
 
+  // Show full screen image
+  void _showFullScreenImage(BuildContext context, String imageUrl) {
+    Navigator.of(context).push(
+      MaterialPageRoute(
+        builder: (context) => Scaffold(
+          backgroundColor: Colors.black,
+          appBar: AppBar(
+            backgroundColor: Colors.black,
+            iconTheme: IconThemeData(color: Colors.white),
+            title: Text('Image Preview', style: TextStyle(color: Colors.white)),
+          ),
+          body: Center(
+            child: InteractiveViewer(
+              panEnabled: true,
+              boundaryMargin: EdgeInsets.all(20),
+              minScale: 0.5,
+              maxScale: 4,
+              child: Image.network(
+                imageUrl,
+                fit: BoxFit.contain,
+                loadingBuilder: (context, child, loadingProgress) {
+                  if (loadingProgress == null) return child;
+                  return Center(
+                    child: CircularProgressIndicator(
+                      color: Colors.white,
+                      value: loadingProgress.expectedTotalBytes != null
+                          ? loadingProgress.cumulativeBytesLoaded /
+                              loadingProgress.expectedTotalBytes!
+                          : null,
+                    ),
+                  );
+                },
+                errorBuilder: (context, error, stackTrace) {
+                  return Center(
+                    child: Column(
+                      mainAxisAlignment: MainAxisAlignment.center,
+                      children: [
+                        Icon(Icons.error, color: Colors.white, size: 48),
+                        SizedBox(height: 16),
+                        Text(
+                          'Failed to load image',
+                          style: TextStyle(color: Colors.white),
+                        ),
+                      ],
+                    ),
+                  );
+                },
+              ),
+            ),
+          ),
+        ),
+      ),
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     // Use the updated report if available
     final report = _updatedReport ?? widget.report;
+
+    // Debug print to check the report data in the build method
+    print('Building UI with report ID: ${report.id}');
+    print('Report status: ${report.status}');
+    print('Has technician: ${report.assignedTechnicianId != null}');
+    print('Has rating: ${report.technicianRating != null}');
+    print(
+        'Has review: ${report.technicianReview != null && report.technicianReview!.isNotEmpty}');
+    print(
+        'Has after image: ${report.afterImageUrl != null && report.afterImageUrl!.isNotEmpty}');
+    if (report.technicianReview != null) {
+      print('Review content: ${report.technicianReview}');
+    }
+    if (report.afterImageUrl != null) {
+      print('After image URL: ${report.afterImageUrl}');
+    }
 
     return Scaffold(
       appBar: AppBar(
@@ -181,44 +261,244 @@ class _ReportDetailScreenState extends State<ReportDetailScreen> {
 
             // Photo if available
             if (report.imageUrl != null) ...[
-              _buildSectionTitle('Photo'),
+              _buildSectionTitle('Issue Photo'),
+              SizedBox(height: 12),
+              GestureDetector(
+                onTap: () => _showFullScreenImage(context, report.imageUrl!),
+                child: Container(
+                  width: double.infinity,
+                  height: 200,
+                  decoration: BoxDecoration(
+                    borderRadius: BorderRadius.circular(12),
+                    border: Border.all(color: Colors.grey[300]!),
+                  ),
+                  child: Stack(
+                    fit: StackFit.expand,
+                    children: [
+                      ClipRRect(
+                        borderRadius: BorderRadius.circular(12),
+                        child: Image.network(
+                          report.imageUrl!,
+                          fit: BoxFit.cover,
+                          loadingBuilder: (context, child, loadingProgress) {
+                            if (loadingProgress == null) return child;
+                            return Center(
+                              child: CircularProgressIndicator(
+                                value: loadingProgress.expectedTotalBytes !=
+                                        null
+                                    ? loadingProgress.cumulativeBytesLoaded /
+                                        loadingProgress.expectedTotalBytes!
+                                    : null,
+                              ),
+                            );
+                          },
+                          errorBuilder: (context, error, stackTrace) {
+                            return Container(
+                              color: Colors.grey[200],
+                              child: Center(
+                                child: Icon(
+                                  Icons.broken_image,
+                                  size: 64,
+                                  color: Colors.grey[400],
+                                ),
+                              ),
+                            );
+                          },
+                        ),
+                      ),
+                      Positioned(
+                        right: 10,
+                        bottom: 10,
+                        child: Container(
+                          padding: EdgeInsets.all(8),
+                          decoration: BoxDecoration(
+                            color: Colors.black.withOpacity(0.5),
+                            borderRadius: BorderRadius.circular(20),
+                          ),
+                          child: Icon(
+                            Icons.zoom_in,
+                            color: Colors.white,
+                            size: 24,
+                          ),
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+              ),
+              SizedBox(height: 20),
+            ],
+
+            // After image if available
+            if (report.afterImageUrl != null &&
+                report.afterImageUrl!.isNotEmpty) ...[
+              _buildSectionTitle('Completion Photo'),
+              SizedBox(height: 12),
+              GestureDetector(
+                onTap: () =>
+                    _showFullScreenImage(context, report.afterImageUrl!),
+                child: Container(
+                  width: double.infinity,
+                  height: 200,
+                  decoration: BoxDecoration(
+                    borderRadius: BorderRadius.circular(12),
+                    border: Border.all(color: Colors.green[300]!),
+                  ),
+                  child: Stack(
+                    fit: StackFit.expand,
+                    children: [
+                      ClipRRect(
+                        borderRadius: BorderRadius.circular(12),
+                        child: Image.network(
+                          report.afterImageUrl!,
+                          fit: BoxFit.cover,
+                          loadingBuilder: (context, child, loadingProgress) {
+                            if (loadingProgress == null) return child;
+                            return Center(
+                              child: CircularProgressIndicator(
+                                value: loadingProgress.expectedTotalBytes !=
+                                        null
+                                    ? loadingProgress.cumulativeBytesLoaded /
+                                        loadingProgress.expectedTotalBytes!
+                                    : null,
+                                valueColor:
+                                    AlwaysStoppedAnimation<Color>(Colors.green),
+                              ),
+                            );
+                          },
+                          errorBuilder: (context, error, stackTrace) {
+                            return Container(
+                              color: Colors.grey[200],
+                              child: Center(
+                                child: Icon(
+                                  Icons.broken_image,
+                                  size: 64,
+                                  color: Colors.grey[400],
+                                ),
+                              ),
+                            );
+                          },
+                        ),
+                      ),
+                      Positioned(
+                        right: 10,
+                        bottom: 10,
+                        child: Container(
+                          padding: EdgeInsets.all(8),
+                          decoration: BoxDecoration(
+                            color: Colors.black.withOpacity(0.5),
+                            borderRadius: BorderRadius.circular(20),
+                          ),
+                          child: Icon(
+                            Icons.zoom_in,
+                            color: Colors.white,
+                            size: 24,
+                          ),
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+              ),
+              SizedBox(height: 20),
+            ],
+
+            // Before and After comparison if both images are available
+            if (report.imageUrl != null &&
+                report.afterImageUrl != null &&
+                report.afterImageUrl!.isNotEmpty) ...[
+              _buildSectionTitle('Before & After Comparison'),
               SizedBox(height: 12),
               Container(
                 width: double.infinity,
-                height: 200,
+                padding: EdgeInsets.all(16),
                 decoration: BoxDecoration(
+                  color: Colors.blue[50],
                   borderRadius: BorderRadius.circular(12),
-                  border: Border.all(color: Colors.grey[300]!),
+                  border: Border.all(color: Colors.blue[200]!),
                 ),
-                child: ClipRRect(
-                  borderRadius: BorderRadius.circular(12),
-                  child: Image.network(
-                    report.imageUrl!,
-                    fit: BoxFit.cover,
-                    loadingBuilder: (context, child, loadingProgress) {
-                      if (loadingProgress == null) return child;
-                      return Center(
-                        child: CircularProgressIndicator(
-                          value: loadingProgress.expectedTotalBytes != null
-                              ? loadingProgress.cumulativeBytesLoaded /
-                                  loadingProgress.expectedTotalBytes!
-                              : null,
-                        ),
-                      );
-                    },
-                    errorBuilder: (context, error, stackTrace) {
-                      return Container(
-                        color: Colors.grey[200],
-                        child: Center(
-                          child: Icon(
-                            Icons.broken_image,
-                            size: 64,
-                            color: Colors.grey[400],
+                child: Column(
+                  children: [
+                    Row(
+                      children: [
+                        Expanded(
+                          child: Column(
+                            children: [
+                              Text(
+                                'Before',
+                                style: TextStyle(
+                                  fontWeight: FontWeight.bold,
+                                  color: Colors.red[700],
+                                ),
+                              ),
+                              SizedBox(height: 8),
+                              GestureDetector(
+                                onTap: () => _showFullScreenImage(
+                                    context, report.imageUrl!),
+                                child: Container(
+                                  height: 120,
+                                  decoration: BoxDecoration(
+                                    borderRadius: BorderRadius.circular(8),
+                                    border: Border.all(color: Colors.red[300]!),
+                                  ),
+                                  child: ClipRRect(
+                                    borderRadius: BorderRadius.circular(8),
+                                    child: Image.network(
+                                      report.imageUrl!,
+                                      fit: BoxFit.cover,
+                                    ),
+                                  ),
+                                ),
+                              ),
+                            ],
                           ),
                         ),
-                      );
-                    },
-                  ),
+                        SizedBox(width: 16),
+                        Expanded(
+                          child: Column(
+                            children: [
+                              Text(
+                                'After',
+                                style: TextStyle(
+                                  fontWeight: FontWeight.bold,
+                                  color: Colors.green[700],
+                                ),
+                              ),
+                              SizedBox(height: 8),
+                              GestureDetector(
+                                onTap: () => _showFullScreenImage(
+                                    context, report.afterImageUrl!),
+                                child: Container(
+                                  height: 120,
+                                  decoration: BoxDecoration(
+                                    borderRadius: BorderRadius.circular(8),
+                                    border:
+                                        Border.all(color: Colors.green[300]!),
+                                  ),
+                                  child: ClipRRect(
+                                    borderRadius: BorderRadius.circular(8),
+                                    child: Image.network(
+                                      report.afterImageUrl!,
+                                      fit: BoxFit.cover,
+                                    ),
+                                  ),
+                                ),
+                              ),
+                            ],
+                          ),
+                        ),
+                      ],
+                    ),
+                    SizedBox(height: 12),
+                    Text(
+                      'Tap on an image to view in full screen',
+                      style: TextStyle(
+                        fontStyle: FontStyle.italic,
+                        fontSize: 12,
+                        color: Colors.blue[700],
+                      ),
+                    ),
+                  ],
                 ),
               ),
               SizedBox(height: 20),
@@ -407,6 +687,39 @@ class _ReportDetailScreenState extends State<ReportDetailScreen> {
                                     ),
                                   ],
                                 ),
+
+                                // Display the technician review if available
+                                if (report.technicianReview != null &&
+                                    report.technicianReview!.isNotEmpty) ...[
+                                  SizedBox(height: 16),
+                                  Text(
+                                    'Feedback:',
+                                    style: TextStyle(
+                                      fontSize: 14,
+                                      fontWeight: FontWeight.w600,
+                                      color: Colors.blue[700],
+                                    ),
+                                  ),
+                                  SizedBox(height: 8),
+                                  Container(
+                                    width: double.infinity,
+                                    padding: EdgeInsets.all(12),
+                                    decoration: BoxDecoration(
+                                      color: Colors.white,
+                                      borderRadius: BorderRadius.circular(8),
+                                      border:
+                                          Border.all(color: Colors.blue[200]!),
+                                    ),
+                                    child: Text(
+                                      report.technicianReview!,
+                                      style: TextStyle(
+                                        fontStyle: FontStyle.italic,
+                                        color: Colors.grey[700],
+                                        height: 1.3,
+                                      ),
+                                    ),
+                                  ),
+                                ],
                               ],
                             ),
                           ),
@@ -418,7 +731,7 @@ class _ReportDetailScreenState extends State<ReportDetailScreen> {
               ),
             ],
 
-            SizedBox(height: 32),
+            SizedBox(height: 24),
 
             // Action Buttons based on status
             if (report.status == 'open') ...[

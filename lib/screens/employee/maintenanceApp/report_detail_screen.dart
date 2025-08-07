@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
+import 'package:image_picker/image_picker.dart';
 import 'package:masbro_inpower_app/utils/firebase_storage_image.dart';
 import '../../../models/maintenanceApp/report_model.dart';
 import '../../../services/maintenanceApp/firestore_service.dart';
@@ -16,6 +17,7 @@ class ReportDetailScreen extends StatefulWidget {
 
 class _ReportDetailScreenState extends State<ReportDetailScreen> {
   final FirestoreService _firestoreService = FirestoreService();
+  final TextEditingController _reviewController = TextEditingController();
   double _rating = 0;
   bool _isSubmittingRating = false;
   ReportModel? _updatedReport;
@@ -29,10 +31,16 @@ class _ReportDetailScreenState extends State<ReportDetailScreen> {
       _rating = widget.report.technicianRating!;
     }
 
-    // Refresh report data to ensure we have the latest rating
+    // Refresh report data to ensure we have the latest rating and review
     if (widget.report.status == 'completed') {
       _refreshReportData();
     }
+  }
+
+  @override
+  void dispose() {
+    _reviewController.dispose();
+    super.dispose();
   }
 
   Future<void> _refreshReportData() async {
@@ -53,7 +61,7 @@ class _ReportDetailScreenState extends State<ReportDetailScreen> {
     }
   }
 
-  Future<void> _submitRating() async {
+  Future<void> _submitRatingAndReview() async {
     if (_rating == 0) {
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
@@ -69,10 +77,13 @@ class _ReportDetailScreenState extends State<ReportDetailScreen> {
     });
 
     try {
+      final review = _reviewController.text.trim();
+
       await _firestoreService.rateTechnician(
         widget.report.id,
         _rating,
         widget.report.assignedTechnicianId!,
+        review: review.isNotEmpty ? review : null,
       );
 
       // Refresh report data after rating
@@ -85,7 +96,7 @@ class _ReportDetailScreenState extends State<ReportDetailScreen> {
 
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
-            content: Text('Rating berhasil dikirim, terima kasih!'),
+            content: Text('Rating dan ulasan berhasil dikirim, terima kasih!'),
             backgroundColor: Colors.green,
           ),
         );
@@ -104,6 +115,59 @@ class _ReportDetailScreenState extends State<ReportDetailScreen> {
         );
       }
     }
+  }
+
+  // Show full screen image view
+  void _showFullScreenImage(BuildContext context, String imageUrl) {
+    Navigator.of(context).push(
+      MaterialPageRoute(
+        builder: (context) => Scaffold(
+          backgroundColor: Colors.black,
+          appBar: AppBar(
+            backgroundColor: Colors.black,
+            iconTheme: IconThemeData(color: Colors.white),
+            title: Text('Lihat Gambar', style: TextStyle(color: Colors.white)),
+          ),
+          body: Center(
+            child: InteractiveViewer(
+              panEnabled: true,
+              boundaryMargin: EdgeInsets.all(20),
+              minScale: 0.5,
+              maxScale: 4,
+              child: Image.network(
+                imageUrl,
+                fit: BoxFit.contain,
+                loadingBuilder: (context, child, loadingProgress) {
+                  if (loadingProgress == null) return child;
+                  return Center(
+                    child: CircularProgressIndicator(
+                      color: Colors.white,
+                      value: loadingProgress.expectedTotalBytes != null
+                          ? loadingProgress.cumulativeBytesLoaded /
+                              loadingProgress.expectedTotalBytes!
+                          : null,
+                    ),
+                  );
+                },
+                errorBuilder: (context, error, stackTrace) {
+                  return Column(
+                    mainAxisAlignment: MainAxisAlignment.center,
+                    children: [
+                      Icon(Icons.broken_image, color: Colors.white, size: 64),
+                      SizedBox(height: 16),
+                      Text(
+                        'Gagal memuat gambar',
+                        style: TextStyle(color: Colors.white),
+                      ),
+                    ],
+                  );
+                },
+              ),
+            ),
+          ),
+        ),
+      ),
+    );
   }
 
   @override
@@ -175,7 +239,7 @@ class _ReportDetailScreenState extends State<ReportDetailScreen> {
             // Technician Rating Section (only for completed reports)
             if (report.status == 'completed' &&
                 report.assignedTechnicianId != null) ...[
-              _buildSectionTitle('Berikan Rating untuk Teknisi'),
+              _buildSectionTitle('Berikan Rating dan Ulasan untuk Teknisi'),
               SizedBox(height: 12),
               Container(
                 width: double.infinity,
@@ -216,10 +280,41 @@ class _ReportDetailScreenState extends State<ReportDetailScreen> {
                       },
                     ),
                     SizedBox(height: 16),
+
+                    // Review text field
+                    if (report.technicianRating == null) ...[
+                      TextField(
+                        controller: _reviewController,
+                        maxLines: 3,
+                        decoration: InputDecoration(
+                          hintText:
+                              'Tambahkan ulasan tentang pelayanan teknisi...',
+                          border: OutlineInputBorder(
+                            borderRadius: BorderRadius.circular(8),
+                            borderSide: BorderSide(color: Colors.amber[300]!),
+                          ),
+                          enabledBorder: OutlineInputBorder(
+                            borderRadius: BorderRadius.circular(8),
+                            borderSide: BorderSide(color: Colors.amber[300]!),
+                          ),
+                          focusedBorder: OutlineInputBorder(
+                            borderRadius: BorderRadius.circular(8),
+                            borderSide:
+                                BorderSide(color: Colors.amber[700]!, width: 2),
+                          ),
+                          filled: true,
+                          fillColor: Colors.white,
+                          contentPadding: EdgeInsets.all(12),
+                        ),
+                      ),
+                      SizedBox(height: 16),
+                    ],
+
+                    // Submit button
                     ElevatedButton(
                       onPressed: report.technicianRating != null
                           ? null
-                          : _submitRating,
+                          : _submitRatingAndReview,
                       style: ElevatedButton.styleFrom(
                         backgroundColor: Colors.amber[700],
                         padding:
@@ -240,20 +335,43 @@ class _ReportDetailScreenState extends State<ReportDetailScreen> {
                           : Text(
                               report.technicianRating != null
                                   ? 'Rating Sudah Dikirim'
-                                  : 'Kirim Rating',
+                                  : 'Kirim Rating & Ulasan',
                               style: TextStyle(color: Colors.white),
                             ),
                     ),
+
+                    // Show submitted rating and review if available
                     if (report.technicianRating != null) ...[
+                      SizedBox(height: 12),
+                      Divider(color: Colors.amber[200]),
                       SizedBox(height: 8),
                       Text(
                         'Anda telah memberikan rating ${report.technicianRating!.toStringAsFixed(1)} bintang',
                         style: TextStyle(
-                          color: Colors.grey[600],
+                          color: Colors.amber[800],
                           fontSize: 14,
-                          fontStyle: FontStyle.italic,
+                          fontWeight: FontWeight.w500,
                         ),
                       ),
+                      if (report.hasReview()) ...[
+                        SizedBox(height: 8),
+                        Container(
+                          width: double.infinity,
+                          padding: EdgeInsets.all(12),
+                          decoration: BoxDecoration(
+                            color: Colors.white,
+                            borderRadius: BorderRadius.circular(8),
+                            border: Border.all(color: Colors.amber[200]!),
+                          ),
+                          child: Text(
+                            report.technicianReview!,
+                            style: TextStyle(
+                              fontStyle: FontStyle.italic,
+                              color: Colors.grey[700],
+                            ),
+                          ),
+                        ),
+                      ],
                     ],
                   ],
                 ),
@@ -287,52 +405,252 @@ class _ReportDetailScreenState extends State<ReportDetailScreen> {
                 ),
             ]),
             SizedBox(height: 20),
+
+            // Original issue photo
             if (report.hasValidImage()) ...[
-              _buildSectionTitle('Foto'),
+              _buildSectionTitle('Foto Masalah'),
               SizedBox(height: 12),
-              Container(
-                height: 200,
-                width: double.infinity,
-                margin: EdgeInsets.only(bottom: 12),
-                decoration: BoxDecoration(
-                  borderRadius: BorderRadius.circular(8),
-                  color: Colors.grey[200],
-                ),
-                child: ClipRRect(
-                  borderRadius: BorderRadius.circular(8),
-                  child: FirebaseStorageImage(
-                    imageUrl: report.imageUrl,
-                    fit: BoxFit.cover,
-                    cacheDuration: Duration(days: 1),
-                    forceFresh: true,
-                    placeholder: Container(
-                      color: Colors.grey[200],
-                      child: Center(child: CircularProgressIndicator()),
-                    ),
-                    errorWidget: Container(
-                      color: Colors.grey[200],
-                      child: Center(
-                        child: Column(
-                          mainAxisAlignment: MainAxisAlignment.center,
-                          children: [
-                            Icon(Icons.error, color: Colors.red),
-                            Text('Gagal memuat gambar'),
-                            SizedBox(height: 8),
-                            ElevatedButton.icon(
-                              onPressed: () {
-                                setState(() {});
-                              },
-                              icon: Icon(Icons.refresh),
-                              label: Text('Coba lagi'),
+              GestureDetector(
+                onTap: () => _showFullScreenImage(context, report.imageUrl!),
+                child: Container(
+                  height: 200,
+                  width: double.infinity,
+                  margin: EdgeInsets.only(bottom: 12),
+                  decoration: BoxDecoration(
+                    borderRadius: BorderRadius.circular(8),
+                    color: Colors.grey[200],
+                  ),
+                  child: Stack(
+                    fit: StackFit.expand,
+                    children: [
+                      ClipRRect(
+                        borderRadius: BorderRadius.circular(8),
+                        child: FirebaseStorageImage(
+                          imageUrl: report.imageUrl,
+                          fit: BoxFit.cover,
+                          cacheDuration: Duration(days: 1),
+                          forceFresh: true,
+                          placeholder: Container(
+                            color: Colors.grey[200],
+                            child: Center(child: CircularProgressIndicator()),
+                          ),
+                          errorWidget: Container(
+                            color: Colors.grey[200],
+                            child: Center(
+                              child: Column(
+                                mainAxisAlignment: MainAxisAlignment.center,
+                                children: [
+                                  Icon(Icons.error, color: Colors.red),
+                                  Text('Gagal memuat gambar'),
+                                  SizedBox(height: 8),
+                                  ElevatedButton.icon(
+                                    onPressed: () {
+                                      setState(() {});
+                                    },
+                                    icon: Icon(Icons.refresh),
+                                    label: Text('Coba lagi'),
+                                  ),
+                                ],
+                              ),
                             ),
-                          ],
+                          ),
                         ),
                       ),
-                    ),
+                      Positioned(
+                        right: 10,
+                        bottom: 10,
+                        child: Container(
+                          padding: EdgeInsets.all(8),
+                          decoration: BoxDecoration(
+                            color: Colors.black.withOpacity(0.5),
+                            borderRadius: BorderRadius.circular(20),
+                          ),
+                          child: Icon(
+                            Icons.zoom_in,
+                            color: Colors.white,
+                            size: 24,
+                          ),
+                        ),
+                      ),
+                    ],
                   ),
                 ),
               ),
             ],
+
+            // After completion photo (if available)
+            if (report.hasValidAfterImage()) ...[
+              _buildSectionTitle('Foto Setelah Perbaikan'),
+              SizedBox(height: 12),
+              GestureDetector(
+                onTap: () =>
+                    _showFullScreenImage(context, report.afterImageUrl!),
+                child: Container(
+                  height: 200,
+                  width: double.infinity,
+                  margin: EdgeInsets.only(bottom: 12),
+                  decoration: BoxDecoration(
+                    borderRadius: BorderRadius.circular(8),
+                    color: Colors.grey[200],
+                    border: Border.all(color: Colors.green[300]!),
+                  ),
+                  child: Stack(
+                    fit: StackFit.expand,
+                    children: [
+                      ClipRRect(
+                        borderRadius: BorderRadius.circular(8),
+                        child: FirebaseStorageImage(
+                          imageUrl: report.afterImageUrl,
+                          fit: BoxFit.cover,
+                          cacheDuration: Duration(days: 1),
+                          forceFresh: true,
+                          placeholder: Container(
+                            color: Colors.grey[200],
+                            child: Center(child: CircularProgressIndicator()),
+                          ),
+                          errorWidget: Container(
+                            color: Colors.grey[200],
+                            child: Center(
+                              child: Column(
+                                mainAxisAlignment: MainAxisAlignment.center,
+                                children: [
+                                  Icon(Icons.error, color: Colors.red),
+                                  Text('Gagal memuat gambar'),
+                                  SizedBox(height: 8),
+                                  ElevatedButton.icon(
+                                    onPressed: () {
+                                      setState(() {});
+                                    },
+                                    icon: Icon(Icons.refresh),
+                                    label: Text('Coba lagi'),
+                                  ),
+                                ],
+                              ),
+                            ),
+                          ),
+                        ),
+                      ),
+                      Positioned(
+                        right: 10,
+                        bottom: 10,
+                        child: Container(
+                          padding: EdgeInsets.all(8),
+                          decoration: BoxDecoration(
+                            color: Colors.black.withOpacity(0.5),
+                            borderRadius: BorderRadius.circular(20),
+                          ),
+                          child: Icon(
+                            Icons.zoom_in,
+                            color: Colors.white,
+                            size: 24,
+                          ),
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+              ),
+            ],
+
+            // Show before/after comparison if both images are available
+            if (report.hasValidImage() && report.hasValidAfterImage()) ...[
+              _buildSectionTitle('Perbandingan Sebelum & Sesudah'),
+              SizedBox(height: 12),
+              Container(
+                width: double.infinity,
+                padding: EdgeInsets.all(16),
+                decoration: BoxDecoration(
+                  color: Colors.blue[50],
+                  borderRadius: BorderRadius.circular(12),
+                  border: Border.all(color: Colors.blue[200]!),
+                ),
+                child: Column(
+                  children: [
+                    Row(
+                      children: [
+                        Expanded(
+                          child: Column(
+                            children: [
+                              Text(
+                                'Sebelum',
+                                style: TextStyle(
+                                  fontWeight: FontWeight.bold,
+                                  color: Colors.red[700],
+                                ),
+                              ),
+                              SizedBox(height: 8),
+                              GestureDetector(
+                                onTap: () => _showFullScreenImage(
+                                    context, report.imageUrl!),
+                                child: Container(
+                                  height: 120,
+                                  decoration: BoxDecoration(
+                                    borderRadius: BorderRadius.circular(8),
+                                    border: Border.all(color: Colors.red[300]!),
+                                  ),
+                                  child: ClipRRect(
+                                    borderRadius: BorderRadius.circular(8),
+                                    child: FirebaseStorageImage(
+                                      imageUrl: report.imageUrl,
+                                      fit: BoxFit.cover,
+                                    ),
+                                  ),
+                                ),
+                              ),
+                            ],
+                          ),
+                        ),
+                        SizedBox(width: 16),
+                        Expanded(
+                          child: Column(
+                            children: [
+                              Text(
+                                'Sesudah',
+                                style: TextStyle(
+                                  fontWeight: FontWeight.bold,
+                                  color: Colors.green[700],
+                                ),
+                              ),
+                              SizedBox(height: 8),
+                              GestureDetector(
+                                onTap: () => _showFullScreenImage(
+                                    context, report.afterImageUrl!),
+                                child: Container(
+                                  height: 120,
+                                  decoration: BoxDecoration(
+                                    borderRadius: BorderRadius.circular(8),
+                                    border:
+                                        Border.all(color: Colors.green[300]!),
+                                  ),
+                                  child: ClipRRect(
+                                    borderRadius: BorderRadius.circular(8),
+                                    child: FirebaseStorageImage(
+                                      imageUrl: report.afterImageUrl,
+                                      fit: BoxFit.cover,
+                                    ),
+                                  ),
+                                ),
+                              ),
+                            ],
+                          ),
+                        ),
+                      ],
+                    ),
+                    SizedBox(height: 12),
+                    Text(
+                      'Tap pada gambar untuk melihat detail',
+                      style: TextStyle(
+                        fontStyle: FontStyle.italic,
+                        fontSize: 12,
+                        color: Colors.blue[700],
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            ],
+
+            SizedBox(height: 20),
             _buildSectionTitle('Deskripsi Masalah'),
             SizedBox(height: 12),
             Container(
