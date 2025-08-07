@@ -5,6 +5,7 @@ import '../../../models/bookingroomApp/room_model.dart';
 import '../../../services/bookingroomApp/firestore_service.dart';
 import '../../../widgets/custom_button.dart';
 import '../../../widgets/custom_text_field.dart';
+import 'package:cloud_firestore/cloud_firestore.dart';
 
 enum BookingType { harian, beberapaHari }
 
@@ -21,6 +22,13 @@ class _BookingDetailScreenState extends State<BookingDetailScreen> {
   final FirestoreService _firestoreService = FirestoreService();
   final _rejectionReasonController = TextEditingController();
   bool _isLoading = false;
+  late BookingModel _currentBooking;
+
+  @override
+  void initState() {
+    super.initState();
+    _currentBooking = widget.booking;
+  }
 
   @override
   void dispose() {
@@ -63,7 +71,7 @@ class _BookingDetailScreenState extends State<BookingDetailScreen> {
             onPressed: () async {
               if (_formKey.currentState!.validate()) {
                 await _firestoreService.updateBookingStatus(
-                  widget.booking.id,
+                  _currentBooking.id,
                   'cancelled',
                   reason: 'Ditolak: ${_rejectionReasonController.text.trim()}',
                 );
@@ -98,7 +106,38 @@ class _BookingDetailScreenState extends State<BookingDetailScreen> {
     }
   }
 
-  void _showManageBookingSheet(BookingModel booking) {
+  Future<void> _refreshBookingData() async {
+    setState(() {
+      _isLoading = true;
+    });
+
+    try {
+      DocumentSnapshot doc = await FirebaseFirestore.instance
+          .collection('bookings')
+          .doc(_currentBooking.id)
+          .get();
+
+      if (doc.exists && mounted) {
+        setState(() {
+          _currentBooking = BookingModel.fromFirestore(doc);
+        });
+      }
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('Gagal memuat data terbaru: $e')),
+        );
+      }
+    } finally {
+      if (mounted) {
+        setState(() {
+          _isLoading = false;
+        });
+      }
+    }
+  }
+
+  Future<bool?> _showManageBookingSheet(BookingModel booking) {
     final formKey = GlobalKey<FormState>();
 
     // State untuk UI
@@ -121,7 +160,7 @@ class _BookingDetailScreenState extends State<BookingDetailScreen> {
     DateTime startDateMulti = booking.usageStartDate;
     DateTime endDateMulti = booking.usageEndDate;
 
-    showModalBottomSheet(
+    return showModalBottomSheet<bool>(
       context: context,
       isScrollControlled: true,
       backgroundColor: Colors.transparent,
@@ -359,7 +398,7 @@ class _BookingDetailScreenState extends State<BookingDetailScreen> {
                 if (!mounted) return;
 
                 Navigator.pop(context);
-                Navigator.pop(context);
+                Navigator.pop(context, true);
                 ScaffoldMessenger.of(context).showSnackBar(const SnackBar(
                   content: Text('Booking berhasil disetujui.'),
                   backgroundColor: Colors.green,
@@ -538,6 +577,11 @@ class _BookingDetailScreenState extends State<BookingDetailScreen> {
                                         'Pemesan', booking.employeeName),
                                     _buildDetailItem(Icons.add_box_outlined,
                                         'Kebutuhan', booking.needs),
+                                    _buildDetailItem(
+                                        Icons.groups_3_outlined,
+                                        'Jumlah Peserta',
+                                        booking.numberOfParticipants
+                                            .toString()),
                                   ],
                                 ),
                               ),
@@ -788,34 +832,34 @@ class _BookingDetailScreenState extends State<BookingDetailScreen> {
             const SizedBox(height: 12),
             _buildInfoCard([
               _buildInfoRow(Icons.meeting_room_outlined, 'Ruangan',
-                  widget.booking.roomName),
+                  _currentBooking.roomName),
               _buildInfoRow(Icons.local_activity_outlined, 'Jenis Kegiatan',
-                  widget.booking.activityType),
+                  _currentBooking.activityType),
               _buildInfoRow(Icons.person_outline, 'Dipesan oleh',
-                  widget.booking.employeeName),
+                  _currentBooking.employeeName),
               _buildInfoRow(
                   Icons.calendar_today,
                   'Jadwal Acara',
-                  _formatBookingDuration(widget.booking.usageStartDate,
-                      widget.booking.usageEndDate)),
+                  _formatBookingDuration(_currentBooking.usageStartDate,
+                      _currentBooking.usageEndDate)),
               _buildInfoRow(Icons.group_outlined, 'Jumlah Peserta',
-                  '${widget.booking.numberOfParticipants} orang'),
+                  '${_currentBooking.numberOfParticipants} orang'),
             ]),
             const SizedBox(height: 24),
             _buildSectionTitle('Agenda Acara'),
             const SizedBox(height: 12),
-            _buildDescriptionBox(widget.booking.eventAgenda),
+            _buildDescriptionBox(_currentBooking.eventAgenda),
             const SizedBox(height: 24),
             _buildSectionTitle('Kebutuhan Tambahan'),
             const SizedBox(height: 12),
-            _buildDescriptionBox(widget.booking.needs),
-            if ((widget.booking.status == 'approved' ||
-                    widget.booking.status == 'cancelled') &&
-                widget.booking.completionReason != null &&
-                widget.booking.completionReason!.isNotEmpty) ...[
+            _buildDescriptionBox(_currentBooking.needs),
+            if ((_currentBooking.status == 'approved' ||
+                    _currentBooking.status == 'cancelled') &&
+                _currentBooking.completionReason != null &&
+                _currentBooking.completionReason!.isNotEmpty) ...[
               const SizedBox(height: 24),
               _buildSectionTitle(
-                widget.booking.status == 'approved'
+                _currentBooking.status == 'approved'
                     ? 'Catatan Persetujuan'
                     : 'Alasan Pembatalan',
               ),
@@ -823,7 +867,7 @@ class _BookingDetailScreenState extends State<BookingDetailScreen> {
               _buildReasonBox(),
             ],
             const SizedBox(height: 24),
-            if (widget.booking.status == 'open') ...[
+            if (_currentBooking.status == 'open') ...[
               const SizedBox(height: 32),
               Row(
                 children: [
@@ -840,7 +884,16 @@ class _BookingDetailScreenState extends State<BookingDetailScreen> {
                   Expanded(
                     child: CustomButton(
                       text: 'Kelola & Setujui',
-                      onPressed: () => _showManageBookingSheet(widget.booking),
+                      onPressed: () async {
+                        // Tunggu hasil dari bottom sheet
+                        final result =
+                            await _showManageBookingSheet(_currentBooking);
+
+                        // Jika ada hasil true (tanda sukses), refresh data
+                        if (result == true && mounted) {
+                          _refreshBookingData();
+                        }
+                      },
                       isLoading: _isLoading,
                       backgroundColor: Colors.blue[700],
                       icon: Icons.edit_calendar_outlined,
@@ -849,17 +902,35 @@ class _BookingDetailScreenState extends State<BookingDetailScreen> {
                 ],
               ),
             ],
-            if (widget.booking.status == 'approved') ...[
+            if (_currentBooking.status == 'approved' &&
+                DateTime.now().isBefore(_currentBooking.usageEndDate)) ...[
               const SizedBox(height: 32),
               Row(
                 children: [
                   Expanded(
                     child: CustomButton(
                       text: 'Edit Jadwal',
-                      onPressed: () => _showManageBookingSheet(widget.booking),
+                      onPressed: () async {
+                        final result =
+                            await _showManageBookingSheet(_currentBooking);
+
+                        if (result == true && mounted) {
+                          _refreshBookingData();
+                        }
+                      },
                       isLoading: _isLoading,
                       backgroundColor: Colors.orange[700],
                       icon: Icons.edit_calendar_outlined,
+                    ),
+                  ),
+                  const SizedBox(width: 12),
+                  Expanded(
+                    child: CustomButton(
+                      text: 'Tolak Booking',
+                      onPressed: _showRejectDialog,
+                      isLoading: _isLoading,
+                      backgroundColor: Colors.red[700],
+                      icon: Icons.cancel_outlined,
                     ),
                   ),
                 ],
@@ -1006,50 +1077,50 @@ class _BookingDetailScreenState extends State<BookingDetailScreen> {
       width: double.infinity,
       padding: const EdgeInsets.all(20),
       decoration: BoxDecoration(
-        color: widget.booking.getStatusColor().withOpacity(0.1),
+        color: _currentBooking.getStatusColor().withOpacity(0.1),
         borderRadius: BorderRadius.circular(12),
-        border: Border.all(color: widget.booking.getStatusColor()),
+        border: Border.all(color: _currentBooking.getStatusColor()),
       ),
       child: Column(
         children: [
           Icon(
-            widget.booking.getStatusIcon(),
-            color: widget.booking.getStatusColor(),
+            _currentBooking.getStatusIcon(),
+            color: _currentBooking.getStatusColor(),
             size: 48,
           ),
           const SizedBox(height: 12),
           Text(
-            'Status: ${widget.booking.getStatusDisplayName()}',
+            'Status: ${_currentBooking.getStatusDisplayName()}',
             style: TextStyle(
               fontSize: 18,
               fontWeight: FontWeight.bold,
-              color: widget.booking.getStatusColor(),
+              color: _currentBooking.getStatusColor(),
             ),
           ),
           const SizedBox(height: 8),
           Text(
-            'Dibuat pada ${DateFormat('d MMMM yyyy, HH:mm', 'id_ID').format(widget.booking.createdAt)}',
+            'Dibuat pada ${DateFormat('d MMMM yyyy, HH:mm', 'id_ID').format(_currentBooking.createdAt)}',
             style: TextStyle(color: Colors.grey[600], fontSize: 14),
           ),
-          if (widget.booking.status == 'approved' &&
-              widget.booking.completionDate != null) ...[
+          if (_currentBooking.status == 'approved' &&
+              _currentBooking.completionDate != null) ...[
             const SizedBox(height: 8),
             Text(
-              'Disetujui pada ${DateFormat('dd MMM yyyy, HH:mm', 'id_ID').format(widget.booking.completionDate!)}',
+              'Disetujui pada ${DateFormat('dd MMM yyyy, HH:mm', 'id_ID').format(_currentBooking.completionDate!)}',
               style: TextStyle(
-                color: widget.booking.getStatusColor().withOpacity(0.8),
+                color: _currentBooking.getStatusColor().withOpacity(0.8),
                 fontSize: 14,
                 fontWeight: FontWeight.w500,
               ),
             ),
           ],
-          if (widget.booking.status == 'cancelled' &&
-              widget.booking.completionDate != null) ...[
+          if (_currentBooking.status == 'cancelled' &&
+              _currentBooking.completionDate != null) ...[
             const SizedBox(height: 8),
             Text(
-              'Dibatalkan pada ${DateFormat('dd MMM yyyy, HH:mm', 'id_ID').format(widget.booking.completionDate!)}',
+              'Dibatalkan pada ${DateFormat('dd MMM yyyy, HH:mm', 'id_ID').format(_currentBooking.completionDate!)}',
               style: TextStyle(
-                color: widget.booking.getStatusColor().withOpacity(0.8),
+                color: _currentBooking.getStatusColor().withOpacity(0.8),
                 fontSize: 14,
                 fontWeight: FontWeight.w500,
               ),
@@ -1077,7 +1148,7 @@ class _BookingDetailScreenState extends State<BookingDetailScreen> {
   }
 
   Widget _buildReasonBox() {
-    bool isApproved = widget.booking.status == 'approved';
+    bool isApproved = _currentBooking.status == 'approved';
 
     Color backgroundColor = isApproved ? Colors.green[50]! : Colors.red[50]!;
     Color borderColor = isApproved ? Colors.green[200]! : Colors.red[200]!;
@@ -1092,7 +1163,7 @@ class _BookingDetailScreenState extends State<BookingDetailScreen> {
         border: Border.all(color: borderColor),
       ),
       child: Text(
-        widget.booking.completionReason!,
+        _currentBooking.completionReason!,
         style: TextStyle(fontSize: 15, height: 1.5, color: textColor),
       ),
     );
