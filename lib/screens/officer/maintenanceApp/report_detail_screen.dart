@@ -19,6 +19,29 @@ class _ReportDetailScreenState extends State<ReportDetailScreen> {
   final FirestoreService _firestoreService = FirestoreService();
   final _completionReasonController = TextEditingController();
   bool _isLoading = false;
+  ReportModel? _updatedReport;
+
+  @override
+  void initState() {
+    super.initState();
+    _updatedReport = widget.report;
+    _refreshReportData();
+  }
+
+  // Refresh report data to ensure we have the latest information including rating
+  Future<void> _refreshReportData() async {
+    try {
+      final updatedReport =
+          await _firestoreService.getReportWithRating(widget.report.id);
+      if (updatedReport != null && mounted) {
+        setState(() {
+          _updatedReport = updatedReport;
+        });
+      }
+    } catch (e) {
+      print('Error refreshing report data: $e');
+    }
+  }
 
   @override
   void dispose() {
@@ -54,14 +77,31 @@ class _ReportDetailScreenState extends State<ReportDetailScreen> {
     }
   }
 
+  // Get color based on rating value
+  Color _getRatingColor(double rating) {
+    if (rating >= 4.5) return Colors.green;
+    if (rating >= 4.0) return Colors.lightGreen;
+    if (rating >= 3.5) return Colors.orange;
+    if (rating >= 3.0) return Colors.deepOrange;
+    return Colors.red;
+  }
+
   @override
   Widget build(BuildContext context) {
+    // Use the updated report if available
+    final report = _updatedReport ?? widget.report;
+
     return Scaffold(
       appBar: AppBar(
         title: Text('Report Details'),
         backgroundColor: Theme.of(context).primaryColor,
         foregroundColor: Colors.white,
         actions: [
+          IconButton(
+            icon: Icon(Icons.refresh),
+            onPressed: _refreshReportData,
+            tooltip: 'Refresh Report',
+          ),
           IconButton(
             icon: Icon(Icons.share),
             onPressed: _shareReport,
@@ -79,35 +119,47 @@ class _ReportDetailScreenState extends State<ReportDetailScreen> {
               width: double.infinity,
               padding: EdgeInsets.all(20),
               decoration: BoxDecoration(
-                color: _getStatusColor(widget.report.status).withOpacity(0.1),
+                color: _getStatusColor(report.status).withOpacity(0.1),
                 borderRadius: BorderRadius.circular(12),
-                border:
-                    Border.all(color: _getStatusColor(widget.report.status)),
+                border: Border.all(color: _getStatusColor(report.status)),
               ),
               child: Column(
                 children: [
                   Icon(
-                    _getStatusIcon(widget.report.status),
-                    color: _getStatusColor(widget.report.status),
+                    _getStatusIcon(report.status),
+                    color: _getStatusColor(report.status),
                     size: 48,
                   ),
                   SizedBox(height: 12),
                   Text(
-                    'Status: ${widget.report.getStatusDisplayName()}',
+                    'Status: ${report.getStatusDisplayName()}',
                     style: TextStyle(
                       fontSize: 18,
                       fontWeight: FontWeight.bold,
-                      color: _getStatusColor(widget.report.status),
+                      color: _getStatusColor(report.status),
                     ),
                   ),
                   SizedBox(height: 8),
                   Text(
-                    'Created ${DateFormat('dd MMM yyyy, HH:mm').format(widget.report.createdAt)}',
+                    'Created ${DateFormat('dd MMM yyyy, HH:mm').format(report.createdAt)}',
                     style: TextStyle(
                       color: Colors.grey[600],
                       fontSize: 14,
                     ),
                   ),
+                  // Show completion date if completed
+                  if (report.status == 'completed' &&
+                      report.completionDate != null) ...[
+                    SizedBox(height: 4),
+                    Text(
+                      'Completed ${DateFormat('dd MMM yyyy, HH:mm').format(report.completionDate!)}',
+                      style: TextStyle(
+                        color: Colors.green[600],
+                        fontSize: 14,
+                        fontWeight: FontWeight.w500,
+                      ),
+                    ),
+                  ],
                 ],
               ),
             ),
@@ -117,20 +169,18 @@ class _ReportDetailScreenState extends State<ReportDetailScreen> {
             _buildSectionTitle('Report Information'),
             SizedBox(height: 12),
             _buildInfoCard([
-              _buildInfoRow(Icons.room, 'Room', widget.report.roomName),
-              _buildInfoRow(
-                  Icons.person, 'Reporter', widget.report.employeeName),
+              _buildInfoRow(Icons.room, 'Room', report.roomName),
+              _buildInfoRow(Icons.person, 'Reporter', report.employeeName),
               _buildInfoRow(
                 Icons.access_time,
                 'Date',
-                DateFormat('dd MMM yyyy, HH:mm')
-                    .format(widget.report.createdAt),
+                DateFormat('dd MMM yyyy, HH:mm').format(report.createdAt),
               ),
             ]),
             SizedBox(height: 20),
 
             // Photo if available
-            if (widget.report.imageUrl != null) ...[
+            if (report.imageUrl != null) ...[
               _buildSectionTitle('Photo'),
               SizedBox(height: 12),
               Container(
@@ -143,7 +193,7 @@ class _ReportDetailScreenState extends State<ReportDetailScreen> {
                 child: ClipRRect(
                   borderRadius: BorderRadius.circular(12),
                   child: Image.network(
-                    widget.report.imageUrl!,
+                    report.imageUrl!,
                     fit: BoxFit.cover,
                     loadingBuilder: (context, child, loadingProgress) {
                       if (loadingProgress == null) return child;
@@ -186,7 +236,7 @@ class _ReportDetailScreenState extends State<ReportDetailScreen> {
                 border: Border.all(color: Colors.grey[200]!),
               ),
               child: Text(
-                widget.report.description,
+                report.description,
                 style: TextStyle(
                   fontSize: 16,
                   height: 1.5,
@@ -196,8 +246,8 @@ class _ReportDetailScreenState extends State<ReportDetailScreen> {
             ),
 
             // Completion Reason (if completed)
-            if (widget.report.status == 'completed' &&
-                widget.report.completionReason != null) ...[
+            if (report.status == 'completed' &&
+                report.completionReason != null) ...[
               SizedBox(height: 20),
               _buildSectionTitle('Completion Notes'),
               SizedBox(height: 12),
@@ -210,7 +260,7 @@ class _ReportDetailScreenState extends State<ReportDetailScreen> {
                   border: Border.all(color: Colors.green[200]!),
                 ),
                 child: Text(
-                  widget.report.completionReason!,
+                  report.completionReason!,
                   style: TextStyle(
                     fontSize: 16,
                     height: 1.5,
@@ -221,7 +271,7 @@ class _ReportDetailScreenState extends State<ReportDetailScreen> {
             ],
 
             // Assigned Technician Info (if assigned)
-            if (widget.report.assignedTechnicianId != null) ...[
+            if (report.assignedTechnicianId != null) ...[
               SizedBox(height: 20),
               _buildSectionTitle('Assigned Technician'),
               SizedBox(height: 12),
@@ -233,45 +283,136 @@ class _ReportDetailScreenState extends State<ReportDetailScreen> {
                   borderRadius: BorderRadius.circular(8),
                   border: Border.all(color: Colors.blue[200]!),
                 ),
-                child: Row(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    Container(
-                      width: 40,
-                      height: 40,
-                      decoration: BoxDecoration(
-                        color: Colors.blue[100],
-                        borderRadius: BorderRadius.circular(20),
-                      ),
-                      child: Icon(
-                        Icons.engineering,
-                        color: Colors.blue[700],
-                        size: 24,
-                      ),
+                    Row(
+                      children: [
+                        Container(
+                          width: 40,
+                          height: 40,
+                          decoration: BoxDecoration(
+                            color: Colors.blue[100],
+                            borderRadius: BorderRadius.circular(20),
+                          ),
+                          child: Icon(
+                            Icons.engineering,
+                            color: Colors.blue[700],
+                            size: 24,
+                          ),
+                        ),
+                        SizedBox(width: 12),
+                        Expanded(
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              Text(
+                                report.technicianName ?? 'Unknown',
+                                style: TextStyle(
+                                  fontSize: 16,
+                                  fontWeight: FontWeight.bold,
+                                  color: Colors.blue[700],
+                                ),
+                              ),
+                              SizedBox(height: 4),
+                              Text(
+                                report.status == 'completed'
+                                    ? 'Completed this maintenance task'
+                                    : 'Assigned to handle this maintenance task',
+                                style: TextStyle(
+                                  fontSize: 14,
+                                  color: Colors.blue[600],
+                                ),
+                              ),
+                            ],
+                          ),
+                        ),
+                      ],
                     ),
-                    SizedBox(width: 12),
-                    Expanded(
-                      child: Column(
+
+                    // Show rating if completed and has rating
+                    if (report.status == 'completed' &&
+                        report.technicianRating != null) ...[
+                      SizedBox(height: 16),
+                      Divider(height: 1, color: Colors.blue[200]),
+                      SizedBox(height: 16),
+                      Row(
                         crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
-                          Text(
-                            widget.report.technicianName ?? 'Unknown',
-                            style: TextStyle(
-                              fontSize: 16,
-                              fontWeight: FontWeight.bold,
-                              color: Colors.blue[700],
-                            ),
-                          ),
-                          SizedBox(height: 4),
-                          Text(
-                            'Assigned to handle this maintenance task',
-                            style: TextStyle(
-                              fontSize: 14,
-                              color: Colors.blue[600],
+                          Icon(Icons.star, color: Colors.amber, size: 20),
+                          SizedBox(width: 8),
+                          Expanded(
+                            child: Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                Text(
+                                  'Technician Rating',
+                                  style: TextStyle(
+                                    fontSize: 14,
+                                    fontWeight: FontWeight.w600,
+                                    color: Colors.blue[700],
+                                  ),
+                                ),
+                                SizedBox(height: 8),
+                                // Star rating display
+                                Row(
+                                  children: List.generate(5, (index) {
+                                    return Icon(
+                                      index < (report.technicianRating!).floor()
+                                          ? Icons.star
+                                          : index <
+                                                      (report.technicianRating!)
+                                                          .ceil() &&
+                                                  (report.technicianRating!)
+                                                          .floor() !=
+                                                      (report.technicianRating!)
+                                                          .ceil()
+                                              ? Icons.star_half
+                                              : Icons.star_border,
+                                      color: Colors.amber,
+                                      size: 18,
+                                    );
+                                  }),
+                                ),
+                                SizedBox(height: 4),
+                                Row(
+                                  children: [
+                                    Text(
+                                      '${report.technicianRating!.toStringAsFixed(1)} out of 5.0',
+                                      style: TextStyle(
+                                        fontSize: 14,
+                                        fontWeight: FontWeight.w500,
+                                        color: _getRatingColor(
+                                            report.technicianRating!),
+                                      ),
+                                    ),
+                                    SizedBox(width: 8),
+                                    Container(
+                                      padding: EdgeInsets.symmetric(
+                                          horizontal: 6, vertical: 2),
+                                      decoration: BoxDecoration(
+                                        color: _getRatingColor(
+                                            report.technicianRating!),
+                                        borderRadius: BorderRadius.circular(4),
+                                      ),
+                                      child: Text(
+                                        _getPerformanceLabel(
+                                            report.technicianRating!),
+                                        style: TextStyle(
+                                          color: Colors.white,
+                                          fontWeight: FontWeight.bold,
+                                          fontSize: 10,
+                                        ),
+                                      ),
+                                    ),
+                                  ],
+                                ),
+                              ],
                             ),
                           ),
                         ],
                       ),
-                    ),
+                    ],
                   ],
                 ),
               ),
@@ -280,7 +421,7 @@ class _ReportDetailScreenState extends State<ReportDetailScreen> {
             SizedBox(height: 32),
 
             // Action Buttons based on status
-            if (widget.report.status == 'open') ...[
+            if (report.status == 'open') ...[
               _buildSectionTitle('Actions'),
               SizedBox(height: 12),
               Row(
@@ -303,8 +444,8 @@ class _ReportDetailScreenState extends State<ReportDetailScreen> {
                   ),
                 ],
               ),
-            ] else if (widget.report.status == 'inProgress' &&
-                widget.report.assignedTechnicianId != null) ...[
+            ] else if (report.status == 'inProgress' &&
+                report.assignedTechnicianId != null) ...[
               Container(
                 padding: EdgeInsets.all(16),
                 decoration: BoxDecoration(
@@ -318,7 +459,7 @@ class _ReportDetailScreenState extends State<ReportDetailScreen> {
                     SizedBox(width: 12),
                     Expanded(
                       child: Text(
-                        'This report is being handled by ${widget.report.technicianName}. The technician will update the status when completed.',
+                        'This report is being handled by ${report.technicianName}. The technician will update the status when completed.',
                         style: TextStyle(
                           color: Colors.blue[600],
                           fontWeight: FontWeight.w500,
@@ -341,6 +482,15 @@ class _ReportDetailScreenState extends State<ReportDetailScreen> {
         ),
       ),
     );
+  }
+
+  // Get performance label based on rating
+  String _getPerformanceLabel(double rating) {
+    if (rating >= 4.5) return 'EXCELLENT';
+    if (rating >= 4.0) return 'GOOD';
+    if (rating >= 3.5) return 'AVERAGE';
+    if (rating >= 3.0) return 'FAIR';
+    return 'NEEDS IMPROVEMENT';
   }
 
   Widget _buildSectionTitle(String title) {

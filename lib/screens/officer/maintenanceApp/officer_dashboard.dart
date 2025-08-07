@@ -19,6 +19,7 @@ class OfficerDashboard extends StatefulWidget {
 class _OfficerDashboardState extends State<OfficerDashboard>
     with TickerProviderStateMixin {
   final FirestoreService _firestoreService = FirestoreService();
+  final UserService _userService = UserService();
   UserModel? currentUser;
   late TabController _tabController;
   String _selectedFilter = 'all';
@@ -26,12 +27,17 @@ class _OfficerDashboardState extends State<OfficerDashboard>
   final _searchController = TextEditingController();
   final _completionReasonController = TextEditingController();
   bool _isCompleting = false;
+  
+  // Variabel untuk menyimpan daftar teknisi
+  List<UserModel> _technicians = [];
+  bool _loadingTechnicians = false;
 
   @override
   void initState() {
     super.initState();
     _tabController = TabController(length: 4, vsync: this);
     _loadUserData();
+    _loadTechnicians(); // Load daftar teknisi saat inisialisasi
   }
 
   @override
@@ -57,6 +63,51 @@ class _OfficerDashboardState extends State<OfficerDashboard>
       } catch (e) {
         print('Error loading user data: $e');
       }
+    }
+  }
+
+  // Fungsi baru untuk memuat daftar teknisi
+  Future<void> _loadTechnicians() async {
+    setState(() {
+      _loadingTechnicians = true;
+    });
+
+    try {
+      // Ambil daftar teknisi dari UserService
+      final technicians = await _userService.getTechnicians();
+      
+      if (mounted) {
+        setState(() {
+          // Filter teknisi yang tidak mengandung kata "driver" di nama atau email
+          _technicians = technicians.where((tech) {
+            final nameContainsDriver = tech.name.toLowerCase().contains('driver');
+            final emailContainsDriver = tech.email.toLowerCase().contains('driver');
+            return !nameContainsDriver && !emailContainsDriver;
+          }).toList();
+          
+          _loadingTechnicians = false;
+        });
+      }
+    } catch (e) {
+      print('Error loading technicians: $e');
+      if (mounted) {
+        setState(() {
+          _loadingTechnicians = false;
+        });
+      }
+    }
+  }
+
+  // Fungsi untuk mendapatkan data rating teknisi
+  Future<Map<String, dynamic>> _getTechnicianRating(String technicianId) async {
+    try {
+      return await _firestoreService.getTechnicianRatingData(technicianId);
+    } catch (e) {
+      print('Error getting technician rating: $e');
+      return {
+        'averageRating': 0.0,
+        'totalRatings': 0,
+      };
     }
   }
 
@@ -274,6 +325,9 @@ class _OfficerDashboardState extends State<OfficerDashboard>
                       case 'profile':
                         _showProfileDialog();
                         break;
+                      case 'technicians':
+                        _showTechniciansRatingDialog(); // Tampilkan dialog rating teknisi
+                        break;
                       case 'back':
                         Navigator.pop(context);
                         break;
@@ -285,6 +339,14 @@ class _OfficerDashboardState extends State<OfficerDashboard>
                       child: ListTile(
                         leading: Icon(Icons.person),
                         title: Text('Profile'),
+                        contentPadding: EdgeInsets.zero,
+                      ),
+                    ),
+                    PopupMenuItem(
+                      value: 'technicians',
+                      child: ListTile(
+                        leading: Icon(Icons.star, color: Colors.amber),
+                        title: Text('Technician Ratings'),
                         contentPadding: EdgeInsets.zero,
                       ),
                     ),
@@ -438,6 +500,334 @@ class _OfficerDashboardState extends State<OfficerDashboard>
     );
   }
 
+  // Dialog untuk menampilkan rating teknisi
+  void _showTechniciansRatingDialog() {
+    showDialog(
+      context: context,
+      builder: (context) {
+        return AlertDialog(
+          title: Row(
+            children: [
+              Icon(Icons.star, color: Colors.amber),
+              SizedBox(width: 8),
+              Text('Technician Ratings'),
+            ],
+          ),
+          content: Container(
+            width: double.maxFinite,
+            child: _loadingTechnicians
+                ? Center(
+                    child: Column(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        CircularProgressIndicator(),
+                        SizedBox(height: 16),
+                        Text('Loading technicians...'),
+                      ],
+                    ),
+                  )
+                : _technicians.isEmpty
+                    ? Center(
+                        child: Text('No technicians found.'),
+                      )
+                    : ListView.builder(
+                        shrinkWrap: true,
+                        itemCount: _technicians.length,
+                        itemBuilder: (context, index) {
+                          final technician = _technicians[index];
+                          return _buildTechnicianRatingItem(technician);
+                        },
+                      ),
+          ),
+          actions: [
+            TextButton(
+              onPressed: () {
+                Navigator.pop(context);
+              },
+              child: Text('Close'),
+            ),
+            
+          ],
+        );
+      },
+    );
+  }
+
+  // Widget untuk menampilkan item teknisi dengan rating
+  Widget _buildTechnicianRatingItem(UserModel technician) {
+    return FutureBuilder<Map<String, dynamic>>(
+      future: _getTechnicianRating(technician.uid),
+      builder: (context, snapshot) {
+        double averageRating = 0.0;
+        int totalRatings = 0;
+        
+        if (snapshot.hasData) {
+          averageRating = snapshot.data!['averageRating'] ?? 0.0;
+          totalRatings = snapshot.data!['totalRatings'] ?? 0;
+        }
+        
+        return Card(
+          margin: EdgeInsets.symmetric(vertical: 6),
+          child: ListTile(
+            leading: Container(
+              width: 40,
+              height: 40,
+              decoration: BoxDecoration(
+                color: Colors.blue[100],
+                borderRadius: BorderRadius.circular(20),
+              ),
+              child: Icon(
+                Icons.engineering,
+                color: Colors.blue[700],
+                size: 20,
+              ),
+            ),
+            title: Text(
+              technician.name,
+              style: TextStyle(fontWeight: FontWeight.bold),
+            ),
+            subtitle: Text(technician.email),
+            trailing: Column(
+              mainAxisAlignment: MainAxisAlignment.center,
+              crossAxisAlignment: CrossAxisAlignment.end,
+              children: [
+                Row(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    Icon(Icons.star, color: Colors.amber, size: 16),
+                    SizedBox(width: 4),
+                    Text(
+                      averageRating.toStringAsFixed(1),
+                      style: TextStyle(
+                        fontWeight: FontWeight.bold,
+                        fontSize: 16,
+                      ),
+                    ),
+                  ],
+                ),
+                SizedBox(height: 4),
+                Text(
+                  '($totalRatings ${totalRatings == 1 ? "rating" : "ratings"})',
+                  style: TextStyle(
+                    fontSize: 12,
+                    color: Colors.grey[600],
+                  ),
+                ),
+              ],
+            ),
+            onTap: () {
+              _showTechnicianDetailDialog(technician, averageRating, totalRatings);
+            },
+          ),
+        );
+      },
+    );
+  }
+
+  // Dialog untuk detail teknisi
+  void _showTechnicianDetailDialog(UserModel technician, double averageRating, int totalRatings) {
+    showDialog(
+      context: context,
+      builder: (context) {
+        return AlertDialog(
+          title: Text('Technician Details'),
+          content: Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Center(
+                child: Container(
+                  width: 80,
+                  height: 80,
+                  decoration: BoxDecoration(
+                    color: Colors.blue[100],
+                    borderRadius: BorderRadius.circular(40),
+                  ),
+                  child: Icon(
+                    Icons.engineering,
+                    color: Colors.blue[700],
+                    size: 40,
+                  ),
+                ),
+              ),
+              SizedBox(height: 16),
+              Center(
+                child: Text(
+                  technician.name,
+                  style: TextStyle(
+                    fontSize: 20,
+                    fontWeight: FontWeight.bold,
+                  ),
+                ),
+              ),
+              Center(
+                child: Text(
+                  technician.email,
+                  style: TextStyle(
+                    color: Colors.grey[600],
+                  ),
+                ),
+              ),
+              SizedBox(height: 24),
+              
+              // Rating display
+              Center(
+                child: Container(
+                  padding: EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+                  decoration: BoxDecoration(
+                    color: _getRatingColor(averageRating).withOpacity(0.1),
+                    borderRadius: BorderRadius.circular(8),
+                    border: Border.all(
+                      color: _getRatingColor(averageRating).withOpacity(0.3),
+                    ),
+                  ),
+                  child: Column(
+                    children: [
+                      Text(
+                        'Performance Rating',
+                        style: TextStyle(
+                          fontWeight: FontWeight.bold,
+                          color: _getRatingColor(averageRating),
+                        ),
+                      ),
+                      SizedBox(height: 8),
+                      Row(
+                        mainAxisSize: MainAxisSize.min,
+                        children: List.generate(5, (index) {
+                          return Icon(
+                            index < (averageRating).floor()
+                                ? Icons.star
+                                : index < (averageRating).ceil() &&
+                                        (averageRating).floor() !=
+                                            (averageRating).ceil()
+                                    ? Icons.star_half
+                                    : Icons.star_border,
+                            color: Colors.amber,
+                            size: 24,
+                          );
+                        }),
+                      ),
+                      SizedBox(height: 8),
+                      Text(
+                        '${averageRating.toStringAsFixed(1)} out of 5.0',
+                        style: TextStyle(
+                          fontSize: 18,
+                          fontWeight: FontWeight.bold,
+                          color: _getRatingColor(averageRating),
+                        ),
+                      ),
+                      Text(
+                        'Based on $totalRatings ${totalRatings == 1 ? "rating" : "ratings"}',
+                        style: TextStyle(
+                          color: Colors.grey[600],
+                        ),
+                      ),
+                      if (totalRatings > 0) ...[
+                        SizedBox(height: 8),
+                        Container(
+                          padding: EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                          decoration: BoxDecoration(
+                            color: _getRatingColor(averageRating),
+                            borderRadius: BorderRadius.circular(4),
+                          ),
+                          child: Text(
+                            _getPerformanceLabel(averageRating),
+                            style: TextStyle(
+                              color: Colors.white,
+                              fontWeight: FontWeight.bold,
+                              fontSize: 10,
+                            ),
+                          ),
+                        ),
+                      ],
+                    ],
+                  ),
+                ),
+              ),
+              
+              SizedBox(height: 16),
+              _buildInfoItem(
+                'Member Since',
+                DateFormat('dd MMM yyyy').format(technician.createdAt),
+                Icons.date_range,
+              ),
+              _buildInfoItem(
+                'Experience',
+                _getExperienceText(technician.createdAt),
+                Icons.work,
+              ),
+            ],
+          ),
+          actions: [
+            TextButton(
+              onPressed: () {
+                Navigator.pop(context);
+              },
+              child: Text('Close'),
+            ),
+          ],
+        );
+      },
+    );
+  }
+
+  Widget _buildInfoItem(String label, String value, IconData icon) {
+    return Padding(
+      padding: EdgeInsets.symmetric(vertical: 8),
+      child: Row(
+        children: [
+          Icon(icon, size: 16, color: Colors.grey[600]),
+          SizedBox(width: 8),
+          Text(
+            '$label:',
+            style: TextStyle(
+              color: Colors.grey[600],
+              fontWeight: FontWeight.w500,
+            ),
+          ),
+          SizedBox(width: 8),
+          Text(
+            value,
+            style: TextStyle(
+              fontWeight: FontWeight.w500,
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Color _getRatingColor(double rating) {
+    if (rating >= 4.5) return Colors.green;
+    if (rating >= 4.0) return Colors.lightGreen;
+    if (rating >= 3.5) return Colors.orange;
+    if (rating >= 3.0) return Colors.deepOrange;
+    return Colors.red;
+  }
+
+  String _getPerformanceLabel(double rating) {
+    if (rating >= 4.5) return 'EXCELLENT';
+    if (rating >= 4.0) return 'GOOD';
+    if (rating >= 3.5) return 'AVERAGE';
+    if (rating >= 3.0) return 'FAIR';
+    return 'NEEDS IMPROVEMENT';
+  }
+
+  String _getExperienceText(DateTime createdAt) {
+    final now = DateTime.now();
+    final difference = now.difference(createdAt);
+
+    if (difference.inDays >= 365) {
+      final years = (difference.inDays / 365).floor();
+      return '$years ${years == 1 ? 'year' : 'years'}';
+    } else if (difference.inDays >= 30) {
+      final months = (difference.inDays / 30).floor();
+      return '$months ${months == 1 ? 'month' : 'months'}';
+    } else {
+      return '${difference.inDays} ${difference.inDays == 1 ? 'day' : 'days'}';
+    }
+  }
+
   // New method for Quick Action Buttons
   Widget _buildQuickActionButtons() {
     return Container(
@@ -474,17 +864,11 @@ class _OfficerDashboardState extends State<OfficerDashboard>
               SizedBox(width: 12),
               Expanded(
                 child: _buildActionButton(
-                  icon: Icons.analytics,
-                  label: 'Report Analytics',
-                  color: Colors.blue,
+                  icon: Icons.star,
+                  label: 'Technician Ratings', // Tambahkan tombol untuk ratings
+                  color: Colors.amber,
                   onTap: () {
-                    // Add navigation to analytics screen if available
-                    ScaffoldMessenger.of(context).showSnackBar(
-                      SnackBar(
-                        content: Text('Report Analytics coming soon!'),
-                        behavior: SnackBarBehavior.floating,
-                      ),
-                    );
+                    _showTechniciansRatingDialog();
                   },
                 ),
               ),
@@ -536,7 +920,7 @@ class _OfficerDashboardState extends State<OfficerDashboard>
     );
   }
 
-  Widget _buildStatisticsCards() {
+Widget _buildStatisticsCards() {
     return StreamBuilder<List<ReportModel>>(
       stream: _firestoreService.getReports(),
       builder: (context, snapshot) {
@@ -1056,6 +1440,45 @@ class _OfficerDashboardState extends State<OfficerDashboard>
                         maxLines: 2,
                         overflow: TextOverflow.ellipsis,
                       ),
+                    ],
+                  ),
+                ),
+              ],
+              
+              // Show technician rating if completed and has rating
+              if (report.status == 'completed' && 
+                  report.technicianRating != null && 
+                  report.assignedTechnicianId != null) ...[
+                SizedBox(height: 8),
+                Container(
+                  width: double.infinity,
+                  padding: EdgeInsets.all(8),
+                  decoration: BoxDecoration(
+                    color: Colors.amber[50],
+                    borderRadius: BorderRadius.circular(8),
+                    border: Border.all(color: Colors.amber[200]!),
+                  ),
+                  child: Row(
+                    children: [
+                      Icon(Icons.star, color: Colors.amber, size: 16),
+                      SizedBox(width: 8),
+                      Text(
+                        'Rating: ${report.technicianRating!.toStringAsFixed(1)}',
+                        style: TextStyle(
+                          fontSize: 12,
+                          color: Colors.amber[800],
+                          fontWeight: FontWeight.w500,
+                        ),
+                      ),
+                      Spacer(),
+                      if (report.technicianName != null)
+                        Text(
+                          '${report.technicianName}',
+                          style: TextStyle(
+                            fontSize: 12,
+                            color: Colors.grey[600],
+                          ),
+                        ),
                     ],
                   ),
                 ),

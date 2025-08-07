@@ -15,6 +15,9 @@ class FirestoreService {
   CollectionReference get _buildingsCollection =>
       _firestore.collection('buildings');
   CollectionReference get _roomsCollection => _firestore.collection('rooms');
+  CollectionReference get _usersCollection => _firestore.collection('users');
+  CollectionReference get _ratingsCollection =>
+      _firestore.collection('technician_ratings');
 
   // BUILDING MANAGEMENT
   // Cek apakah nama gedung sudah ada (tidak case sensitive)
@@ -604,6 +607,222 @@ class FirestoreService {
       return null;
     } catch (e) {
       print('Error getting report by ID: $e');
+      throw e;
+    }
+  }
+
+  /// METODE RATING YANG DIPERBARUI ///
+
+  /// Menambahkan rating untuk teknisi
+  Future<void> rateTechnician(
+      String reportId, double rating, String technicianId) async {
+    try {
+      print(
+          'Starting rating process for report $reportId, technician $technicianId with rating $rating');
+
+      // 1. Update rating in the report document first
+      try {
+        await _reportsCollection.doc(reportId).update({
+          'technicianRating': rating,
+        });
+        print('Report rating updated successfully');
+      } catch (e) {
+        print('Error updating report rating: $e');
+        throw Exception('Failed to update report rating: $e');
+      }
+
+      // 2. Save rating to separate collection
+      try {
+        await _ratingsCollection.add({
+          'technicianId': technicianId,
+          'reportId': reportId,
+          'rating': rating,
+          'timestamp': FieldValue.serverTimestamp(),
+        });
+        print('Rating saved to separate collection');
+      } catch (e) {
+        print('Error saving rating to separate collection: $e');
+        // Continue execution even if this fails
+      }
+
+      // 3. Try to update user document (but don't fail the entire operation if this fails)
+      try {
+        // Get technician ratings from separate collection
+        final ratingData =
+            await _calculateAverageRatingFromCollection(technicianId);
+
+        // Try to update the technician document with new rating data
+        await _usersCollection.doc(technicianId).update({
+          'totalRatings': ratingData['totalRatings'],
+          'averageRating': ratingData['averageRating'],
+        });
+        print('Technician rating updated successfully in user document');
+      } catch (e) {
+        print('Warning: Could not update technician document directly: $e');
+        print(
+            'Rating was saved to separate collection and can be accessed from there');
+      }
+
+      print('Rating process completed');
+    } catch (e) {
+      print('Error in rating process: $e');
+      throw e;
+    }
+  }
+
+  /// Calculate average rating from separate collection
+  Future<Map<String, dynamic>> _calculateAverageRatingFromCollection(
+      String technicianId) async {
+    try {
+      // Get all ratings for this technician
+      final snapshot = await _ratingsCollection
+          .where('technicianId', isEqualTo: technicianId)
+          .get();
+
+      if (snapshot.docs.isEmpty) {
+        return {
+          'totalRatings': 0,
+          'averageRating': 0.0,
+        };
+      }
+
+      double totalRating = 0;
+      final totalRatings = snapshot.docs.length;
+
+      for (var doc in snapshot.docs) {
+        final data = doc.data() as Map<String, dynamic>;
+        final rating = data['rating'] is int
+            ? (data['rating'] as int).toDouble()
+            : data['rating'] as double;
+        totalRating += rating;
+      }
+
+      final averageRating = totalRating / totalRatings;
+
+      print(
+          'Calculated rating for technician $technicianId: $averageRating from $totalRatings ratings');
+
+      return {
+        'totalRatings': totalRatings,
+        'averageRating': averageRating,
+      };
+    } catch (e) {
+      print('Error calculating average rating: $e');
+      return {
+        'totalRatings': 0,
+        'averageRating': 0.0,
+      };
+    }
+  }
+
+  /// Get technician rating data - Use this method to get rating info for display
+  Future<Map<String, dynamic>> getTechnicianRatingData(
+      String technicianId) async {
+    try {
+      // First try to get rating from user document
+      final userDoc = await _usersCollection.doc(technicianId).get();
+
+      if (userDoc.exists) {
+        final userData = userDoc.data() as Map<String, dynamic>;
+
+        if (userData['averageRating'] != null &&
+            userData['totalRatings'] != null) {
+          // Convert to proper types
+          double averageRating = userData['averageRating'] is int
+              ? (userData['averageRating'] as int).toDouble()
+              : userData['averageRating'] as double;
+
+          int totalRatings = userData['totalRatings'] as int;
+
+          return {
+            'averageRating': averageRating,
+            'totalRatings': totalRatings,
+            'source': 'user_document',
+          };
+        }
+      }
+
+      // If user document doesn't have rating data, calculate from ratings collection
+      final ratingData =
+          await _calculateAverageRatingFromCollection(technicianId);
+      ratingData['source'] = 'ratings_collection';
+
+      return ratingData;
+    } catch (e) {
+      print('Error getting technician rating data: $e');
+      return {
+        'averageRating': 0.0,
+        'totalRatings': 0,
+        'error': e.toString(),
+      };
+    }
+  }
+
+  /// Get report with updated rating (memastikan data rating terbaru)
+  Future<ReportModel?> getReportWithRating(String reportId) async {
+    try {
+      final doc = await _reportsCollection.doc(reportId).get();
+      if (doc.exists) {
+        final report = ReportModel.fromFirestore(doc);
+        print(
+            'Retrieved report $reportId with rating: ${report.technicianRating}');
+        return report;
+      }
+      return null;
+    } catch (e) {
+      print('Error getting report with rating: $e');
+      throw e;
+    }
+  }
+  // Add these methods to your FirestoreService class
+
+  Future<void> completeTaskWithImage({
+    required String taskId,
+    required String reportId,
+    required String completionNote,
+    required String afterImageUrl,
+  }) async {
+    try {
+      final batch = _firestore.batch();
+      final now = FieldValue.serverTimestamp();
+
+      // Update task
+      batch.update(_tasksCollection.doc(taskId), {
+        'status': 'completed',
+        'completedAt': now,
+        'completionNote': completionNote,
+        'afterImageUrl': afterImageUrl,
+      });
+
+      // Update report
+      batch.update(_reportsCollection.doc(reportId), {
+        'status': 'completed',
+        'completionDate': now,
+        'completionReason': completionNote,
+        'afterImageUrl': afterImageUrl,
+      });
+
+      await batch.commit();
+    } catch (e) {
+      print('Error completing task with image: $e');
+      throw e;
+    }
+  }
+
+  Future<void> updateTaskWithAfterImage({
+    required String taskId,
+    required String completionNote,
+    required String afterImageUrl,
+  }) async {
+    try {
+      await _tasksCollection.doc(taskId).update({
+        'status': 'completed',
+        'completedAt': FieldValue.serverTimestamp(),
+        'completionNote': completionNote,
+        'afterImageUrl': afterImageUrl,
+      });
+    } catch (e) {
+      print('Error updating task with after image: $e');
       throw e;
     }
   }

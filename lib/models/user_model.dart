@@ -1,13 +1,13 @@
-
-
 import 'package:cloud_firestore/cloud_firestore.dart';
 
 class UserModel {
   final String uid;
   final String name;
   final String email;
-  final String role;
+  final String role; // 'admin', 'employee', 'technician', 'officer'
   final DateTime createdAt;
+  final double? averageRating; // Rating rata-rata teknisi
+  final int? totalRatings; // Jumlah total rating yang diterima
 
   UserModel({
     required this.uid,
@@ -15,43 +15,71 @@ class UserModel {
     required this.email,
     required this.role,
     required this.createdAt,
+    this.averageRating,
+    this.totalRatings,
   });
 
-  // Create from Firestore DocumentSnapshot
   factory UserModel.fromFirestore(DocumentSnapshot doc) {
-    Map<String, dynamic> data = doc.data() as Map<String, dynamic>;
+    final data = doc.data() as Map<String, dynamic>;
+
+    // Handle date conversion
+    DateTime createdAt;
+    if (data['createdAt'] is Timestamp) {
+      createdAt = (data['createdAt'] as Timestamp).toDate();
+    } else if (data['createdAt'] is String) {
+      createdAt = DateTime.parse(data['createdAt'] as String);
+    } else {
+      createdAt = DateTime.now(); // Fallback
+    }
+
+    // Handle rating conversion
+    double? averageRating;
+    if (data['averageRating'] != null) {
+      averageRating = data['averageRating'] is int
+          ? (data['averageRating'] as int).toDouble()
+          : data['averageRating'] as double;
+    }
 
     return UserModel(
       uid: doc.id,
       name: data['name'] ?? '',
       email: data['email'] ?? '',
       role: data['role'] ?? 'employee',
-      createdAt: (data['createdAt'] as Timestamp?)?.toDate() ?? DateTime.now(),
+      createdAt: createdAt,
+      averageRating: averageRating,
+      totalRatings: data['totalRatings'] as int?,
     );
   }
 
-  // Convert to map for Firestore
   Map<String, dynamic> toMap() {
     return {
       'name': name,
       'email': email,
       'role': role,
-      'createdAt': Timestamp.fromDate(createdAt),
+      'createdAt': createdAt,
+      'averageRating': averageRating,
+      'totalRatings': totalRatings,
     };
   }
 
-  // Create copy with updated values
+  // Untuk membuat salinan objek dengan nilai yang diperbarui
   UserModel copyWith({
+    String? uid,
     String? name,
     String? email,
     String? role,
+    DateTime? createdAt,
+    double? averageRating,
+    int? totalRatings,
   }) {
     return UserModel(
-      uid: this.uid,
+      uid: uid ?? this.uid,
       name: name ?? this.name,
       email: email ?? this.email,
       role: role ?? this.role,
-      createdAt: this.createdAt,
+      createdAt: createdAt ?? this.createdAt,
+      averageRating: averageRating ?? this.averageRating,
+      totalRatings: totalRatings ?? this.totalRatings,
     );
   }
 }

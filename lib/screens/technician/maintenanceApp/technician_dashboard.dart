@@ -57,7 +57,7 @@ class _TechnicianDashboardState extends State<TechnicianDashboard>
         headerSliverBuilder: (context, innerBoxIsScrolled) {
           return [
             SliverAppBar(
-              expandedHeight: 180,
+              expandedHeight: 220, // Increased height to accommodate rating
               floating: false,
               automaticallyImplyLeading: false,
               pinned: true,
@@ -168,51 +168,65 @@ class _TechnicianDashboardState extends State<TechnicianDashboard>
                                 ],
                               ),
 
-                              // Quick stats
+                              // Rating Display Section
                               Padding(
                                 padding: EdgeInsets.only(top: 16, left: 4),
-                                child: Text(
-                                  'Manage your maintenance tasks',
-                                  style: TextStyle(
-                                    color: Colors.white.withOpacity(0.85),
-                                    fontSize: 14,
-                                    fontWeight: FontWeight.w500,
-                                  ),
-                                ),
+                                child: _buildRatingSection(),
                               ),
 
-                              SizedBox(height: 8),
-                              StreamBuilder<List<TaskModel>>(
-                                stream: _firestoreService.getTasksByTechnician(
-                                  authService.user!.uid,
-                                ),
-                                builder: (context, snapshot) {
-                                  final tasks = snapshot.data ?? [];
-                                  // Count tasks with either inProgress or in_progress status
-                                  final inProgress = tasks
-                                      .where((t) =>
-                                          t.status == 'inProgress' ||
-                                          t.status == 'in_progress')
-                                      .length;
-
-                                  if (tasks.isEmpty) {
-                                    return Text(
-                                      'No tasks assigned yet',
+                              // Quick stats
+                              Padding(
+                                padding: EdgeInsets.only(
+                                    top: 8, left: 4), // Reduced top padding
+                                child: Column(
+                                  mainAxisSize: MainAxisSize.min, // Important
+                                  crossAxisAlignment: CrossAxisAlignment.start,
+                                  children: [
+                                    Text(
+                                      'Manage your maintenance tasks',
                                       style: TextStyle(
-                                        color: Colors.white.withOpacity(0.7),
-                                        fontSize: 12,
+                                        color: Colors.white.withOpacity(0.85),
+                                        fontSize: 14,
+                                        fontWeight: FontWeight.w400,
                                       ),
-                                    );
-                                  }
-
-                                  return Text(
-                                    '${tasks.length} total tasks · $inProgress in progress',
-                                    style: TextStyle(
-                                      color: Colors.white.withOpacity(0.7),
-                                      fontSize: 12,
                                     ),
-                                  );
-                                },
+                                    SizedBox(height: 4), // Reduced spacing
+                                    StreamBuilder<List<TaskModel>>(
+                                      stream: _firestoreService
+                                          .getTasksByTechnician(
+                                        authService.user!.uid,
+                                      ),
+                                      builder: (context, snapshot) {
+                                        final tasks = snapshot.data ?? [];
+                                        final inProgress = tasks
+                                            .where((t) =>
+                                                t.status == 'inProgress' ||
+                                                t.status == 'in_progress')
+                                            .length;
+
+                                        if (tasks.isEmpty) {
+                                          return Text(
+                                            'No tasks assigned yet',
+                                            style: TextStyle(
+                                              color:
+                                                  Colors.white.withOpacity(0.7),
+                                              fontSize: 12,
+                                            ),
+                                          );
+                                        }
+
+                                        return Text(
+                                          '${tasks.length} total tasks · $inProgress in progress',
+                                          style: TextStyle(
+                                            color:
+                                                Colors.white.withOpacity(0.7),
+                                            fontSize: 12,
+                                          ),
+                                        );
+                                      },
+                                    ),
+                                  ],
+                                ),
                               ),
                             ],
                           ],
@@ -312,6 +326,61 @@ class _TechnicianDashboardState extends State<TechnicianDashboard>
             ),
           ],
         ),
+      ),
+    );
+  }
+
+  Widget _buildRatingSection() {
+    if (currentUser == null) return SizedBox();
+
+    final hasRating = currentUser!.averageRating != null &&
+        currentUser!.totalRatings != null &&
+        currentUser!.totalRatings! > 0;
+
+    return Container(
+      padding: EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+      decoration: BoxDecoration(
+        color: Colors.white.withOpacity(0.15),
+        borderRadius: BorderRadius.circular(12),
+        border: Border.all(color: Colors.white.withOpacity(0.3)),
+      ),
+      child: Row(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Icon(
+            Icons.star,
+            color: Colors.amber[300],
+            size: 18,
+          ),
+          SizedBox(width: 6),
+          if (hasRating) ...[
+            Text(
+              '${currentUser!.averageRating!.toStringAsFixed(1)}',
+              style: TextStyle(
+                color: Colors.white,
+                fontSize: 15,
+                fontWeight: FontWeight.bold,
+              ),
+            ),
+            SizedBox(width: 4),
+            Text(
+              '(${currentUser!.totalRatings} ${currentUser!.totalRatings! > 1 ? 'ratings' : 'rating'})',
+              style: TextStyle(
+                color: Colors.white.withOpacity(0.9),
+                fontSize: 12,
+              ),
+            ),
+          ] else ...[
+            Text(
+              'No ratings yet',
+              style: TextStyle(
+                color: Colors.white.withOpacity(0.8),
+                fontSize: 13,
+                fontStyle: FontStyle.italic,
+              ),
+            ),
+          ],
+        ],
       ),
     );
   }
@@ -1251,6 +1320,79 @@ class _TechnicianDashboardState extends State<TechnicianDashboard>
               'Member Since',
               DateFormat('dd MMM yyyy').format(currentUser!.createdAt),
             ),
+            // Add rating information to profile
+            if (currentUser!.averageRating != null &&
+                currentUser!.totalRatings != null &&
+                currentUser!.totalRatings! > 0) ...[
+              Divider(height: 20),
+              Text(
+                'Performance Rating',
+                style: TextStyle(
+                  fontWeight: FontWeight.bold,
+                  fontSize: 16,
+                  color: Colors.amber[800],
+                ),
+              ),
+              SizedBox(height: 8),
+              Row(
+                children: [
+                  // Star rating display
+                  Row(
+                    children: List.generate(5, (index) {
+                      return Icon(
+                        index < (currentUser!.averageRating ?? 0).floor()
+                            ? Icons.star
+                            : index <
+                                        (currentUser!.averageRating ?? 0)
+                                            .ceil() &&
+                                    (currentUser!.averageRating ?? 0).floor() !=
+                                        (currentUser!.averageRating ?? 0).ceil()
+                                ? Icons.star_half
+                                : Icons.star_border,
+                        color: Colors.amber,
+                        size: 20,
+                      );
+                    }),
+                  ),
+                  SizedBox(width: 8),
+                  Text(
+                    '${currentUser!.averageRating!.toStringAsFixed(1)}',
+                    style: TextStyle(
+                      fontSize: 16,
+                      fontWeight: FontWeight.bold,
+                      color: Colors.amber[800],
+                    ),
+                  ),
+                ],
+              ),
+              SizedBox(height: 4),
+              Text(
+                'Based on ${currentUser!.totalRatings} ${currentUser!.totalRatings! > 1 ? 'ratings' : 'rating'}',
+                style: TextStyle(
+                  fontSize: 12,
+                  color: Colors.grey[600],
+                ),
+              ),
+            ] else ...[
+              Divider(height: 20),
+              Text(
+                'Performance Rating',
+                style: TextStyle(
+                  fontWeight: FontWeight.bold,
+                  fontSize: 16,
+                  color: Colors.grey[600],
+                ),
+              ),
+              SizedBox(height: 8),
+              Text(
+                'No ratings received yet',
+                style: TextStyle(
+                  fontSize: 14,
+                  color: Colors.grey[500],
+                  fontStyle: FontStyle.italic,
+                ),
+              ),
+            ],
           ],
         ),
         actions: [

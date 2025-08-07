@@ -2,6 +2,8 @@ import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
 import 'package:masbro_inpower_app/utils/firebase_storage_image.dart';
 import '../../../models/maintenanceApp/report_model.dart';
+import '../../../services/maintenanceApp/firestore_service.dart';
+import 'package:flutter_rating_bar/flutter_rating_bar.dart';
 
 class ReportDetailScreen extends StatefulWidget {
   final ReportModel report;
@@ -13,8 +15,102 @@ class ReportDetailScreen extends StatefulWidget {
 }
 
 class _ReportDetailScreenState extends State<ReportDetailScreen> {
+  final FirestoreService _firestoreService = FirestoreService();
+  double _rating = 0;
+  bool _isSubmittingRating = false;
+  ReportModel? _updatedReport;
+
+  @override
+  void initState() {
+    super.initState();
+    _updatedReport = widget.report;
+    // Initialize rating with the stored value if it exists
+    if (widget.report.technicianRating != null) {
+      _rating = widget.report.technicianRating!;
+    }
+
+    // Refresh report data to ensure we have the latest rating
+    if (widget.report.status == 'completed') {
+      _refreshReportData();
+    }
+  }
+
+  Future<void> _refreshReportData() async {
+    try {
+      final updatedReport =
+          await _firestoreService.getReportWithRating(widget.report.id);
+      if (updatedReport != null && mounted) {
+        setState(() {
+          _updatedReport = updatedReport;
+          if (updatedReport.technicianRating != null) {
+            _rating = updatedReport.technicianRating!;
+          }
+        });
+      }
+    } catch (e) {
+      print('Error refreshing report data: $e');
+      // No need to show error to user, we'll just use the original report
+    }
+  }
+
+  Future<void> _submitRating() async {
+    if (_rating == 0) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text('Silakan berikan rating terlebih dahulu'),
+          backgroundColor: Colors.orange,
+        ),
+      );
+      return;
+    }
+
+    setState(() {
+      _isSubmittingRating = true;
+    });
+
+    try {
+      await _firestoreService.rateTechnician(
+        widget.report.id,
+        _rating,
+        widget.report.assignedTechnicianId!,
+      );
+
+      // Refresh report data after rating
+      await _refreshReportData();
+
+      if (mounted) {
+        setState(() {
+          _isSubmittingRating = false;
+        });
+
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('Rating berhasil dikirim, terima kasih!'),
+            backgroundColor: Colors.green,
+          ),
+        );
+      }
+    } catch (e) {
+      if (mounted) {
+        setState(() {
+          _isSubmittingRating = false;
+        });
+
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('Gagal mengirim rating: $e'),
+            backgroundColor: Colors.red,
+          ),
+        );
+      }
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
+    // Use the updated report if available, otherwise use the original
+    final report = _updatedReport ?? widget.report;
+
     return Scaffold(
       appBar: AppBar(
         title: Text('Detail Laporan'),
@@ -30,40 +126,40 @@ class _ReportDetailScreenState extends State<ReportDetailScreen> {
               width: double.infinity,
               padding: EdgeInsets.all(20),
               decoration: BoxDecoration(
-                color: widget.report.getStatusColor().withOpacity(0.1),
+                color: report.getStatusColor().withOpacity(0.1),
                 borderRadius: BorderRadius.circular(12),
-                border: Border.all(color: widget.report.getStatusColor()),
+                border: Border.all(color: report.getStatusColor()),
               ),
               child: Column(
                 children: [
                   Icon(
-                    widget.report.getStatusIcon(),
-                    color: widget.report.getStatusColor(),
+                    report.getStatusIcon(),
+                    color: report.getStatusColor(),
                     size: 48,
                   ),
                   SizedBox(height: 12),
                   Text(
-                    'Status: ${widget.report.getStatusDisplayName()}',
+                    'Status: ${report.getStatusDisplayName()}',
                     style: TextStyle(
                       fontSize: 18,
                       fontWeight: FontWeight.bold,
-                      color: widget.report.getStatusColor(),
+                      color: report.getStatusColor(),
                     ),
                   ),
                   SizedBox(height: 8),
                   Text(
-                    'Dibuat pada ${DateFormat('dd MMM yyyy, HH:mm').format(widget.report.createdAt)}',
+                    'Dibuat pada ${DateFormat('dd MMM yyyy, HH:mm').format(report.createdAt)}',
                     style: TextStyle(
                       color: Colors.grey[600],
                       fontSize: 14,
                     ),
                   ),
                   // Show completion date when status is completed
-                  if (widget.report.status == 'completed' &&
-                      widget.report.completionDate != null) ...[
+                  if (report.status == 'completed' &&
+                      report.completionDate != null) ...[
                     SizedBox(height: 8),
                     Text(
-                      'Diselesaikan pada ${DateFormat('dd MMM yyyy, HH:mm').format(widget.report.completionDate!)}',
+                      'Diselesaikan pada ${DateFormat('dd MMM yyyy, HH:mm').format(report.completionDate!)}',
                       style: TextStyle(
                         color: Colors.green[600],
                         fontSize: 14,
@@ -75,35 +171,123 @@ class _ReportDetailScreenState extends State<ReportDetailScreen> {
               ),
             ),
             SizedBox(height: 20),
+
+            // Technician Rating Section (only for completed reports)
+            if (report.status == 'completed' &&
+                report.assignedTechnicianId != null) ...[
+              _buildSectionTitle('Berikan Rating untuk Teknisi'),
+              SizedBox(height: 12),
+              Container(
+                width: double.infinity,
+                padding: EdgeInsets.all(16),
+                decoration: BoxDecoration(
+                  color: Colors.amber[50],
+                  borderRadius: BorderRadius.circular(12),
+                  border: Border.all(color: Colors.amber[200]!),
+                ),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.center,
+                  children: [
+                    Text(
+                      'Bagaimana kinerja ${report.technicianName} dalam menangani laporan ini?',
+                      textAlign: TextAlign.center,
+                      style: TextStyle(
+                        fontSize: 16,
+                        fontWeight: FontWeight.w500,
+                        color: Colors.amber[800],
+                      ),
+                    ),
+                    SizedBox(height: 16),
+                    RatingBar.builder(
+                      initialRating: _rating,
+                      minRating: 1,
+                      direction: Axis.horizontal,
+                      allowHalfRating: false,
+                      itemCount: 5,
+                      itemPadding: EdgeInsets.symmetric(horizontal: 4.0),
+                      itemBuilder: (context, _) => Icon(
+                        Icons.star,
+                        color: Colors.amber,
+                      ),
+                      onRatingUpdate: (rating) {
+                        setState(() {
+                          _rating = rating;
+                        });
+                      },
+                    ),
+                    SizedBox(height: 16),
+                    ElevatedButton(
+                      onPressed: report.technicianRating != null
+                          ? null
+                          : _submitRating,
+                      style: ElevatedButton.styleFrom(
+                        backgroundColor: Colors.amber[700],
+                        padding:
+                            EdgeInsets.symmetric(horizontal: 24, vertical: 12),
+                        shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(8),
+                        ),
+                      ),
+                      child: _isSubmittingRating
+                          ? SizedBox(
+                              width: 20,
+                              height: 20,
+                              child: CircularProgressIndicator(
+                                color: Colors.white,
+                                strokeWidth: 2,
+                              ),
+                            )
+                          : Text(
+                              report.technicianRating != null
+                                  ? 'Rating Sudah Dikirim'
+                                  : 'Kirim Rating',
+                              style: TextStyle(color: Colors.white),
+                            ),
+                    ),
+                    if (report.technicianRating != null) ...[
+                      SizedBox(height: 8),
+                      Text(
+                        'Anda telah memberikan rating ${report.technicianRating!.toStringAsFixed(1)} bintang',
+                        style: TextStyle(
+                          color: Colors.grey[600],
+                          fontSize: 14,
+                          fontStyle: FontStyle.italic,
+                        ),
+                      ),
+                    ],
+                  ],
+                ),
+              ),
+              SizedBox(height: 20),
+            ],
+
             _buildSectionTitle('Informasi Laporan'),
             SizedBox(height: 12),
             _buildInfoCard([
-              _buildInfoRow(Icons.room, 'Ruangan', widget.report.roomName),
-              if (widget.report.itemName.isNotEmpty)
-                _buildInfoRow(Icons.category, 'Item', widget.report.itemName),
+              _buildInfoRow(Icons.room, 'Ruangan', report.roomName),
+              if (report.itemName.isNotEmpty)
+                _buildInfoRow(Icons.category, 'Item', report.itemName),
               _buildInfoRow(
                 Icons.access_time,
                 'Tanggal',
-                DateFormat('dd MMM yyyy, HH:mm')
-                    .format(widget.report.createdAt),
+                DateFormat('dd MMM yyyy, HH:mm').format(report.createdAt),
               ),
               _buildInfoRow(
                 Icons.person,
                 'Pelapor',
-                widget.report.employeeName,
+                report.employeeName,
               ),
               // Add completion date in the information card as well
-              if (widget.report.status == 'completed' &&
-                  widget.report.completionDate != null)
+              if (report.status == 'completed' && report.completionDate != null)
                 _buildInfoRow(
                   Icons.check_circle,
                   'Selesai',
                   DateFormat('dd MMM yyyy, HH:mm')
-                      .format(widget.report.completionDate!),
+                      .format(report.completionDate!),
                 ),
             ]),
             SizedBox(height: 20),
-            if (widget.report.hasValidImage()) ...[
+            if (report.hasValidImage()) ...[
               _buildSectionTitle('Foto'),
               SizedBox(height: 12),
               Container(
@@ -117,7 +301,7 @@ class _ReportDetailScreenState extends State<ReportDetailScreen> {
                 child: ClipRRect(
                   borderRadius: BorderRadius.circular(8),
                   child: FirebaseStorageImage(
-                    imageUrl: widget.report.imageUrl,
+                    imageUrl: report.imageUrl,
                     fit: BoxFit.cover,
                     cacheDuration: Duration(days: 1),
                     forceFresh: true,
@@ -160,7 +344,7 @@ class _ReportDetailScreenState extends State<ReportDetailScreen> {
                 border: Border.all(color: Colors.grey[200]!),
               ),
               child: Text(
-                widget.report.description,
+                report.description,
                 style: TextStyle(
                   fontSize: 16,
                   height: 1.5,
@@ -168,8 +352,8 @@ class _ReportDetailScreenState extends State<ReportDetailScreen> {
                 ),
               ),
             ),
-            if (widget.report.status == 'inProgress' &&
-                widget.report.assignedTechnicianId != null) ...[
+            if (report.status == 'inProgress' &&
+                report.assignedTechnicianId != null) ...[
               SizedBox(height: 20),
               _buildSectionTitle('Teknisi yang Ditugaskan'),
               SizedBox(height: 12),
@@ -202,7 +386,7 @@ class _ReportDetailScreenState extends State<ReportDetailScreen> {
                         crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
                           Text(
-                            widget.report.technicianName ?? 'Tidak diketahui',
+                            report.technicianName ?? 'Tidak diketahui',
                             style: TextStyle(
                               fontSize: 16,
                               fontWeight: FontWeight.bold,
@@ -224,8 +408,8 @@ class _ReportDetailScreenState extends State<ReportDetailScreen> {
                 ),
               ),
             ],
-            if (widget.report.status == 'completed' &&
-                widget.report.completionReason != null) ...[
+            if (report.status == 'completed' &&
+                report.completionReason != null) ...[
               SizedBox(height: 20),
               _buildSectionTitle('Catatan Penyelesaian'),
               SizedBox(height: 12),
@@ -240,7 +424,7 @@ class _ReportDetailScreenState extends State<ReportDetailScreen> {
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    if (widget.report.completionDate != null)
+                    if (report.completionDate != null)
                       Padding(
                         padding: const EdgeInsets.only(bottom: 8.0),
                         child: Row(
@@ -250,7 +434,7 @@ class _ReportDetailScreenState extends State<ReportDetailScreen> {
                             SizedBox(width: 8),
                             Expanded(
                               child: Text(
-                                'Diselesaikan pada: ${DateFormat('dd MMM yyyy, HH:mm').format(widget.report.completionDate!)}',
+                                'Diselesaikan pada: ${DateFormat('dd MMM yyyy, HH:mm').format(report.completionDate!)}',
                                 style: TextStyle(
                                   fontSize: 14,
                                   color: Colors.green[600],
@@ -262,7 +446,7 @@ class _ReportDetailScreenState extends State<ReportDetailScreen> {
                         ),
                       ),
                     Text(
-                      widget.report.completionReason!,
+                      report.completionReason!,
                       style: TextStyle(
                         fontSize: 16,
                         height: 1.5,
