@@ -18,6 +18,7 @@ class ReportModel {
   final String? technicianName;
   final String? imageUrl;
   final DateTime? completionDate;
+  final double? technicianRating; // Added technician rating field
 
   ReportModel({
     required this.id,
@@ -36,6 +37,7 @@ class ReportModel {
     this.technicianName,
     this.imageUrl,
     this.completionDate,
+    this.technicianRating, // Add to constructor
   });
 
   /// Create ReportModel from Firestore document
@@ -48,6 +50,14 @@ class ReportModel {
           '[ReportModel] Document ID: ${doc.id}, Image URL found: ${imageUrl.toString().substring(0, min(30, imageUrl.toString().length))}...');
     } else {
       print('[ReportModel] Document ID: ${doc.id}, Image URL not found');
+    }
+
+    // Handle technician rating conversion from Firestore
+    double? technicianRating;
+    if (data['technicianRating'] != null) {
+      technicianRating = data['technicianRating'] is int
+          ? (data['technicianRating'] as int).toDouble()
+          : data['technicianRating'] as double;
     }
 
     return ReportModel(
@@ -69,6 +79,7 @@ class ReportModel {
       completionDate: data['completionDate'] != null
           ? (data['completionDate'] as Timestamp).toDate()
           : null,
+      technicianRating: technicianRating, // Add to return object
     );
   }
 
@@ -98,6 +109,7 @@ class ReportModel {
       'imageUrl': imageUrl,
       'completionDate':
           completionDate != null ? Timestamp.fromDate(completionDate!) : null,
+      'technicianRating': technicianRating, // Add to map
     };
   }
 
@@ -161,6 +173,7 @@ class ReportModel {
     String? technicianName,
     String? imageUrl,
     DateTime? completionDate,
+    double? technicianRating, // Add to copyWith
   }) {
     return ReportModel(
       id: id ?? this.id,
@@ -179,6 +192,8 @@ class ReportModel {
       technicianName: technicianName ?? this.technicianName,
       imageUrl: imageUrl ?? this.imageUrl,
       completionDate: completionDate ?? this.completionDate,
+      technicianRating:
+          technicianRating ?? this.technicianRating, // Add to constructor
     );
   }
 

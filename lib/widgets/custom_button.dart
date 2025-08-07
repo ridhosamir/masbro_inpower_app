@@ -2,7 +2,7 @@ import 'package:flutter/material.dart';
 
 class CustomButton extends StatelessWidget {
   final String text;
-  final VoidCallback onPressed;
+  final VoidCallback? onPressed; // Changed to nullable
   final bool isLoading;
   final Color? backgroundColor;
   final Color? textColor;
@@ -11,7 +11,7 @@ class CustomButton extends StatelessWidget {
   const CustomButton({
     Key? key,
     required this.text,
-    required this.onPressed,
+    required this.onPressed, // Still required but now nullable
     this.isLoading = false,
     this.backgroundColor,
     this.textColor,
