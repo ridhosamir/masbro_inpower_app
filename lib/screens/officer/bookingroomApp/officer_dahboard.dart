@@ -475,7 +475,19 @@ class _OfficerDashboardBookingRoomState
           }).toList();
         }
 
-        bookings.sort((a, b) => b.createdAt.compareTo(a.createdAt));
+        bookings.sort((a, b) {
+          if (a.status == 'approved' && b.status == 'approved') {
+            if (a.completionDate != null && b.completionDate != null) {
+              return b.completionDate!.compareTo(a.completionDate!);
+            }
+          }
+          if (a.status == 'cancelled' && b.status == 'cancelled') {
+            if (a.completionDate != null && b.completionDate != null) {
+              return b.completionDate!.compareTo(a.completionDate!);
+            }
+          }
+          return b.createdAt.compareTo(a.createdAt);
+        });
 
         if (bookings.isEmpty) {
           if (_searchQuery.isNotEmpty) {
@@ -656,7 +668,8 @@ class _OfficerDashboardBookingRoomState
                   ],
                 ),
               ],
-              if (booking.status == 'approved') ...[
+              if (booking.status == 'approved' &&
+                  DateTime.now().isBefore(booking.usageEndDate)) ...[
                 const Divider(height: 24),
                 Row(
                   children: [
@@ -1249,6 +1262,11 @@ class _OfficerDashboardBookingRoomState
                                         'Pemesan', booking.employeeName),
                                     _buildDetailItem(Icons.add_box_outlined,
                                         'Kebutuhan', booking.needs),
+                                    _buildDetailItem(
+                                        Icons.groups_3_outlined,
+                                        'Jumlah Peserta',
+                                        booking.numberOfParticipants
+                                            .toString()),
                                   ],
                                 ),
                               ),
@@ -1538,7 +1556,7 @@ class _OfficerDashboardBookingRoomState
                 );
                 Navigator.pop(context);
                 ScaffoldMessenger.of(context).showSnackBar(const SnackBar(
-                  content: Text('Booking telah ditolak.'),
+                  content: Text('Booking berhasil ditolak.'),
                   backgroundColor: Colors.orange,
                 ));
               }

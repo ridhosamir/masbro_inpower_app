@@ -3184,6 +3184,11 @@ class _OfficerStatusTabState extends State<OfficerStatusTab>
                                         'Pemesan', booking.employeeName),
                                     _buildDetailItem(Icons.add_box_outlined,
                                         'Kebutuhan', booking.needs),
+                                    _buildDetailItem(
+                                        Icons.groups_3_outlined,
+                                        'Jumlah Peserta',
+                                        booking.numberOfParticipants
+                                            .toString()),
                                   ],
                                 ),
                               ),
