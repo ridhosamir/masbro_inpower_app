@@ -58,40 +58,89 @@ class _RequestDetailScreenResourceState
     }
   }
 
-  void _showCompleteDialog() {
+  Color _getRatingColor(double rating) {
+    if (rating >= 4.5) return Colors.green;
+    if (rating >= 4.0) return Colors.lightGreen;
+    if (rating >= 3.5) return Colors.orange;
+    if (rating >= 3.0) return Colors.deepOrange;
+    return Colors.red;
+  }
+
+  String _getPerformanceLabel(double rating) {
+    if (rating >= 4.5) return 'EXCELLENT';
+    if (rating >= 4.0) return 'GOOD';
+    if (rating >= 3.5) return 'AVERAGE';
+    if (rating >= 3.0) return 'FAIR';
+    return 'NEEDS IMPROVEMENT';
+  }
+
+  void _showCompleteDialog(RequestModel request) {
+    final formKey = GlobalKey<FormState>();
+    _completionReasonController.clear();
+
     showDialog(
       context: context,
-      builder: (context) => AlertDialog(
-        title: const Text('Selesaikan Permintaan'),
-        content: Column(
-          mainAxisSize: MainAxisSize.min,
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            const Text('Berikan catatan penyelesaian:'),
-            const SizedBox(height: 16),
-            CustomTextField(
-              labelText: 'Catatan Penyelesaian',
-              hintText: 'Contoh: Pekerjaan telah selesai...',
-              controller: _completionReasonController,
-              maxLines: 3,
-            ),
-          ],
-        ),
-        actions: [
-          TextButton(
-            onPressed: () {
-              _completionReasonController.clear();
-              Navigator.pop(context);
-            },
-            child: const Text('Batal'),
-          ),
-          TextButton(
-            onPressed: _completeRequest,
-            child:
-                const Text('Selesaikan', style: TextStyle(color: Colors.green)),
-          ),
-        ],
-      ),
+      barrierDismissible: !_isCompleting,
+      builder: (dialogContext) {
+        return StatefulBuilder(
+          builder: (context, setDialogState) {
+            return AlertDialog(
+              shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(16)),
+              title: const Text('Complete Request'),
+              content: Form(
+                key: formKey,
+                child: Column(
+                  mainAxisSize: MainAxisSize.min,
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    const Text('Provide completion notes:'),
+                    const SizedBox(height: 16),
+                    TextFormField(
+                      controller: _completionReasonController,
+                      decoration: const InputDecoration(
+                        labelText: 'Completion Notes',
+                        hintText: 'Enter notes about completion...',
+                        border: OutlineInputBorder(),
+                      ),
+                      maxLines: 3,
+                      validator: (value) {
+                        if (value == null || value.trim().isEmpty) {
+                          return 'Please provide completion notes';
+                        }
+                        return null;
+                      },
+                    ),
+                  ],
+                ),
+              ),
+              actions: [
+                TextButton(
+                  onPressed: () => Navigator.pop(dialogContext),
+                  child: const Text('Cancel'),
+                ),
+                TextButton(
+                  onPressed: _isCompleting
+                      ? null
+                      : () {
+                          if (formKey.currentState!.validate()) {
+                            _completeRequest(request);
+                          }
+                        },
+                  child: _isCompleting
+                      ? const SizedBox(
+                          width: 18,
+                          height: 18,
+                          child: CircularProgressIndicator(strokeWidth: 2),
+                        )
+                      : const Text('Complete',
+                          style: TextStyle(color: Colors.green)),
+                ),
+              ],
+            );
+          },
+        );
+      },
     );
   }
 
@@ -109,12 +158,13 @@ class _RequestDetailScreenResourceState
     }
   }
 
-  Future<void> _completeRequest() async {
+  Future<void> _completeRequest(RequestModel request) async {
     if (_completionReasonController.text.trim().isEmpty) {
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(
-          content: Text('Harap berikan catatan penyelesaian'),
+          content: Text('Please provide completion notes'),
           backgroundColor: Colors.red,
+          behavior: SnackBarBehavior.floating,
         ),
       );
       return;
@@ -376,7 +426,7 @@ class _RequestDetailScreenResourceState
             if (_currentRequest.technicianName != null &&
                 _currentRequest.technicianName!.isNotEmpty) ...[
               const SizedBox(height: 24),
-              _buildSectionTitle('Resource yang Ditugaskan'),
+              _buildSectionTitle('Teknisi yang Ditugaskan'),
               const SizedBox(height: 12),
               Container(
                 width: double.infinity,
@@ -386,23 +436,163 @@ class _RequestDetailScreenResourceState
                   borderRadius: BorderRadius.circular(8),
                   border: Border.all(color: Colors.blue[200]!),
                 ),
-                child: Row(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    CircleAvatar(
-                      backgroundColor: Colors.blue[100],
-                      child: Icon(Icons.engineering, color: Colors.blue[700]),
+                    Row(
+                      children: [
+                        CircleAvatar(
+                          backgroundColor: Colors.blue[100],
+                          child:
+                              Icon(Icons.engineering, color: Colors.blue[700]),
+                        ),
+                        const SizedBox(width: 12),
+                        Expanded(
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              Text(
+                                _currentRequest.technicianName!,
+                                style: TextStyle(
+                                  fontSize: 16,
+                                  fontWeight: FontWeight.bold,
+                                  color: Colors.blue[800],
+                                ),
+                              ),
+                              const SizedBox(height: 4),
+                              Text(
+                                _currentRequest.status == 'completed'
+                                    ? 'Menyelesaikan permintaan ini'
+                                    : 'Sedang menangani permintaan ini',
+                                style: TextStyle(
+                                  fontSize: 14,
+                                  color: Colors.blue[600],
+                                ),
+                              ),
+                            ],
+                          ),
+                        ),
+                      ],
                     ),
-                    const SizedBox(width: 12),
-                    Expanded(
-                      child: Text(
-                        _currentRequest.technicianName!,
+                    if (_currentRequest.status == 'completed' &&
+                        _currentRequest.technicianRating != null) ...[
+                      const SizedBox(height: 16),
+                      Divider(height: 1, color: Colors.blue[200]),
+                      const SizedBox(height: 16),
+                      Row(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Icon(Icons.star, color: Colors.amber, size: 20),
+                          const SizedBox(width: 8),
+                          Expanded(
+                            child: Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                Text(
+                                  'Peringkat dari Pemohon',
+                                  style: TextStyle(
+                                    fontSize: 14,
+                                    fontWeight: FontWeight.w600,
+                                    color: Colors.blue[700],
+                                  ),
+                                ),
+                                const SizedBox(height: 8),
+                                Row(
+                                  children: [
+                                    Text(
+                                      '${_currentRequest.technicianRating!.toStringAsFixed(1)} dari 5.0',
+                                      style: TextStyle(
+                                        fontSize: 14,
+                                        fontWeight: FontWeight.w500,
+                                        color: _getRatingColor(
+                                            _currentRequest.technicianRating!),
+                                      ),
+                                    ),
+                                    const SizedBox(width: 8),
+                                    Container(
+                                      padding: const EdgeInsets.symmetric(
+                                          horizontal: 6, vertical: 2),
+                                      decoration: BoxDecoration(
+                                        color: _getRatingColor(
+                                            _currentRequest.technicianRating!),
+                                        borderRadius: BorderRadius.circular(4),
+                                      ),
+                                      child: Text(
+                                        _getPerformanceLabel(
+                                            _currentRequest.technicianRating!),
+                                        style: const TextStyle(
+                                          color: Colors.white,
+                                          fontWeight: FontWeight.bold,
+                                          fontSize: 10,
+                                        ),
+                                      ),
+                                    ),
+                                  ],
+                                ),
+
+                                // Menampilkan ulasan jika ada
+                                if (_currentRequest.technicianReview != null &&
+                                    _currentRequest
+                                        .technicianReview!.isNotEmpty) ...[
+                                  const SizedBox(height: 12),
+                                  Container(
+                                    width: double.infinity,
+                                    padding: const EdgeInsets.all(12),
+                                    decoration: BoxDecoration(
+                                      color: Colors.white,
+                                      borderRadius: BorderRadius.circular(8),
+                                      border:
+                                          Border.all(color: Colors.blue[100]!),
+                                    ),
+                                    child: Text(
+                                      '"${_currentRequest.technicianReview!}"',
+                                      style: TextStyle(
+                                        fontStyle: FontStyle.italic,
+                                        color: Colors.grey[700],
+                                      ),
+                                    ),
+                                  ),
+                                ],
+                              ],
+                            ),
+                          ),
+                        ],
+                      ),
+                    ],
+                    if (!isResourceRequest &&
+                        _currentRequest.hasValidAfterImage()) ...[
+                      const SizedBox(height: 16),
+                      Divider(height: 1, color: Colors.blue[200]),
+                      const SizedBox(height: 16),
+                      Text(
+                        'Item dari Teknisi:',
                         style: TextStyle(
-                          fontSize: 16,
-                          fontWeight: FontWeight.bold,
-                          color: Colors.blue[800],
+                          fontSize: 14,
+                          fontWeight: FontWeight.w600,
+                          color: Colors.blue[700],
                         ),
                       ),
-                    ),
+                      const SizedBox(height: 12),
+                      GestureDetector(
+                        onTap: () {
+                          _showFullScreenImage(context,
+                              _currentRequest.getNormalizedAfterImageUrl()!);
+                        },
+                        child: ClipRRect(
+                          borderRadius: BorderRadius.circular(12),
+                          child: Container(
+                            height: 200,
+                            width: double.infinity,
+                            color: Colors.blue[100],
+                            child: FirebaseStorageImage(
+                              imageUrl:
+                                  _currentRequest.getNormalizedAfterImageUrl(),
+                              fit: BoxFit.cover,
+                            ),
+                          ),
+                        ),
+                      ),
+                    ],
                   ],
                 ),
               ),
@@ -462,7 +652,7 @@ class _RequestDetailScreenResourceState
               const SizedBox(height: 12),
               CustomButton(
                 text: 'Tandai Selesai',
-                onPressed: _showCompleteDialog,
+                onPressed: () => _showCompleteDialog(_currentRequest),
                 backgroundColor: Colors.green,
                 icon: Icons.check_circle,
               ),

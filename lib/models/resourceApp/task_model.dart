@@ -15,6 +15,9 @@ class TaskModel {
   final DateTime? completedAt;
   final String? completionNote;
   final String? imageUrl;
+  final double? userRating;
+  final String? userReview;
+  final String? afterImageUrl;
 
   TaskModel({
     required this.id,
@@ -30,10 +33,21 @@ class TaskModel {
     this.completedAt,
     this.completionNote,
     this.imageUrl,
+    this.userRating,
+    this.userReview,
+    this.afterImageUrl,
   });
 
   factory TaskModel.fromFirestore(DocumentSnapshot doc) {
     Map<String, dynamic> data = doc.data() as Map<String, dynamic>;
+
+    double? userRating;
+    if (data['userRating'] != null) {
+      userRating = data['userRating'] is int
+          ? (data['userRating'] as int).toDouble()
+          : data['userRating'] as double;
+    }
+
     return TaskModel(
       id: doc.id,
       requestId: data['requestId'] ?? '',
@@ -50,6 +64,9 @@ class TaskModel {
           : null,
       completionNote: data['completionNote'],
       imageUrl: data['imageUrl'],
+      userRating: userRating,
+      userReview: data['userReview'],
+      afterImageUrl: data['afterImageUrl'],
     );
   }
 
@@ -68,6 +85,9 @@ class TaskModel {
           completedAt != null ? Timestamp.fromDate(completedAt!) : null,
       'completionNote': completionNote,
       'imageUrl': imageUrl,
+      'userRating': userRating,
+      'userReview': userReview,
+      'afterImageUrl': afterImageUrl,
     };
   }
 

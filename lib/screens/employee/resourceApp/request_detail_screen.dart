@@ -2,6 +2,8 @@ import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
 import 'package:masbro_inpower_app/utils/firebase_storage_image.dart';
 import '../../../models/resourceApp/request_model.dart';
+import 'package:flutter_rating_bar/flutter_rating_bar.dart';
+import '../../../services/resourceApp/firestore_service.dart';
 
 class RequestDetailScreen extends StatefulWidget {
   final RequestModel request;
@@ -13,9 +15,96 @@ class RequestDetailScreen extends StatefulWidget {
 }
 
 class _RequestDetailScreenState extends State<RequestDetailScreen> {
+  final FirestoreServiceResource _firestoreService = FirestoreServiceResource();
+  final TextEditingController _reviewController = TextEditingController();
+  double _rating = 0;
+  bool _isSubmitting = false;
+  RequestModel? _updatedRequest;
+
+  @override
+  void initState() {
+    super.initState();
+    _updatedRequest = widget.request;
+    if (widget.request.status == 'completed') {
+      _refreshRequestData();
+    }
+  }
+
+  Future<void> _refreshRequestData() async {
+    try {
+      final freshRequest =
+          await _firestoreService.getRequestById(widget.request.id);
+      if (freshRequest != null && mounted) {
+        setState(() {
+          _updatedRequest = freshRequest;
+          // Inisialisasi rating dengan nilai yang sudah ada jika ada
+          if (freshRequest.technicianRating != null) {
+            _rating = freshRequest.technicianRating!;
+          }
+        });
+      }
+    } catch (e) {
+      print('Gagal menyegarkan data permintaan: $e');
+    }
+  }
+
+  Future<void> _submitRating() async {
+    if (_rating == 0) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('Silakan berikan rating bintang terlebih dahulu.'),
+          backgroundColor: Colors.orange,
+        ),
+      );
+      return;
+    }
+
+    setState(() => _isSubmitting = true);
+
+    try {
+      await _firestoreService.rateTechnician(
+        widget.request.id,
+        _rating,
+        widget.request.assignedTechnicianId!,
+        review: _reviewController.text.trim(),
+      );
+
+      await _refreshRequestData();
+
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text('Terima kasih! Penilaian Anda telah disimpan.'),
+            backgroundColor: Colors.green,
+          ),
+        );
+      }
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('Gagal mengirim penilaian: $e'),
+            backgroundColor: Colors.red,
+          ),
+        );
+      }
+    } finally {
+      if (mounted) {
+        setState(() => _isSubmitting = false);
+      }
+    }
+  }
+
+  @override
+  void dispose() {
+    _reviewController.dispose();
+    super.dispose();
+  }
+
   @override
   Widget build(BuildContext context) {
-    final bool isResourceRequest = widget.request.request == 'resource';
+    final request = _updatedRequest ?? widget.request;
+    final bool isResourceRequest = request.request == 'resource';
     return Scaffold(
       appBar: AppBar(
         title: const Text('Detail Permintaan'),
@@ -32,29 +121,29 @@ class _RequestDetailScreenState extends State<RequestDetailScreen> {
               width: double.infinity,
               padding: const EdgeInsets.all(20),
               decoration: BoxDecoration(
-                color: widget.request.getStatusColor().withOpacity(0.1),
+                color: request.getStatusColor().withOpacity(0.1),
                 borderRadius: BorderRadius.circular(12),
-                border: Border.all(color: widget.request.getStatusColor()),
+                border: Border.all(color: request.getStatusColor()),
               ),
               child: Column(
                 children: [
                   Icon(
-                    widget.request.getStatusIcon(),
-                    color: widget.request.getStatusColor(),
+                    request.getStatusIcon(),
+                    color: request.getStatusColor(),
                     size: 48,
                   ),
                   const SizedBox(height: 12),
                   Text(
-                    'Status: ${widget.request.getStatusDisplayName()}',
+                    'Status: ${request.getStatusDisplayName()}',
                     style: TextStyle(
                       fontSize: 18,
                       fontWeight: FontWeight.bold,
-                      color: widget.request.getStatusColor(),
+                      color: request.getStatusColor(),
                     ),
                   ),
                   const SizedBox(height: 8),
                   Text(
-                    'Dibuat pada ${DateFormat('d MMMM yyyy, HH:mm').format(widget.request.createdAt)}',
+                    'Dibuat pada ${DateFormat('d MMMM yyyy, HH:mm').format(request.createdAt)}',
                     style: TextStyle(
                       color: Colors.grey[600],
                       fontSize: 14,
@@ -64,7 +153,7 @@ class _RequestDetailScreenState extends State<RequestDetailScreen> {
                       widget.request.completionDate != null) ...[
                     const SizedBox(height: 8),
                     Text(
-                      'Diselesaikan pada ${DateFormat('dd MMM yyyy, HH:mm').format(widget.request.completionDate!)}',
+                      'Diselesaikan pada ${DateFormat('dd MMM yyyy, HH:mm').format(request.completionDate!)}',
                       style: TextStyle(
                         color: Colors.green[700],
                         fontSize: 14,
@@ -77,6 +166,132 @@ class _RequestDetailScreenState extends State<RequestDetailScreen> {
             ),
             const SizedBox(height: 24),
 
+            // --- Penilaian Layanan ---
+            if (request.status == 'completed' &&
+                request.assignedTechnicianId != null) ...[
+              const SizedBox(height: 24),
+              _buildSectionTitle('Penilaian Layanan'),
+              const SizedBox(height: 12),
+              Container(
+                width: double.infinity,
+                padding: const EdgeInsets.all(16),
+                decoration: BoxDecoration(
+                  color: Colors.amber[50],
+                  borderRadius: BorderRadius.circular(12),
+                  border: Border.all(color: Colors.amber[200]!),
+                ),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.center,
+                  children: [
+                    Text(
+                      'Bagaimana kinerja ${request.technicianName ?? 'Teknisi'}?',
+                      textAlign: TextAlign.center,
+                      style: TextStyle(
+                        fontSize: 16,
+                        fontWeight: FontWeight.w500,
+                        color: Colors.amber[800],
+                      ),
+                    ),
+                    const SizedBox(height: 16),
+                    // Widget Rating Bar
+                    RatingBar.builder(
+                      initialRating: _rating,
+                      minRating: 1,
+                      direction: Axis.horizontal,
+                      itemCount: 5,
+                      itemPadding: const EdgeInsets.symmetric(horizontal: 4.0),
+                      itemBuilder: (context, _) => const Icon(
+                        Icons.star,
+                        color: Colors.amber,
+                      ),
+                      // Hanya bisa di-update jika belum pernah memberi rating
+                      onRatingUpdate: (rating) {
+                        if (request.technicianRating == null) {
+                          setState(() {
+                            _rating = rating;
+                          });
+                        }
+                      },
+                      // Abaikan gestur jika sudah di-rate
+                      ignoreGestures: request.technicianRating != null,
+                    ),
+                    const SizedBox(height: 16),
+                    // Tampilkan form atau hasil rating
+                    if (request.technicianRating == null) ...[
+                      // -- FORM UNTUK MEMBERI RATING --
+                      TextField(
+                        controller: _reviewController,
+                        maxLines: 3,
+                        decoration: InputDecoration(
+                          hintText: 'Tulis ulasan Anda (opsional)...',
+                          border: OutlineInputBorder(
+                            borderRadius: BorderRadius.circular(8),
+                            borderSide: BorderSide(color: Colors.amber[300]!),
+                          ),
+                          filled: true,
+                          fillColor: Colors.white,
+                        ),
+                      ),
+                      const SizedBox(height: 16),
+                      ElevatedButton.icon(
+                        onPressed: _isSubmitting ? null : _submitRating,
+                        style: ElevatedButton.styleFrom(
+                          backgroundColor: Colors.amber[700],
+                          foregroundColor: Colors.white,
+                          minimumSize: const Size(double.infinity, 48),
+                          shape: RoundedRectangleBorder(
+                            borderRadius: BorderRadius.circular(8),
+                          ),
+                        ),
+                        icon: _isSubmitting
+                            ? Container(
+                                width: 20,
+                                height: 20,
+                                child: const CircularProgressIndicator(
+                                    color: Colors.white, strokeWidth: 2),
+                              )
+                            : const Icon(Icons.send),
+                        label: Text(
+                            _isSubmitting ? 'Mengirim...' : 'Kirim Penilaian'),
+                      ),
+                    ] else ...[
+                      // -- TAMPILAN SETELAH MEMBERI RATING --
+                      const Divider(height: 24),
+                      Text(
+                        'Penilaian Anda telah dikirim. Terima kasih!',
+                        style: TextStyle(
+                          color: Colors.green[700],
+                          fontWeight: FontWeight.bold,
+                        ),
+                      ),
+                      if (request.technicianReview != null &&
+                          request.technicianReview!.isNotEmpty) ...[
+                        const SizedBox(height: 12),
+                        Container(
+                          width: double.infinity,
+                          padding: const EdgeInsets.all(12),
+                          decoration: BoxDecoration(
+                            color: Colors.white,
+                            borderRadius: BorderRadius.circular(8),
+                            border: Border.all(color: Colors.grey[200]!),
+                          ),
+                          child: Text(
+                            '"${request.technicianReview!}"',
+                            textAlign: TextAlign.center,
+                            style: TextStyle(
+                              fontStyle: FontStyle.italic,
+                              color: Colors.grey[700],
+                            ),
+                          ),
+                        ),
+                      ],
+                    ],
+                  ],
+                ),
+              ),
+            ],
+            const SizedBox(height: 24),
+
             // --- Informasi Permintaan ---
             _buildSectionTitle('Informasi Permintaan'),
             const SizedBox(height: 12),
@@ -84,31 +299,30 @@ class _RequestDetailScreenState extends State<RequestDetailScreen> {
               _buildInfoRow(
                 Icons.person,
                 'Pemohon',
-                widget.request.employeeName,
+                request.employeeName,
               ),
               _buildInfoRow(
                 isResourceRequest ? Icons.supervisor_account : Icons.inventory,
                 'Kebutuhan',
-                '${widget.request.request[0].toUpperCase()}${widget.request.request.substring(1)}',
+                '${request.request[0].toUpperCase()}${widget.request.request.substring(1)}',
               ),
               if (widget.request.timeRequired != null &&
                   widget.request.timeRequired!.isNotEmpty)
                 _buildInfoRow(
                   Icons.calendar_today,
                   'Waktu\nDibutuhkan',
-                  _formatDisplayDate(widget.request.timeRequired!),
+                  _formatDisplayDate(request.timeRequired!),
                 ),
             ]),
             // Tampilkan foto jika ini adalah permintaan item
-            if (!isResourceRequest && widget.request.hasValidImage()) ...[
+            if (!isResourceRequest && request.hasValidImage()) ...[
               const SizedBox(height: 24),
-              _buildSectionTitle('Foto Item'),
+              _buildSectionTitle('Foto Item Permintaan'),
               const SizedBox(height: 12),
               GestureDetector(
                 onTap: () {
-                  // Panggil fungsi untuk menampilkan gambar fullscreen
                   _showFullScreenImage(
-                      context, widget.request.getNormalizedImageUrl()!);
+                      context, request.getNormalizedImageUrl()!);
                 },
                 child: Stack(
                   alignment: Alignment.center,
@@ -124,7 +338,7 @@ class _RequestDetailScreenState extends State<RequestDetailScreen> {
                       child: ClipRRect(
                         borderRadius: BorderRadius.circular(12),
                         child: FirebaseStorageImage(
-                          imageUrl: widget.request.getNormalizedImageUrl(),
+                          imageUrl: request.getNormalizedImageUrl(),
                           fit: BoxFit.cover,
                           placeholder: Container(
                             color: Colors.grey[200],
@@ -187,7 +401,7 @@ class _RequestDetailScreenState extends State<RequestDetailScreen> {
                 border: Border.all(color: Colors.grey[200]!),
               ),
               child: Text(
-                widget.request.description,
+                request.description,
                 style: TextStyle(
                   fontSize: 16,
                   height: 1.5,
@@ -257,10 +471,10 @@ class _RequestDetailScreenState extends State<RequestDetailScreen> {
             ],
 
             // --- Catatan Penyelesaian ---
-            if (widget.request.status == 'completed' &&
-                widget.request.completionReason != null) ...[
+            if (request.status == 'completed' &&
+                request.completionReason != null) ...[
               const SizedBox(height: 24),
-              _buildSectionTitle('Catatan Penyelesaian'),
+              _buildSectionTitle('Detail Penyelesaian'),
               const SizedBox(height: 12),
               Container(
                 width: double.infinity,
@@ -273,26 +487,51 @@ class _RequestDetailScreenState extends State<RequestDetailScreen> {
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    if (widget.request.completionDate != null)
-                      Padding(
-                        padding: const EdgeInsets.only(bottom: 8.0),
-                        child: Text(
-                          'Diselesaikan pada: ${DateFormat('d MMMM yyyy, HH:mm').format(widget.request.completionDate!)}',
-                          style: TextStyle(
-                            fontSize: 14,
-                            color: Colors.green[700],
-                            fontWeight: FontWeight.w500,
-                          ),
-                        ),
-                      ),
                     Text(
-                      widget.request.completionReason!,
+                      'Catatan dari Teknisi/Officer:',
+                      style: TextStyle(
+                          fontWeight: FontWeight.bold,
+                          color: Colors.green[800]),
+                    ),
+                    const SizedBox(height: 8),
+                    Text(
+                      request.completionReason!,
                       style: TextStyle(
                         fontSize: 16,
                         height: 1.5,
                         color: Colors.green[800],
                       ),
                     ),
+                    if (!isResourceRequest && request.hasValidAfterImage()) ...[
+                      const Divider(height: 32, thickness: 1),
+                      Text(
+                        'Foto Item yang Diberikan:',
+                        style: TextStyle(
+                          fontWeight: FontWeight.bold,
+                          color: Colors.green[800],
+                        ),
+                      ),
+                      const SizedBox(height: 12),
+                      GestureDetector(
+                        onTap: () {
+                          _showFullScreenImage(
+                              context, request.getNormalizedAfterImageUrl()!);
+                        },
+                        child: ClipRRect(
+                          borderRadius: BorderRadius.circular(12),
+                          child: Container(
+                            height: 250,
+                            width: double.infinity,
+                            color: Colors.grey[200],
+                            child: FirebaseStorageImage(
+                              // UBAH INI
+                              imageUrl: request.getNormalizedAfterImageUrl(),
+                              fit: BoxFit.cover,
+                            ),
+                          ),
+                        ),
+                      ),
+                    ],
                   ],
                 ),
               ),

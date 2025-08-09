@@ -29,12 +29,16 @@ class _OfficerDashboardResourceState extends State<OfficerDashboardResource>
   final _searchController = TextEditingController();
   final _completionReasonController = TextEditingController();
   bool _isCompleting = false;
+  final UserService _userService = UserService();
+  List<UserModel> _technicians = [];
+  bool _loadingTechnicians = false;
 
   @override
   void initState() {
     super.initState();
     _tabController = TabController(length: 4, vsync: this);
     _loadUserData();
+    _loadTechnicians();
     _searchController.addListener(_onSearchChanged);
   }
 
@@ -46,6 +50,40 @@ class _OfficerDashboardResourceState extends State<OfficerDashboardResource>
     setState(() {
       _searchQuery = _searchController.text;
     });
+  }
+
+  // Fungsi baru untuk memuat daftar teknisi
+  Future<void> _loadTechnicians() async {
+    setState(() {
+      _loadingTechnicians = true;
+    });
+
+    try {
+      // Ambil daftar teknisi dari UserService
+      final technicians = await _userService.getTechnicians();
+
+      if (mounted) {
+        setState(() {
+          // Filter teknisi yang tidak mengandung kata "driver" di nama atau email
+          _technicians = technicians.where((tech) {
+            final nameContainsDriver =
+                tech.name.toLowerCase().contains('driver');
+            final emailContainsDriver =
+                tech.email.toLowerCase().contains('driver');
+            return !nameContainsDriver && !emailContainsDriver;
+          }).toList();
+
+          _loadingTechnicians = false;
+        });
+      }
+    } catch (e) {
+      print('Error loading technicians: $e');
+      if (mounted) {
+        setState(() {
+          _loadingTechnicians = false;
+        });
+      }
+    }
   }
 
   @override
@@ -302,11 +340,12 @@ class _OfficerDashboardResourceState extends State<OfficerDashboardResource>
         },
         body: Column(
           children: [
-            const SizedBox(height: 20),
             Container(
               padding: const EdgeInsets.all(16),
               child: _buildStatisticsCards(),
             ),
+            _buildQuickActionButtons(),
+            const SizedBox(height: 8),
             Padding(
               padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
               child: Row(
@@ -971,39 +1010,72 @@ class _OfficerDashboardResourceState extends State<OfficerDashboardResource>
   }
 
   void _showCompleteDialog(RequestModel request) {
+    final formKey = GlobalKey<FormState>();
     _completionReasonController.clear();
 
     showDialog(
       context: context,
-      builder: (context) => AlertDialog(
-        title: Text('Complete Request'),
-        content: Column(
-          mainAxisSize: MainAxisSize.min,
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Text('Provide completion notes:'),
-            SizedBox(height: 16),
-            CustomTextField(
-              labelText: 'Completion Notes',
-              hintText: 'Enter notes about completion...',
-              controller: _completionReasonController,
-              maxLines: 3,
-            ),
-          ],
-        ),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(context),
-            child: Text('Cancel'),
-          ),
-          TextButton(
-            onPressed: () => _completeRequest(request),
-            child: _isCompleting
-                ? CircularProgressIndicator(strokeWidth: 2)
-                : Text('Complete', style: TextStyle(color: Colors.green)),
-          ),
-        ],
-      ),
+      barrierDismissible: !_isCompleting,
+      builder: (dialogContext) {
+        return StatefulBuilder(
+          builder: (context, setDialogState) {
+            return AlertDialog(
+              shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(16)),
+              title: const Text('Complete Request'),
+              content: Form(
+                key: formKey,
+                child: Column(
+                  mainAxisSize: MainAxisSize.min,
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    const Text('Provide completion notes:'),
+                    const SizedBox(height: 16),
+                    TextFormField(
+                      controller: _completionReasonController,
+                      decoration: const InputDecoration(
+                        labelText: 'Completion Notes',
+                        hintText: 'Enter notes about completion...',
+                        border: OutlineInputBorder(),
+                      ),
+                      maxLines: 3,
+                      validator: (value) {
+                        if (value == null || value.trim().isEmpty) {
+                          return 'Please provide completion notes';
+                        }
+                        return null;
+                      },
+                    ),
+                  ],
+                ),
+              ),
+              actions: [
+                TextButton(
+                  onPressed: () => Navigator.pop(dialogContext),
+                  child: const Text('Cancel'),
+                ),
+                TextButton(
+                  onPressed: _isCompleting
+                      ? null
+                      : () {
+                          if (formKey.currentState!.validate()) {
+                            _completeRequest(request);
+                          }
+                        },
+                  child: _isCompleting
+                      ? const SizedBox(
+                          width: 18,
+                          height: 18,
+                          child: CircularProgressIndicator(strokeWidth: 2),
+                        )
+                      : const Text('Complete',
+                          style: TextStyle(color: Colors.green)),
+                ),
+              ],
+            );
+          },
+        );
+      },
     );
   }
 
@@ -1054,6 +1126,383 @@ class _OfficerDashboardResourceState extends State<OfficerDashboardResource>
           ),
         );
       }
+    }
+  }
+
+  // // Fungsi untuk mendapatkan data rating teknisi (semua aplikasi)
+  // Future<Map<String, dynamic>> _getTechnicianRating(String technicianId) async {
+  //   try {
+  //     return await _firestoreService.getTechnicianRatingData(technicianId);
+  //   } catch (e) {
+  //     print('Error getting technician rating for $technicianId: $e');
+  //     return {'averageRating': 0.0, 'totalRatings': 0};
+  //   }
+  // }
+
+  // Fungsi untuk mendapatkan data rating teknisi (aplikasi resource)
+  Future<Map<String, dynamic>> _getTechnicianRating(String technicianId) async {
+    try {
+      return await _firestoreService
+          .getTechnicianRatingForResourceApp(technicianId);
+    } catch (e) {
+      print('Error getting technician rating for $technicianId: $e');
+      return {'averageRating': 0.0, 'totalRatings': 0};
+    }
+  }
+
+  void _showTechniciansRatingDialog() {
+    showDialog(
+      context: context,
+      builder: (context) {
+        return AlertDialog(
+          title: const Row(
+            children: [
+              Icon(Icons.star, color: Colors.amber),
+              SizedBox(width: 8),
+              Text('Technician Ratings'),
+            ],
+          ),
+          content: SizedBox(
+            width: double.maxFinite,
+            child: _loadingTechnicians
+                ? const Center(child: CircularProgressIndicator())
+                : _technicians.isEmpty
+                    ? const Center(child: Text('Tidak ada teknisi ditemukan.'))
+                    : ListView.builder(
+                        shrinkWrap: true,
+                        itemCount: _technicians.length,
+                        itemBuilder: (context, index) {
+                          final technician = _technicians[index];
+                          return _buildTechnicianRatingItem(technician);
+                        },
+                      ),
+          ),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.pop(context),
+              child: const Text('Tutup'),
+            ),
+          ],
+        );
+      },
+    );
+  }
+
+  // Widget untuk menampilkan item teknisi dengan ratingnya
+  Widget _buildTechnicianRatingItem(UserModel technician) {
+    return FutureBuilder<Map<String, dynamic>>(
+      future: _getTechnicianRating(technician.uid),
+      builder: (context, snapshot) {
+        double averageRating = 0.0;
+        int totalRatings = 0;
+
+        if (snapshot.connectionState == ConnectionState.done &&
+            snapshot.hasData) {
+          averageRating =
+              (snapshot.data!['averageRating'] as num?)?.toDouble() ?? 0.0;
+          totalRatings = (snapshot.data!['totalRatings'] as int?) ?? 0;
+        }
+
+        return Card(
+          margin: const EdgeInsets.symmetric(vertical: 6),
+          child: ListTile(
+            leading: CircleAvatar(
+              backgroundColor: Colors.blue[100],
+              child: Icon(Icons.engineering, color: Colors.blue[700], size: 20),
+            ),
+            title: Text(technician.name,
+                style: const TextStyle(fontWeight: FontWeight.bold)),
+            subtitle:
+                Text(technician.email, style: const TextStyle(fontSize: 12)),
+            trailing: snapshot.connectionState == ConnectionState.waiting
+                ? const SizedBox(
+                    width: 20,
+                    height: 20,
+                    child: CircularProgressIndicator(strokeWidth: 2))
+                : Row(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      Icon(Icons.star, color: Colors.amber, size: 18),
+                      const SizedBox(width: 4),
+                      Text(
+                        averageRating.toStringAsFixed(1),
+                        style: const TextStyle(
+                            fontWeight: FontWeight.bold, fontSize: 16),
+                      ),
+                      const SizedBox(width: 4),
+                      Text(
+                        '($totalRatings)',
+                        style: TextStyle(fontSize: 12, color: Colors.grey[600]),
+                      ),
+                    ],
+                  ),
+            onTap: () {
+              if (snapshot.connectionState == ConnectionState.done) {
+                _showTechnicianDetailDialog(
+                    technician, averageRating, totalRatings);
+              }
+            },
+          ),
+        );
+      },
+    );
+  }
+
+  Widget _buildQuickActionButtons() {
+    return Padding(
+      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 0),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Text(
+            'Quick Actions',
+            style: TextStyle(
+              fontSize: 16,
+              fontWeight: FontWeight.bold,
+              color: Colors.grey[700],
+            ),
+          ),
+          const SizedBox(height: 12),
+          _buildActionButton(
+            icon: Icons.star,
+            label: 'Technician Ratings',
+            color: Colors.amber,
+            onTap: _showTechniciansRatingDialog,
+          ),
+        ],
+      ),
+    );
+  }
+
+  // Helper untuk tombol Quick Action (buat jika belum ada)
+  Widget _buildActionButton({
+    required IconData icon,
+    required String label,
+    required Color color,
+    required VoidCallback onTap,
+  }) {
+    return InkWell(
+      onTap: onTap,
+      borderRadius: BorderRadius.circular(12),
+      child: Container(
+        padding: const EdgeInsets.symmetric(vertical: 16, horizontal: 16),
+        decoration: BoxDecoration(
+          color: color.withOpacity(0.1),
+          borderRadius: BorderRadius.circular(12),
+          border: Border.all(color: color.withOpacity(0.3)),
+        ),
+        child: Row(
+          children: [
+            Icon(icon, color: color, size: 22),
+            const SizedBox(width: 12),
+            Text(
+              label,
+              style: TextStyle(
+                color: color,
+                fontSize: 14,
+                fontWeight: FontWeight.w600,
+              ),
+            ),
+            const Spacer(),
+            Icon(Icons.chevron_right, color: color.withOpacity(0.7)),
+          ],
+        ),
+      ),
+    );
+  }
+
+  // Dialog untuk menampilkan detail teknisi
+  void _showTechnicianDetailDialog(
+      UserModel technician, double averageRating, int totalRatings) {
+    showDialog(
+      context: context,
+      builder: (context) {
+        return AlertDialog(
+          title: const Text('Technician Details'),
+          content: Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Center(
+                child: CircleAvatar(
+                  radius: 40,
+                  backgroundColor: Colors.blue[100],
+                  child: Icon(
+                    Icons.engineering,
+                    color: Colors.blue[700],
+                    size: 40,
+                  ),
+                ),
+              ),
+              const SizedBox(height: 16),
+              Center(
+                child: Text(
+                  technician.name,
+                  style: const TextStyle(
+                    fontSize: 20,
+                    fontWeight: FontWeight.bold,
+                  ),
+                ),
+              ),
+              Center(
+                child: Text(
+                  technician.email,
+                  style: TextStyle(color: Colors.grey[600]),
+                ),
+              ),
+              const SizedBox(height: 24),
+
+              // Tampilan Peringkat
+              Center(
+                child: Container(
+                  padding:
+                      const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+                  decoration: BoxDecoration(
+                    color: _getRatingColor(averageRating).withOpacity(0.1),
+                    borderRadius: BorderRadius.circular(8),
+                    border: Border.all(
+                      color: _getRatingColor(averageRating).withOpacity(0.3),
+                    ),
+                  ),
+                  child: Column(
+                    children: [
+                      Text(
+                        'Performance Rating',
+                        style: TextStyle(
+                          fontWeight: FontWeight.bold,
+                          color: _getRatingColor(averageRating),
+                        ),
+                      ),
+                      const SizedBox(height: 8),
+                      Row(
+                        mainAxisSize: MainAxisSize.min,
+                        children: List.generate(5, (index) {
+                          return Icon(
+                            index < (averageRating).floor()
+                                ? Icons.star
+                                : index < (averageRating).ceil() &&
+                                        (averageRating).floor() !=
+                                            (averageRating).ceil()
+                                    ? Icons.star_half
+                                    : Icons.star_border,
+                            color: Colors.amber,
+                            size: 24,
+                          );
+                        }),
+                      ),
+                      SizedBox(height: 8),
+                      Text(
+                        '${averageRating.toStringAsFixed(1)} out of 5.0',
+                        style: TextStyle(
+                          fontSize: 18,
+                          fontWeight: FontWeight.bold,
+                          color: _getRatingColor(averageRating),
+                        ),
+                      ),
+                      Text(
+                        'Based on $totalRatings ${totalRatings == 1 ? "rating" : "ratings"}',
+                        style: TextStyle(
+                          color: Colors.grey[600],
+                        ),
+                      ),
+                      if (totalRatings > 0) ...[
+                        const SizedBox(height: 8),
+                        Container(
+                          padding: const EdgeInsets.symmetric(
+                              horizontal: 8, vertical: 4),
+                          decoration: BoxDecoration(
+                            color: _getRatingColor(averageRating),
+                            borderRadius: BorderRadius.circular(4),
+                          ),
+                          child: Text(
+                            _getPerformanceLabel(averageRating),
+                            style: const TextStyle(
+                              color: Colors.white,
+                              fontWeight: FontWeight.bold,
+                              fontSize: 10,
+                            ),
+                          ),
+                        ),
+                      ],
+                    ],
+                  ),
+                ),
+              ),
+              const SizedBox(height: 16),
+              _buildInfoItem(
+                'Member Since',
+                DateFormat('dd MMM yyyy', 'id_ID').format(technician.createdAt),
+                Icons.date_range,
+              ),
+            ],
+          ),
+          actions: [
+            TextButton(
+              onPressed: () {
+                Navigator.pop(context);
+              },
+              child: const Text('Tutup'),
+            ),
+          ],
+        );
+      },
+    );
+  }
+
+  Widget _buildInfoItem(String label, String value, IconData icon) {
+    return Padding(
+      padding: const EdgeInsets.symmetric(vertical: 8),
+      child: Row(
+        children: [
+          Icon(icon, size: 16, color: Colors.grey[600]),
+          const SizedBox(width: 8),
+          Text(
+            '$label:',
+            style: TextStyle(
+              color: Colors.grey[600],
+              fontWeight: FontWeight.w500,
+            ),
+          ),
+          const SizedBox(width: 8),
+          Expanded(
+            child: Text(
+              value,
+              style: const TextStyle(fontWeight: FontWeight.w500),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Color _getRatingColor(double rating) {
+    if (rating >= 4.5) return Colors.green;
+    if (rating >= 4.0) return Colors.lightGreen;
+    if (rating >= 3.5) return Colors.orange;
+    if (rating >= 3.0) return Colors.deepOrange;
+    return Colors.red;
+  }
+
+  String _getPerformanceLabel(double rating) {
+    if (rating >= 4.5) return 'EXCELLENT';
+    if (rating >= 4.0) return 'GOOD';
+    if (rating >= 3.5) return 'AVERAGE';
+    if (rating >= 3.0) return 'FAIR';
+    return 'NEEDS IMPROVEMENT';
+  }
+
+  String _getExperienceText(DateTime createdAt) {
+    final now = DateTime.now();
+    final difference = now.difference(createdAt);
+
+    if (difference.inDays >= 365) {
+      final years = (difference.inDays / 365).floor();
+      return '$years ${years == 1 ? 'tahun' : 'tahun'}';
+    } else if (difference.inDays >= 30) {
+      final months = (difference.inDays / 30).floor();
+      return '$months ${months == 1 ? 'bulan' : 'bulan'}';
+    } else {
+      return '${difference.inDays} ${difference.inDays == 1 ? 'hari' : 'hari'}';
     }
   }
 

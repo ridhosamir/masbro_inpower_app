@@ -16,6 +16,9 @@ class RequestModel {
   final String? technicianName;
   final String? imageUrl;
   final DateTime? completionDate;
+  final double? technicianRating;
+  final String? technicianReview;
+  final String? afterImageUrl;
 
   RequestModel({
     required this.id,
@@ -31,6 +34,9 @@ class RequestModel {
     this.technicianName,
     this.imageUrl,
     this.completionDate,
+    this.technicianRating,
+    this.technicianReview,
+    this.afterImageUrl,
   });
 
   /// Membuat RequestModel dari Firestore document
@@ -44,6 +50,13 @@ class RequestModel {
           '[RequestModel] Document ID: ${doc.id}, Image URL found: ${imageUrl.toString().substring(0, min(30, imageUrl.toString().length))}...');
     } else {
       print('[RequestModel] Document ID: ${doc.id}, Image URL not found');
+    }
+
+    double? technicianRating;
+    if (data['technicianRating'] != null) {
+      technicianRating = data['technicianRating'] is int
+          ? (data['technicianRating'] as int).toDouble()
+          : data['technicianRating'] as double;
     }
 
     return RequestModel(
@@ -62,6 +75,9 @@ class RequestModel {
       completionDate: data['completionDate'] != null
           ? (data['completionDate'] as Timestamp).toDate()
           : null,
+      technicianRating: technicianRating,
+      technicianReview: data['technicianReview'],
+      afterImageUrl: data['afterImageUrl'],
     );
   }
 
@@ -88,6 +104,9 @@ class RequestModel {
       'imageUrl': imageUrl,
       'completionDate':
           completionDate != null ? Timestamp.fromDate(completionDate!) : null,
+      'technicianRating': technicianRating,
+      'technicianReview': technicianReview,
+      'afterImageUrl': afterImageUrl,
     };
   }
 
@@ -148,6 +167,9 @@ class RequestModel {
     String? technicianName,
     String? imageUrl,
     DateTime? completionDate,
+    double? technicianRating,
+    String? technicianReview,
+    String? afterImageUrl,
   }) {
     return RequestModel(
       id: id ?? this.id,
@@ -163,32 +185,19 @@ class RequestModel {
       technicianName: technicianName ?? this.technicianName,
       imageUrl: imageUrl ?? this.imageUrl,
       completionDate: completionDate ?? this.completionDate,
+      technicianRating: technicianRating ?? this.technicianRating,
+      technicianReview: technicianReview ?? this.technicianReview,
+      afterImageUrl: afterImageUrl ?? this.afterImageUrl,
     );
   }
 
+  /// Menormalkan URL gambar untuk ditampilkan
   bool hasValidImage() {
-    // Jika URL kosong atau null, gambar tidak valid
-    if (imageUrl == null || imageUrl!.isEmpty) {
-      print('[RequestModel] Image not valid: URL is empty or null');
+    if (imageUrl == null || imageUrl!.isEmpty) return false;
+    if (!imageUrl!.startsWith('http') && !imageUrl!.startsWith('gs://'))
       return false;
-    }
-
-    if (!imageUrl!.startsWith('http') &&
-        !imageUrl!.startsWith('https') &&
-        !imageUrl!.startsWith('gs://')) {
-      print(
-          '[RequestModel] Image not valid: URL does not start with http/https/gs://: $imageUrl');
-      return false;
-    }
-
-    // URL tidak boleh mengandung "undefined" atau "null"
     if (imageUrl!.toLowerCase().contains('undefined') ||
-        imageUrl!.toLowerCase().contains('null')) {
-      print(
-          '[RequestModel] Image not valid: URL contains "undefined" or "null"');
-      return false;
-    }
-
+        imageUrl!.toLowerCase().contains('null')) return false;
     return true;
   }
 
@@ -197,15 +206,24 @@ class RequestModel {
     if (!hasValidImage()) {
       return null;
     }
-
-    // Jika URL sudah dimulai dengan http/https, gunakan secara langsung
-    if (imageUrl!.startsWith('http')) {
-      return imageUrl;
-    }
-
-    // Jika URL dimulai dengan gs://, ini adalah URL Firebase Storage
-    // URL ini akan ditangani oleh widget seperti FirebaseStorageImage
     return imageUrl;
+  }
+
+  bool hasValidAfterImage() {
+    if (afterImageUrl == null || afterImageUrl!.isEmpty) return false;
+    if (!afterImageUrl!.startsWith('http') &&
+        !afterImageUrl!.startsWith('gs://')) return false;
+    if (afterImageUrl!.toLowerCase().contains('undefined') ||
+        afterImageUrl!.toLowerCase().contains('null')) return false;
+    return true;
+  }
+
+  /// Menormalkan URL gambar setelah penyelesaian untuk ditampilkan
+  String? getNormalizedAfterImageUrl() {
+    if (!hasValidAfterImage()) {
+      return null;
+    }
+    return afterImageUrl;
   }
 }
 
