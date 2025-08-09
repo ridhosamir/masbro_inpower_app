@@ -5,11 +5,16 @@ import '../../models/resourceApp/task_model.dart';
 class FirestoreServiceResource {
   final FirebaseFirestore _firestore = FirebaseFirestore.instance;
 
+  CollectionReference get _usersCollection => _firestore.collection('users');
+
   CollectionReference get _requestsCollection =>
       _firestore.collection('requests_resource');
 
   CollectionReference get _tasksCollection =>
       _firestore.collection('tasks_resource');
+
+  CollectionReference get _ratingsCollection =>
+      _firestore.collection('technician_ratings_resource');
 
   // Membuat laporan resource baru
   Future<void> createRequest(RequestModel request) async {
@@ -230,13 +235,16 @@ class FirestoreServiceResource {
 
   // Memperbarui status task
   Future<void> updateTaskStatus(String taskId, String status,
-      {String? completionNote}) async {
+      {String? completionNote, String? afterImageUrl}) async {
     try {
       Map<String, dynamic> data = {'status': status};
       if (status == 'completed') {
         data['completedAt'] = FieldValue.serverTimestamp();
         if (completionNote != null) {
           data['completionNote'] = completionNote;
+        }
+        if (afterImageUrl != null) {
+          data['afterImageUrl'] = afterImageUrl;
         }
       }
       await _tasksCollection.doc(taskId).update(data);
@@ -245,14 +253,161 @@ class FirestoreServiceResource {
       if (status == 'completed') {
         final taskDoc = await _tasksCollection.doc(taskId).get();
         final task = TaskModel.fromFirestore(taskDoc);
-        await _requestsCollection.doc(task.requestId).update({
+        Map<String, dynamic> requestUpdateData = {
           'status': 'completed',
           'completionReason': completionNote ?? 'Completed by technician',
           'completionDate': FieldValue.serverTimestamp(),
-        });
+        };
+
+        if (afterImageUrl != null) {
+          requestUpdateData['afterImageUrl'] = afterImageUrl;
+        }
+
+        await _requestsCollection.doc(task.requestId).update(requestUpdateData);
       }
     } catch (e) {
       print('Error updating resource task status: $e');
+      rethrow;
+    }
+  }
+
+  // Menambahkan rating dan review untuk teknisi dari employee
+  Future<void> rateTechnician(
+      String requestId, double rating, String technicianId,
+      {String? review}) async {
+    try {
+      final batch = _firestore.batch();
+
+      // 1. Update rating dan review di dokumen request_resource
+      final requestRef = _requestsCollection.doc(requestId);
+      Map<String, dynamic> requestUpdateData = {'technicianRating': rating};
+      if (review != null && review.isNotEmpty) {
+        requestUpdateData['technicianReview'] = review;
+      }
+      batch.update(requestRef, requestUpdateData);
+
+      // 2. Update rating dan review di dokumen task_resource yang sesuai
+      final taskQuery = await _tasksCollection
+          .where('requestId', isEqualTo: requestId)
+          .limit(1)
+          .get();
+
+      if (taskQuery.docs.isNotEmpty) {
+        final taskRef = taskQuery.docs.first.reference;
+        Map<String, dynamic> taskUpdateData = {'userRating': rating};
+        if (review != null && review.isNotEmpty) {
+          taskUpdateData['userReview'] = review;
+        }
+        batch.update(taskRef, taskUpdateData);
+      }
+
+      // 3. Buat dokumen rating baru untuk memicu Cloud Function.
+      final ratingDoc = _ratingsCollection.doc();
+      Map<String, dynamic> ratingData = {
+        'technicianId': technicianId,
+        'requestId': requestId,
+        'rating': rating,
+        'review': review, // Simpan review juga di sini untuk histori
+        'appName': 'resource', // Identifier aplikasi
+        'timestamp': FieldValue.serverTimestamp(),
+      };
+      batch.set(ratingDoc, ratingData);
+
+      // Commit semua perubahan
+      await batch.commit();
+
+      print(
+          'Penilaian untuk teknisi $technicianId berhasil disimpan. Agregasi akan ditangani oleh Cloud Function.');
+    } catch (e) {
+      print('Error saat memberikan rating untuk teknisi: $e');
+      rethrow;
+    }
+  }
+
+  /// Menghitung rating rata-rata dari koleksi terpisah
+  Future<Map<String, dynamic>> _calculateAverageRatingFromCollection(
+      String technicianId) async {
+    try {
+      final snapshot = await _ratingsCollection
+          .where('technicianId', isEqualTo: technicianId)
+          .get();
+
+      if (snapshot.docs.isEmpty) {
+        return {'totalRatings': 0, 'averageRating': 0.0};
+      }
+
+      double totalRating = 0;
+      final totalRatings = snapshot.docs.length;
+
+      for (var doc in snapshot.docs) {
+        final data = doc.data() as Map<String, dynamic>;
+        final rating = data['rating'] is int
+            ? (data['rating'] as int).toDouble()
+            : data['rating'] as double;
+        totalRating += rating;
+      }
+
+      final averageRating = totalRating / totalRatings;
+
+      return {
+        'totalRatings': totalRatings,
+        'averageRating': averageRating,
+      };
+    } catch (e) {
+      print('Error menghitung rata-rata rating dari sisi klien: $e');
+      return {'totalRatings': 0, 'averageRating': 0.0};
+    }
+  }
+
+  // Mendapatkan data rating teknisi (rata-rata dan total)
+  Future<Map<String, dynamic>> getTechnicianRatingData(
+      String technicianId) async {
+    try {
+      final userDoc = await _usersCollection.doc(technicianId).get();
+
+      // PRIORITAS 1: Ambil data yang sudah diagregasi oleh Cloud Function.
+      if (userDoc.exists) {
+        final userData = userDoc.data() as Map<String, dynamic>;
+        if (userData.containsKey('averageRating') &&
+            userData.containsKey('totalRatings')) {
+          print("Mengambil data rating dari koleksi 'users' (sumber utama).");
+          return {
+            'averageRating':
+                (userData['averageRating'] as num?)?.toDouble() ?? 0.0,
+            'totalRatings': userData['totalRatings'] as int? ?? 0,
+          };
+        }
+      }
+
+      // PRIORITAS 2 (FALLBACK): Jika data di 'users' tidak ada, hitung manual dari koleksi resource.
+      // Ini berguna untuk menampilkan data sementara sebelum Cloud Function selesai berjalan.
+      print(
+          "Data rating di 'users' tidak ditemukan. Menjalankan fallback calculation.");
+      return await _calculateAverageRatingFromCollection(technicianId);
+    } catch (e) {
+      print('Error mendapatkan data rating teknisi: $e');
+      return {'averageRating': 0.0, 'totalRatings': 0};
+    }
+  }
+
+  Future<Map<String, dynamic>> getTechnicianRatingForResourceApp(
+      String technicianId) async {
+    // Fungsi ini memanggil kalkulasi manual yang sudah ada,
+    // yang memang hanya menghitung dari '_ratingsCollection' (_technician_ratings_resource)
+    print(
+        "Menghitung rating spesifik untuk Resource App bagi teknisi $technicianId.");
+    return await _calculateAverageRatingFromCollection(technicianId);
+  }
+
+  Future<RequestModel?> getRequestById(String requestId) async {
+    try {
+      final doc = await _requestsCollection.doc(requestId).get();
+      if (doc.exists) {
+        return RequestModel.fromFirestore(doc);
+      }
+      return null;
+    } catch (e) {
+      print('Error getting request by ID: $e');
       rethrow;
     }
   }

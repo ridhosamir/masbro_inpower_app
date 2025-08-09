@@ -1,3 +1,5 @@
+import 'dart:io';
+import 'package:image_picker/image_picker.dart';
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'package:intl/intl.dart';
@@ -9,6 +11,9 @@ import '../../../models/user_model.dart';
 import '../../../widgets/custom_button.dart';
 import '../../../widgets/custom_text_field.dart';
 import 'package:masbro_inpower_app/utils/firebase_storage_image.dart';
+import '../../../services/storage_service.dart';
+import 'package:flutter/foundation.dart' show kIsWeb;
+import 'dart:typed_data';
 
 class TechnicianDashboardResource extends StatefulWidget {
   const TechnicianDashboardResource({super.key});
@@ -22,6 +27,9 @@ class _TechnicianDashboardResourceState
     extends State<TechnicianDashboardResource> with TickerProviderStateMixin {
   final FirestoreServiceResource _firestoreService = FirestoreServiceResource();
   final _completionNoteController = TextEditingController();
+  final StorageService _storageService = StorageService();
+  XFile? _selectedImage;
+  Uint8List? _selectedImageBytes;
   UserModel? currentUser;
   late TabController _tabController;
   String _selectedFilter = 'all';
@@ -64,6 +72,38 @@ class _TechnicianDashboardResourceState
         setState(() {
           currentUser = userData;
         });
+      }
+    }
+  }
+
+  Future<void> _pickImage(
+      ImageSource source, StateSetter setStateDialog) async {
+    try {
+      final picker = ImagePicker();
+      final pickedFile =
+          await picker.pickImage(source: source, imageQuality: 80);
+
+      if (pickedFile != null) {
+        // Jika platformnya web, baca data bytes untuk preview
+        if (kIsWeb) {
+          final bytes = await pickedFile.readAsBytes();
+          setStateDialog(() {
+            _selectedImage = pickedFile;
+            _selectedImageBytes = bytes;
+          });
+        } else {
+          // Jika mobile, cukup simpan filenya
+          setStateDialog(() {
+            _selectedImage = pickedFile;
+          });
+        }
+      }
+    } catch (e) {
+      print('Gagal memilih gambar: $e');
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('Gagal memilih gambar: $e')),
+        );
       }
     }
   }
@@ -1119,35 +1159,92 @@ class _TechnicianDashboardResourceState
 
   void _showCompleteDialog(TaskModel task) {
     _completionNoteController.clear();
-    String? dialogErrorText; // Variabel untuk menyimpan pesan error
+    _selectedImage = null;
+    _selectedImageBytes = null;
+    String? dialogErrorText;
 
     showDialog(
       context: context,
       builder: (context) {
-        // Menggunakan StatefulBuilder agar konten dialog bisa di-update
         return StatefulBuilder(
           builder: (context, setStateDialog) {
             return AlertDialog(
               title: const Text('Selesaikan Tugas'),
-              content: Column(
-                mainAxisSize: MainAxisSize.min,
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  CustomTextField(
-                    labelText: 'Catatan Penyelesaian',
-                    hintText: 'Masukkan catatan pekerjaan...',
-                    controller: _completionNoteController,
-                    maxLines: 3,
-                  ),
-                  // --- TAMBAHAN: Bagian untuk menampilkan error ---
-                  if (dialogErrorText != null) ...[
-                    const SizedBox(height: 8),
-                    Text(
-                      dialogErrorText!,
-                      style: const TextStyle(color: Colors.red, fontSize: 12),
+              content: SingleChildScrollView(
+                child: Column(
+                  mainAxisSize: MainAxisSize.min,
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    CustomTextField(
+                      labelText: 'Catatan Penyelesaian',
+                      hintText: 'Masukkan catatan pekerjaan...',
+                      controller: _completionNoteController,
+                      maxLines: 3,
                     ),
-                  ]
-                ],
+                    if (task.request == 'item') ...[
+                      const SizedBox(height: 16),
+                      Text('Foto Item (Opsional)',
+                          style: TextStyle(
+                              fontWeight: FontWeight.bold,
+                              color: Colors.grey[700])),
+                      const SizedBox(height: 8),
+                      Container(
+                        height: 150,
+                        width: double.infinity,
+                        decoration: BoxDecoration(
+                          color: Colors.grey[200],
+                          borderRadius: BorderRadius.circular(12),
+                          border: Border.all(color: Colors.grey[300]!),
+                        ),
+                        child: ClipRRect(
+                          borderRadius: BorderRadius.circular(12),
+                          child: kIsWeb
+                              ? (_selectedImageBytes != null
+                                  ? Image.memory(_selectedImageBytes!,
+                                      fit: BoxFit.cover)
+                                  : Center(
+                                      child: Icon(
+                                          Icons.photo_camera_back_outlined,
+                                          color: Colors.grey[400],
+                                          size: 40)))
+                              : (_selectedImage != null
+                                  ? Image.file(File(_selectedImage!.path),
+                                      fit: BoxFit.cover)
+                                  : Center(
+                                      child: Icon(
+                                          Icons.photo_camera_back_outlined,
+                                          color: Colors.grey[400],
+                                          size: 40))),
+                        ),
+                      ),
+                      const SizedBox(height: 8),
+                      Row(
+                        mainAxisAlignment: MainAxisAlignment.spaceEvenly,
+                        children: [
+                          TextButton.icon(
+                            icon: const Icon(Icons.photo_library),
+                            label: const Text('Galeri'),
+                            onPressed: () =>
+                                _pickImage(ImageSource.gallery, setStateDialog),
+                          ),
+                          TextButton.icon(
+                            icon: const Icon(Icons.camera_alt),
+                            label: const Text('Kamera'),
+                            onPressed: () =>
+                                _pickImage(ImageSource.camera, setStateDialog),
+                          ),
+                        ],
+                      ),
+                    ],
+                    if (dialogErrorText != null) ...[
+                      const SizedBox(height: 8),
+                      Text(
+                        dialogErrorText!,
+                        style: const TextStyle(color: Colors.red, fontSize: 12),
+                      ),
+                    ]
+                  ],
+                ),
               ),
               actions: [
                 TextButton(
@@ -1155,20 +1252,20 @@ class _TechnicianDashboardResourceState
                   child: const Text('Batal'),
                 ),
                 TextButton(
-                  // PERBAIKAN: Logika validasi dipindah ke sini
                   onPressed: () {
                     if (_completionNoteController.text.trim().isEmpty) {
-                      // Update state dialog untuk menampilkan pesan error
                       setStateDialog(() {
                         dialogErrorText = 'Harap berikan catatan penyelesaian';
                       });
                     } else {
-                      // Jika valid, baru panggil _completeTask
                       _completeTask(task);
                     }
                   },
                   child: _isLoading
-                      ? const CircularProgressIndicator(strokeWidth: 2)
+                      ? const SizedBox(
+                          width: 20,
+                          height: 20,
+                          child: CircularProgressIndicator(strokeWidth: 2))
                       : const Text('Selesaikan',
                           style: TextStyle(color: Colors.green)),
                 ),
@@ -1181,22 +1278,50 @@ class _TechnicianDashboardResourceState
   }
 
   Future<void> _completeTask(TaskModel task) async {
+    // Tutup keyboard jika terbuka
+    FocusScope.of(context).unfocus();
     setState(() => _isLoading = true);
+
+    String? imageUrl;
     try {
+      if (_selectedImage != null) {
+        imageUrl = await _storageService.uploadImage(
+            _selectedImage!, 'completed_items');
+        if (imageUrl == null) {
+          throw Exception('Gagal mengunggah gambar.');
+        }
+      }
       await _firestoreService.updateTaskStatus(
         task.id,
         'completed',
         completionNote: _completionNoteController.text.trim(),
+        afterImageUrl: imageUrl,
       );
-      if (mounted) Navigator.pop(context);
+
+      if (mounted) {
+        Navigator.pop(context);
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+              content: Text('Tugas berhasil diselesaikan!'),
+              backgroundColor: Colors.green),
+        );
+      }
     } catch (e) {
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('Error: $e'), backgroundColor: Colors.red),
+          SnackBar(
+              content: Text('Error: ${e.toString()}'),
+              backgroundColor: Colors.red),
         );
       }
     } finally {
-      if (mounted) setState(() => _isLoading = false);
+      if (mounted) {
+        setState(() {
+          _isLoading = false;
+          _selectedImage = null;
+          _selectedImageBytes = null;
+        });
+      }
     }
   }
 

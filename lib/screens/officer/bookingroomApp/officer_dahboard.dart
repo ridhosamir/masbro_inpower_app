@@ -188,7 +188,7 @@ class _OfficerDashboardBookingRoomState
               child: Column(
                 children: [
                   _buildStatisticsCards(),
-                  const SizedBox(height: 16),
+                  const SizedBox(height: 20),
                   _buildQuickActions(),
                 ],
               ),

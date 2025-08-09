@@ -1,9 +1,11 @@
 import 'dart:io';
 import 'dart:typed_data';
 import 'package:firebase_storage/firebase_storage.dart';
+import 'package:image_picker/image_picker.dart';
 import 'package:flutter_cache_manager/flutter_cache_manager.dart';
 import 'package:http/http.dart' as http;
 import 'package:flutter/foundation.dart' show kIsWeb;
+import 'package:path/path.dart' as path;
 
 class StorageService {
   final FirebaseStorage _storage = FirebaseStorage.instance;
@@ -189,6 +191,38 @@ class StorageService {
         return 'application/pdf';
       default:
         return 'application/octet-stream';
+    }
+  }
+
+  Future<String?> uploadImage(XFile imageFile, String folder) async {
+    try {
+      // Membuat nama file yang unik berdasarkan waktu
+      String fileName =
+          '${DateTime.now().millisecondsSinceEpoch}_${imageFile.name}';
+
+      // Membuat referensi ke lokasi penyimpanan di Firebase Storage
+      Reference ref = _storage.ref().child('$folder/$fileName');
+
+      // Mengunggah file berdasarkan platform
+      UploadTask uploadTask;
+      if (kIsWeb) {
+        // Untuk Web, unggah data bytes
+        uploadTask = ref.putData(await imageFile.readAsBytes());
+      } else {
+        // Untuk Mobile (iOS/Android), unggah file dari path
+        uploadTask = ref.putFile(File(imageFile.path));
+      }
+
+      // Menunggu unggahan selesai
+      TaskSnapshot snapshot = await uploadTask;
+
+      // Mendapatkan URL download dari file yang diunggah
+      String downloadUrl = await snapshot.ref.getDownloadURL();
+
+      return downloadUrl;
+    } catch (e) {
+      print('Error uploading image: $e');
+      return null;
     }
   }
 }

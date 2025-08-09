@@ -409,66 +409,146 @@ class _HomeDashboardOfficerState extends State<HomeDashboardOfficer>
   }
 
   Widget _buildAppGrid(BuildContext context) {
-    return Container(
-      color: const Color(0xFFF4F6F8),
+    return SingleChildScrollView(
       padding: const EdgeInsets.all(16.0),
-      child: GridView.count(
-        crossAxisCount: 2,
-        crossAxisSpacing: 16,
-        mainAxisSpacing: 16,
+      child: Column(
         children: [
-          _buildAppCard(
+          _buildRatingTechnicianCard(
             context: context,
-            title: 'Maintenance',
-            icon: Icons.construction,
-            color: Colors.orange,
+            title: 'Manage Rating',
+            icon: Icons.star_rate_rounded,
+            color: Colors.amber,
             onTap: () {
-              Navigator.push(
-                context,
-                MaterialPageRoute(builder: (context) => OfficerDashboard()),
+              ScaffoldMessenger.of(context).showSnackBar(
+                const SnackBar(
+                  content: Text('Kelola rating belum tersedia.'),
+                  backgroundColor: Colors.blueGrey,
+                ),
               );
             },
           ),
-          _buildAppCard(
-            context: context,
-            title: 'Resource/Item',
-            icon: Icons.people_alt_outlined,
-            color: Colors.cyan,
-            onTap: () {
-              Navigator.push(
-                context,
-                MaterialPageRoute(
-                    builder: (context) => OfficerDashboardResource()),
-              );
-            },
-          ),
-          _buildAppCard(
-            context: context,
-            title: 'Operational',
-            icon: Icons.directions_car,
-            color: Colors.red,
-            onTap: () {
-              Navigator.push(
-                context,
-                MaterialPageRoute(
-                    builder: (context) => OfficerDashboardOprational()),
-              );
-            },
-          ),
-          _buildAppCard(
-            context: context,
-            title: 'Booking Room',
-            icon: Icons.meeting_room,
-            color: Colors.teal,
-            onTap: () {
-              Navigator.push(
-                context,
-                MaterialPageRoute(
-                    builder: (context) => OfficerDashboardBookingRoom()),
-              );
-            },
+          GridView.count(
+            padding: const EdgeInsets.only(top: 16.0),
+            crossAxisCount: 2,
+            crossAxisSpacing: 16,
+            mainAxisSpacing: 16,
+            shrinkWrap: true,
+            physics: const NeverScrollableScrollPhysics(),
+            children: [
+              _buildAppCard(
+                context: context,
+                title: 'Maintenance',
+                icon: Icons.construction,
+                color: Colors.orange,
+                onTap: () {
+                  Navigator.push(
+                    context,
+                    MaterialPageRoute(builder: (context) => OfficerDashboard()),
+                  );
+                },
+              ),
+              _buildAppCard(
+                context: context,
+                title: 'Resource/Item',
+                icon: Icons.people_alt_outlined,
+                color: Colors.cyan,
+                onTap: () {
+                  Navigator.push(
+                    context,
+                    MaterialPageRoute(
+                        builder: (context) => OfficerDashboardResource()),
+                  );
+                },
+              ),
+              _buildAppCard(
+                context: context,
+                title: 'Operational',
+                icon: Icons.directions_car,
+                color: Colors.red,
+                onTap: () {
+                  Navigator.push(
+                    context,
+                    MaterialPageRoute(
+                        builder: (context) => OfficerDashboardOprational()),
+                  );
+                },
+              ),
+              _buildAppCard(
+                context: context,
+                title: 'Booking Room',
+                icon: Icons.meeting_room,
+                color: Colors.teal,
+                onTap: () {
+                  Navigator.push(
+                    context,
+                    MaterialPageRoute(
+                        builder: (context) => OfficerDashboardBookingRoom()),
+                  );
+                },
+              ),
+            ],
           ),
         ],
+      ),
+    );
+  }
+
+  Widget _buildRatingTechnicianCard({
+    required BuildContext context,
+    required String title,
+    required IconData icon,
+    required Color color,
+    required VoidCallback onTap,
+  }) {
+    return Card(
+      margin: EdgeInsets.zero,
+      elevation: 8,
+      shadowColor: color.withOpacity(0.3),
+      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
+      child: InkWell(
+        onTap: onTap,
+        borderRadius: BorderRadius.circular(20),
+        child: Container(
+          padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+          decoration: BoxDecoration(
+            borderRadius: BorderRadius.circular(20),
+            gradient: LinearGradient(
+              colors: [
+                color.withOpacity(0.1),
+                color.withOpacity(0.05),
+              ],
+              begin: Alignment.topLeft,
+              end: Alignment.bottomRight,
+            ),
+          ),
+          child: Row(
+            children: [
+              Container(
+                padding: const EdgeInsets.all(8),
+                decoration: BoxDecoration(
+                  color: color.withOpacity(0.2),
+                  shape: BoxShape.circle,
+                ),
+                child: Icon(icon, size: 24, color: color),
+              ),
+              const SizedBox(width: 16),
+              Expanded(
+                child: Text(
+                  title,
+                  style: TextStyle(
+                    fontSize: 16,
+                    fontWeight: FontWeight.w600,
+                    color: color,
+                  ),
+                ),
+              ),
+              Icon(
+                Icons.chevron_right,
+                color: color.withOpacity(0.7),
+              ),
+            ],
+          ),
+        ),
       ),
     );
   }
@@ -481,6 +561,7 @@ class _HomeDashboardOfficerState extends State<HomeDashboardOfficer>
     required VoidCallback onTap,
   }) {
     return Card(
+      margin: EdgeInsets.zero,
       elevation: 8,
       shadowColor: color.withOpacity(0.3),
       shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
