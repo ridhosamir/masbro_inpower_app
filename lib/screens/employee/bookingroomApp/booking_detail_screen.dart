@@ -173,7 +173,7 @@ class _BookingDetailScreenState extends State<BookingDetailScreen> {
             ElevatedButton.icon(
               onPressed: _isSubmitting ? null : _submitRating,
               style: ElevatedButton.styleFrom(
-                backgroundColor: Colors.green[500],
+                backgroundColor: Colors.orange[500],
                 foregroundColor: Colors.white,
                 minimumSize: const Size(double.infinity, 48),
                 shape: RoundedRectangleBorder(

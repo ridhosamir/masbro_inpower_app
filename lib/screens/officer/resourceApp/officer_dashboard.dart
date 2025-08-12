@@ -3,6 +3,7 @@ import 'package:provider/provider.dart';
 import 'package:intl/intl.dart';
 import 'package:masbro_inpower_app/utils/firebase_storage_image.dart';
 import '../../../services/resourceApp/firestore_service.dart';
+import 'package:cloud_firestore/cloud_firestore.dart';
 import '../../../models/resourceApp/request_model.dart';
 import '../../../services/auth_service.dart';
 import '../../../services/user_service.dart';
@@ -22,6 +23,7 @@ class OfficerDashboardResource extends StatefulWidget {
 class _OfficerDashboardResourceState extends State<OfficerDashboardResource>
     with TickerProviderStateMixin {
   final FirestoreServiceResource _firestoreService = FirestoreServiceResource();
+  final FirebaseFirestore _firestore = FirebaseFirestore.instance;
   UserModel? currentUser;
   late TabController _tabController;
   String _selectedFilter = 'all';
@@ -59,20 +61,21 @@ class _OfficerDashboardResourceState extends State<OfficerDashboardResource>
     });
 
     try {
-      // Ambil daftar teknisi dari UserService
-      final technicians = await _userService.getTechnicians();
+      // 1. Dapatkan semua pengguna dengan role 'technician'
+      final allTechnicians = await _userService.getTechnicians();
+
+      // 2. Dapatkan semua UID dari koleksi 'drivers'
+      final driversSnapshot = await _firestore.collection('drivers').get();
+      final driverUIDs = driversSnapshot.docs.map((doc) => doc.id).toSet();
+
+      // 3. Filter teknisi yang UID-nya TIDAK ADA di dalam koleksi 'drivers'
+      final nonDriverTechnicians = allTechnicians.where((technician) {
+        return !driverUIDs.contains(technician.uid);
+      }).toList();
 
       if (mounted) {
         setState(() {
-          // Filter teknisi yang tidak mengandung kata "driver" di nama atau email
-          _technicians = technicians.where((tech) {
-            final nameContainsDriver =
-                tech.name.toLowerCase().contains('driver');
-            final emailContainsDriver =
-                tech.email.toLowerCase().contains('driver');
-            return !nameContainsDriver && !emailContainsDriver;
-          }).toList();
-
+          _technicians = nonDriverTechnicians;
           _loadingTechnicians = false;
         });
       }

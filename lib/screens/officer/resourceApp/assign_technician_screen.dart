@@ -1,3 +1,4 @@
+import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
 import '../../../models/resourceApp/request_model.dart';
@@ -18,6 +19,7 @@ class AssignTechnicianScreenResource extends StatefulWidget {
 
 class _AssignTechnicianScreenResourceState
     extends State<AssignTechnicianScreenResource> {
+  final FirebaseFirestore _firestore = FirebaseFirestore.instance;
   final FirestoreServiceResource _firestoreService = FirestoreServiceResource();
   final UserService _userService = UserService();
   List<UserModel> _technicians = [];
@@ -28,7 +30,7 @@ class _AssignTechnicianScreenResourceState
 
   final TextEditingController _searchController = TextEditingController();
   String _searchQuery = '';
-  String _sortBy = 'default';
+  String _sortBy = 'rating';
 
   @override
   void initState() {
@@ -44,7 +46,7 @@ class _AssignTechnicianScreenResourceState
 
   void _filterAndSortTechnicians() {
     setState(() {
-      // 1. Filter berdasarkan pencarian (search)
+      // 1. Filter berdasarkan pencarian
       if (_searchQuery.isNotEmpty) {
         _filteredTechnicians = _technicians.where((tech) {
           final nameMatches =
@@ -57,66 +59,76 @@ class _AssignTechnicianScreenResourceState
         _filteredTechnicians = List.from(_technicians);
       }
 
-      // 2. Urutkan (sort) hasil filter
+      // 2. Urutkan hasil filter
       switch (_sortBy) {
         case 'rating':
           _filteredTechnicians.sort((a, b) {
             final ratingA = a.averageRating ?? 0.0;
             final ratingB = b.averageRating ?? 0.0;
-            final totalRatingsA = a.totalRatings ?? 0;
-            final totalRatingsB = b.totalRatings ?? 0;
-
-            // Teknisi tanpa rating selalu di paling bawah
-            if (totalRatingsA == 0 && totalRatingsB > 0) return 1;
-            if (totalRatingsB == 0 && totalRatingsA > 0) return -1;
-
-            // Urutkan berdasarkan rating tertinggi
-            int ratingCompare = ratingB.compareTo(ratingA);
-            if (ratingCompare != 0) return ratingCompare;
-
-            // Jika rating sama, urutkan berdasarkan jumlah rating terbanyak
-            return totalRatingsB.compareTo(totalRatingsA);
+            if (ratingA != ratingB) {
+              return ratingB.compareTo(ratingA); // Rating tertinggi dulu
+            }
+            final totalA = a.totalRatings ?? 0;
+            final totalB = b.totalRatings ?? 0;
+            return totalB.compareTo(totalA); // Jumlah rating terbanyak dulu
           });
           break;
         case 'name':
           _filteredTechnicians.sort((a, b) => a.name.compareTo(b.name));
           break;
-        default:
-          _filteredTechnicians.sort((a, b) {
-            if (widget.request.assignedTechnicianId != null) {
-              final assignedId = widget.request.assignedTechnicianId;
-              if (a.uid == assignedId) return -1;
-              if (b.uid == assignedId) return 1;
-            }
-            return 0;
-          });
+        case 'experience':
+          // Member tertua (pengalaman terlama) di atas
+          _filteredTechnicians
+              .sort((a, b) => a.createdAt.compareTo(b.createdAt));
           break;
       }
     });
   }
 
   Future<void> _loadTechnicians() async {
+    setState(() => _isLoading = true);
+
     try {
-      final technicians = await _userService.getTechnicians();
-      final ratingFutures = technicians
+      // 1. Dapatkan semua pengguna dengan role 'technician' (dengan rating gabungan awal)
+      final allTechnicians = await _userService.getTechnicians();
+
+      // 2. Dapatkan semua UID dari koleksi 'drivers'
+      final driversSnapshot = await _firestore.collection('drivers').get();
+      final driverUIDs = driversSnapshot.docs.map((doc) => doc.id).toSet();
+
+      // 3. Filter teknisi yang UID-nya TIDAK ADA di dalam koleksi 'drivers'
+      final nonDriverTechnicians = allTechnicians.where((technician) {
+        return !driverUIDs.contains(technician.uid);
+      }).toList();
+
+      // 4. Ambil rating SPESIFIK untuk ResourceApp untuk setiap teknisi yang telah difilter
+      final ratingFutures = nonDriverTechnicians
           .map((tech) =>
               _firestoreService.getTechnicianRatingForResourceApp(tech.uid))
           .toList();
 
       final ratingsData = await Future.wait(ratingFutures);
-      for (int i = 0; i < technicians.length; i++) {
+
+      // 5. Buat daftar teknisi baru dengan rating yang sudah diperbarui (spesifik ResourceApp)
+      final List<UserModel> techniciansWithAppSpecificRatings = [];
+      for (int i = 0; i < nonDriverTechnicians.length; i++) {
+        final technician = nonDriverTechnicians[i];
         final ratingMap = ratingsData[i];
-        _technicians.add(technicians[i].copyWith(
-          averageRating:
-              (ratingMap['averageRating'] as num?)?.toDouble() ?? 0.0,
-          totalRatings: (ratingMap['totalRatings'] as int?) ?? 0,
-        ));
+
+        // Gunakan copyWith untuk menimpa rating gabungan dengan rating spesifik
+        techniciansWithAppSpecificRatings.add(
+          technician.copyWith(
+            averageRating:
+                (ratingMap['averageRating'] as num?)?.toDouble() ?? 0.0,
+            totalRatings: (ratingMap['totalRatings'] as int?) ?? 0,
+          ),
+        );
       }
 
       if (mounted) {
         setState(() {
-          _filterAndSortTechnicians();
-          _isLoading = false;
+          _technicians = techniciansWithAppSpecificRatings;
+          // Set teknisi yang sudah ditugaskan sebelumnya jika ada
           if (widget.request.assignedTechnicianId != null) {
             try {
               _selectedTechnician = _technicians.firstWhere(
@@ -126,6 +138,8 @@ class _AssignTechnicianScreenResourceState
               _selectedTechnician = null;
             }
           }
+          _filterAndSortTechnicians(); // Terapkan filter dan sort awal
+          _isLoading = false;
         });
       }
     } catch (e) {
@@ -145,7 +159,7 @@ class _AssignTechnicianScreenResourceState
     if (_selectedTechnician == null) {
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(
-          content: Text('Silakan pilih teknisi terlebih dahulu'),
+          content: Text('Please select a technician first.'),
           backgroundColor: Colors.orange,
         ),
       );
@@ -164,7 +178,7 @@ class _AssignTechnicianScreenResourceState
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
-            content: Text('Tugas ditugaskan ke ${_selectedTechnician!.name}'),
+            content: Text('Tasks assigned to ${_selectedTechnician!.name}'),
             backgroundColor: Colors.green,
           ),
         );
@@ -175,7 +189,7 @@ class _AssignTechnicianScreenResourceState
         setState(() => _isAssigning = false);
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
-            content: Text('Error menugaskan teknisi: $e'),
+            content: Text('Error assigning technician: $e'),
             backgroundColor: Colors.red,
           ),
         );
@@ -183,30 +197,128 @@ class _AssignTechnicianScreenResourceState
     }
   }
 
-  Widget _buildRatingStars(double rating, int totalRatings) {
-    if (totalRatings == 0) {
-      return Text(
-        'Belum ada rating',
-        style: TextStyle(
-            fontSize: 12, color: Colors.grey[500], fontStyle: FontStyle.italic),
+  Color _getRatingColor(double rating) {
+    if (rating >= 4.5) return Colors.green;
+    if (rating >= 4.0) return Colors.lightGreen;
+    if (rating >= 3.5) return Colors.orange;
+    if (rating >= 3.0) return Colors.deepOrange;
+    return Colors.red;
+  }
+
+  String _getExperienceText(DateTime createdAt) {
+    final now = DateTime.now();
+    final difference = now.difference(createdAt);
+
+    if (difference.inDays >= 365) {
+      final years = (difference.inDays / 365).floor();
+      return '${years}y exp';
+    } else if (difference.inDays >= 30) {
+      final months = (difference.inDays / 30).floor();
+      return '${months}m exp';
+    } else {
+      return '${difference.inDays}d exp';
+    }
+  }
+
+  String _getPerformanceLabel(double rating) {
+    if (rating >= 4.5) return 'EXCELLENT';
+    if (rating >= 4.0) return 'GOOD';
+    if (rating >= 3.5) return 'AVERAGE';
+    if (rating >= 3.0) return 'FAIR';
+    return 'POOR';
+  }
+
+  Widget _buildTechnicianRatingEnhanced(UserModel technician) {
+    if (technician.averageRating != null &&
+        technician.totalRatings != null &&
+        technician.totalRatings! > 0) {
+      return Container(
+        padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+        decoration: BoxDecoration(
+          color: _getRatingColor(technician.averageRating!).withOpacity(0.1),
+          borderRadius: BorderRadius.circular(8),
+          border: Border.all(
+            color: _getRatingColor(technician.averageRating!).withOpacity(0.3),
+          ),
+        ),
+        child: Row(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Row(
+              children: List.generate(5, (index) {
+                return Icon(
+                  index < (technician.averageRating ?? 0).floor()
+                      ? Icons.star
+                      : index < (technician.averageRating ?? 0).ceil() &&
+                              (technician.averageRating ?? 0).floor() !=
+                                  (technician.averageRating ?? 0).ceil()
+                          ? Icons.star_half
+                          : Icons.star_border,
+                  color: Colors.amber,
+                  size: 14,
+                );
+              }),
+            ),
+            const SizedBox(width: 4),
+            Text(
+              '${technician.averageRating!.toStringAsFixed(1)}',
+              style: TextStyle(
+                fontSize: 12,
+                fontWeight: FontWeight.bold,
+                color: _getRatingColor(technician.averageRating!),
+              ),
+            ),
+            const SizedBox(width: 4),
+            Text(
+              '(${technician.totalRatings})',
+              style: TextStyle(
+                fontSize: 11,
+                color: Colors.grey[600],
+              ),
+            ),
+            const SizedBox(width: 6),
+            Container(
+              padding: const EdgeInsets.symmetric(horizontal: 4, vertical: 2),
+              decoration: BoxDecoration(
+                color: _getRatingColor(technician.averageRating!),
+                borderRadius: BorderRadius.circular(4),
+              ),
+              child: Text(
+                _getPerformanceLabel(technician.averageRating!),
+                style: const TextStyle(
+                  color: Colors.white,
+                  fontSize: 9,
+                  fontWeight: FontWeight.bold,
+                ),
+              ),
+            ),
+          ],
+        ),
       );
     }
 
-    return Row(
-      mainAxisSize: MainAxisSize.min,
-      children: [
-        Icon(Icons.star, color: Colors.amber, size: 16),
-        const SizedBox(width: 4),
-        Text(
-          rating.toStringAsFixed(1),
-          style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 14),
-        ),
-        const SizedBox(width: 4),
-        Text(
-          '($totalRatings)',
-          style: TextStyle(fontSize: 12, color: Colors.grey[600]),
-        ),
-      ],
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+      decoration: BoxDecoration(
+        color: Colors.grey[100],
+        borderRadius: BorderRadius.circular(8),
+        border: Border.all(color: Colors.grey[300]!),
+      ),
+      child: Row(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Icon(Icons.star_border, color: Colors.grey[400], size: 14),
+          const SizedBox(width: 4),
+          Text(
+            'Belum ada rating',
+            style: TextStyle(
+              fontSize: 11,
+              color: Colors.grey[500],
+              fontStyle: FontStyle.italic,
+            ),
+          ),
+        ],
+      ),
     );
   }
 
@@ -214,7 +326,7 @@ class _AssignTechnicianScreenResourceState
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
-        title: const Text('Tugaskan Resource'),
+        title: const Text('Assign Technician'),
         backgroundColor: Theme.of(context).primaryColor,
         foregroundColor: Colors.white,
       ),
@@ -239,15 +351,15 @@ class _AssignTechnicianScreenResourceState
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
                         _buildSummaryItem(
-                            'Pemohon', widget.request.employeeName),
+                            'Requester', widget.request.employeeName),
                         _buildSummaryItem(
-                          'Kebutuhan',
+                          'Needs',
                           '${widget.request.request[0].toUpperCase()}${widget.request.request.substring(1)}',
                         ),
                         if (widget.request.request != 'resource' &&
                             widget.request.hasValidImage()) ...[
                           Text(
-                            'Item Permintaan:',
+                            'Request Item:',
                             style: TextStyle(
                               fontSize: 16,
                               fontWeight: FontWeight.bold,
@@ -291,11 +403,11 @@ class _AssignTechnicianScreenResourceState
                         if (widget.request.timeRequired != null &&
                             widget.request.timeRequired!.isNotEmpty)
                           _buildSummaryItem(
-                            'Waktu Dibutuhkan',
+                            'Time Required',
                             widget.request.timeRequired!,
                           ),
                         _buildSummaryItem(
-                            'Deskripsi', widget.request.description),
+                            'Description', widget.request.description),
                       ],
                     ),
                   ),
@@ -303,47 +415,78 @@ class _AssignTechnicianScreenResourceState
 
                   // --- Daftar Teknisi Tersedia ---
                   Row(
+                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
                     children: [
-                      Expanded(
-                        child: Text(
-                          'Pilih Teknisi',
-                          style: TextStyle(
-                            fontSize: 18,
-                            fontWeight: FontWeight.bold,
-                            color: Colors.grey[800],
-                          ),
+                      Text(
+                        'Select a Technician',
+                        style: TextStyle(
+                          fontSize: 18,
+                          fontWeight: FontWeight.bold,
+                          color: Colors.grey[800],
                         ),
                       ),
-                      // Tombol Dropdown untuk Filter
-                      DropdownButton<String>(
-                        value: _sortBy,
-                        icon: const Icon(Icons.sort, size: 20),
-                        underline: const SizedBox(),
-                        items: const [
-                          DropdownMenuItem(
-                            value: 'default',
-                            child:
-                                Text('Default', style: TextStyle(fontSize: 14)),
+                      // Sort dropdown
+                      Container(
+                        padding: const EdgeInsets.symmetric(
+                            horizontal: 12, vertical: 4),
+                        decoration: BoxDecoration(
+                          border: Border.all(color: Colors.grey[300]!),
+                          borderRadius: BorderRadius.circular(8),
+                        ),
+                        child: DropdownButtonHideUnderline(
+                          child: DropdownButton<String>(
+                            value: _sortBy,
+                            icon: const Icon(Icons.sort, size: 18),
+                            isDense: true,
+                            onChanged: (String? newValue) {
+                              if (newValue != null) {
+                                setState(() {
+                                  _sortBy = newValue;
+                                });
+                                _filterAndSortTechnicians();
+                              }
+                            },
+                            items: const [
+                              DropdownMenuItem(
+                                value: 'rating',
+                                child: Row(
+                                  mainAxisSize: MainAxisSize.min,
+                                  children: [
+                                    Icon(Icons.star,
+                                        size: 16, color: Colors.amber),
+                                    SizedBox(width: 4),
+                                    Text('Rating',
+                                        style: TextStyle(fontSize: 14)),
+                                  ],
+                                ),
+                              ),
+                              DropdownMenuItem(
+                                value: 'name',
+                                child: Row(
+                                  mainAxisSize: MainAxisSize.min,
+                                  children: [
+                                    Icon(Icons.sort_by_alpha, size: 16),
+                                    SizedBox(width: 4),
+                                    Text('Name',
+                                        style: TextStyle(fontSize: 14)),
+                                  ],
+                                ),
+                              ),
+                              DropdownMenuItem(
+                                value: 'experience',
+                                child: Row(
+                                  mainAxisSize: MainAxisSize.min,
+                                  children: [
+                                    Icon(Icons.access_time, size: 16),
+                                    SizedBox(width: 4),
+                                    Text('Experience',
+                                        style: TextStyle(fontSize: 14)),
+                                  ],
+                                ),
+                              ),
+                            ],
                           ),
-                          DropdownMenuItem(
-                            value: 'rating',
-                            child: Text('Rating Tertinggi',
-                                style: TextStyle(fontSize: 14)),
-                          ),
-                          DropdownMenuItem(
-                            value: 'name',
-                            child: Text('Nama (A-Z)',
-                                style: TextStyle(fontSize: 14)),
-                          ),
-                        ],
-                        onChanged: (value) {
-                          if (value != null) {
-                            setState(() {
-                              _sortBy = value;
-                              _filterAndSortTechnicians();
-                            });
-                          }
-                        },
+                        ),
                       ),
                     ],
                   ),
@@ -352,7 +495,7 @@ class _AssignTechnicianScreenResourceState
                   TextField(
                     controller: _searchController,
                     decoration: InputDecoration(
-                      hintText: 'Cari teknisi...',
+                      hintText: 'Find a Technician...',
                       prefixIcon: const Icon(Icons.search, size: 20),
                       border: OutlineInputBorder(
                         borderRadius: BorderRadius.circular(12),
@@ -379,106 +522,217 @@ class _AssignTechnicianScreenResourceState
                     const Center(
                         child: Padding(
                       padding: EdgeInsets.all(32.0),
-                      child: CircularProgressIndicator(),
+                      child: Column(
+                        children: [
+                          CircularProgressIndicator(),
+                          SizedBox(height: 16),
+                          Text('Loading Technician...'),
+                        ],
+                      ),
                     ))
                   else if (_filteredTechnicians.isEmpty)
-                    const Center(
-                        child: Padding(
-                      padding: EdgeInsets.all(32.0),
-                      child: Text('Tidak ada teknisi yang cocok.'),
-                    ))
+                    Center(
+                      child: Padding(
+                        padding: const EdgeInsets.all(32.0),
+                        child: Column(
+                          mainAxisAlignment: MainAxisAlignment.center,
+                          children: [
+                            Icon(Icons.engineering,
+                                size: 64, color: Colors.grey[400]),
+                            const SizedBox(height: 16),
+                            Text(
+                              'Technician Not Found.',
+                              style: TextStyle(
+                                fontSize: 18,
+                                fontWeight: FontWeight.bold,
+                                color: Colors.grey[600],
+                              ),
+                            ),
+                            Text(
+                              _searchQuery.isNotEmpty
+                                  ? 'No technicians matched the search.'
+                                  : 'No technicians (non-drivers) available.',
+                              textAlign: TextAlign.center,
+                              style: TextStyle(color: Colors.grey[500]),
+                            ),
+                          ],
+                        ),
+                      ),
+                    )
                   else
-                    Column(
-                      children: _filteredTechnicians.map((technician) {
+                    ListView.builder(
+                      shrinkWrap: true,
+                      physics: const NeverScrollableScrollPhysics(),
+                      itemCount: _filteredTechnicians.length,
+                      itemBuilder: (context, index) {
+                        final technician = _filteredTechnicians[index];
                         final isSelected =
                             _selectedTechnician?.uid == technician.uid;
+
                         return Container(
                           margin: const EdgeInsets.only(bottom: 12),
-                          decoration: BoxDecoration(
-                            color: isSelected ? Colors.blue[50] : Colors.white,
+                          child: InkWell(
+                            onTap: () {
+                              setState(() {
+                                _selectedTechnician =
+                                    isSelected ? null : technician;
+                              });
+                            },
                             borderRadius: BorderRadius.circular(12),
-                            border: Border.all(
-                              color: isSelected
-                                  ? Colors.blue[300]!
-                                  : Colors.grey[300]!,
-                              width: isSelected ? 2 : 1,
+                            child: Container(
+                              padding: const EdgeInsets.all(16),
+                              decoration: BoxDecoration(
+                                color:
+                                    isSelected ? Colors.blue[50] : Colors.white,
+                                borderRadius: BorderRadius.circular(12),
+                                border: Border.all(
+                                  color: isSelected
+                                      ? Colors.blue[300]!
+                                      : Colors.grey[200]!,
+                                  width: isSelected ? 2 : 1,
+                                ),
+                                boxShadow: [
+                                  BoxShadow(
+                                    color: Colors.black.withOpacity(0.05),
+                                    blurRadius: 8,
+                                    offset: const Offset(0, 2),
+                                  ),
+                                ],
+                              ),
+                              child: Row(
+                                children: [
+                                  Stack(
+                                    children: [
+                                      Container(
+                                        width: 60,
+                                        height: 60,
+                                        decoration: BoxDecoration(
+                                          color: isSelected
+                                              ? Colors.blue[100]
+                                              : Colors.grey[100],
+                                          borderRadius:
+                                              BorderRadius.circular(30),
+                                        ),
+                                        child: Icon(
+                                          Icons.engineering,
+                                          color: isSelected
+                                              ? Colors.blue[700]
+                                              : Colors.grey[600],
+                                          size: 28,
+                                        ),
+                                      ),
+                                      if (technician.averageRating != null &&
+                                          technician.totalRatings != null &&
+                                          technician.totalRatings! > 0)
+                                        Positioned(
+                                          right: -2,
+                                          top: -2,
+                                          child: Container(
+                                            padding: const EdgeInsets.symmetric(
+                                                horizontal: 6, vertical: 2),
+                                            decoration: BoxDecoration(
+                                              color: _getRatingColor(
+                                                  technician.averageRating!),
+                                              borderRadius:
+                                                  BorderRadius.circular(10),
+                                              border: Border.all(
+                                                  color: Colors.white,
+                                                  width: 2),
+                                            ),
+                                            child: Text(
+                                              technician.averageRating!
+                                                  .toStringAsFixed(1),
+                                              style: const TextStyle(
+                                                color: Colors.white,
+                                                fontSize: 10,
+                                                fontWeight: FontWeight.bold,
+                                              ),
+                                            ),
+                                          ),
+                                        ),
+                                    ],
+                                  ),
+                                  const SizedBox(width: 16),
+                                  Expanded(
+                                    child: Column(
+                                      crossAxisAlignment:
+                                          CrossAxisAlignment.start,
+                                      children: [
+                                        Row(
+                                          children: [
+                                            Expanded(
+                                              child: Text(
+                                                technician.name,
+                                                style: TextStyle(
+                                                  fontSize: 16,
+                                                  fontWeight: FontWeight.bold,
+                                                  color: isSelected
+                                                      ? Colors.blue[700]
+                                                      : Colors.grey[800],
+                                                ),
+                                              ),
+                                            ),
+                                            Icon(
+                                              isSelected
+                                                  ? Icons.check_circle
+                                                  : Icons
+                                                      .radio_button_unchecked,
+                                              color: isSelected
+                                                  ? Colors.blue[700]
+                                                  : Colors.grey[400],
+                                              size: 24,
+                                            ),
+                                          ],
+                                        ),
+                                        const SizedBox(height: 4),
+                                        Text(
+                                          technician.email,
+                                          style: TextStyle(
+                                            fontSize: 13,
+                                            color: Colors.grey[600],
+                                          ),
+                                        ),
+                                        const SizedBox(height: 8),
+                                        _buildTechnicianRatingEnhanced(
+                                            technician),
+                                        const SizedBox(height: 6),
+                                        Row(
+                                          children: [
+                                            Icon(Icons.access_time,
+                                                size: 12,
+                                                color: Colors.grey[500]),
+                                            const SizedBox(width: 4),
+                                            Text(
+                                              'Member since ${DateFormat('MMM yyyy').format(technician.createdAt)}',
+                                              style: TextStyle(
+                                                fontSize: 11,
+                                                color: Colors.grey[500],
+                                              ),
+                                            ),
+                                            const SizedBox(width: 12),
+                                            Icon(Icons.timeline,
+                                                size: 12,
+                                                color: Colors.grey[500]),
+                                            const SizedBox(width: 4),
+                                            Text(
+                                              _getExperienceText(
+                                                  technician.createdAt),
+                                              style: TextStyle(
+                                                fontSize: 11,
+                                                color: Colors.grey[500],
+                                              ),
+                                            ),
+                                          ],
+                                        ),
+                                      ],
+                                    ),
+                                  ),
+                                ],
+                              ),
                             ),
                           ),
-                          child: FutureBuilder<Map<String, dynamic>>(
-                            future: _firestoreService
-                                .getTechnicianRatingForResourceApp(
-                                    technician.uid),
-                            builder: (context, snapshot) {
-                              double averageRating = 0.0;
-                              int totalRatings = 0;
-                              Widget ratingWidget = const SizedBox(
-                                  height: 16,
-                                  width: 16,
-                                  child: CircularProgressIndicator(
-                                      strokeWidth: 2));
-
-                              if (snapshot.connectionState ==
-                                      ConnectionState.done &&
-                                  snapshot.hasData) {
-                                averageRating =
-                                    (snapshot.data!['averageRating'] as num?)
-                                            ?.toDouble() ??
-                                        0.0;
-                                totalRatings =
-                                    (snapshot.data!['totalRatings'] as int?) ??
-                                        0;
-                                ratingWidget = _buildRatingStars(
-                                    averageRating, totalRatings);
-                              } else if (snapshot.hasError) {
-                                ratingWidget = const Text('Error',
-                                    style: TextStyle(
-                                        color: Colors.red, fontSize: 12));
-                              }
-
-                              return ListTile(
-                                onTap: () {
-                                  setState(() {
-                                    _selectedTechnician =
-                                        isSelected ? null : technician;
-                                  });
-                                },
-                                leading: CircleAvatar(
-                                  backgroundColor: isSelected
-                                      ? Colors.blue[100]
-                                      : Colors.grey[200],
-                                  child: Icon(
-                                    Icons.engineering,
-                                    color: isSelected
-                                        ? Colors.blue[700]
-                                        : Colors.grey[600],
-                                  ),
-                                ),
-                                title: Text(
-                                  technician.name,
-                                  style: TextStyle(
-                                    fontWeight: FontWeight.bold,
-                                    color: isSelected
-                                        ? Colors.blue[800]
-                                        : Colors.grey[800],
-                                  ),
-                                ),
-                                subtitle: Column(
-                                  crossAxisAlignment: CrossAxisAlignment.start,
-                                  children: [
-                                    Text(technician.email),
-                                    const SizedBox(height: 4),
-                                    ratingWidget,
-                                  ],
-                                ),
-                                trailing: isSelected
-                                    ? Icon(Icons.check_circle,
-                                        color: Colors.blue[700])
-                                    : const Icon(Icons.radio_button_unchecked),
-                              );
-                            },
-                          ),
                         );
-                      }).toList(),
+                      },
                     ),
                 ],
               ),
@@ -501,7 +755,7 @@ class _AssignTechnicianScreenResourceState
                 ),
               ),
               child: CustomButton(
-                text: 'Tugaskan',
+                text: 'Assign',
                 onPressed: _assignTechnician,
                 isLoading: _isAssigning,
               ),
@@ -513,24 +767,24 @@ class _AssignTechnicianScreenResourceState
 
   Widget _buildSummaryItem(String label, String value) {
     return Padding(
-      padding: const EdgeInsets.only(bottom: 12.0),
-      child: Column(
+      padding: const EdgeInsets.only(bottom: 4.0),
+      child: Row(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Text(
-            '$label:',
-            style: TextStyle(
-              fontSize: 16,
-              fontWeight: FontWeight.bold,
-              color: Colors.blue[800],
+          SizedBox(
+            width: 120, // Lebar label agar rapi
+            child: Text(
+              '$label:',
+              style: TextStyle(
+                fontWeight: FontWeight.w600,
+                color: Colors.blue[700],
+              ),
             ),
           ),
-          const SizedBox(height: 4),
-          Text(
-            value,
-            style: TextStyle(
-              fontSize: 15,
-              color: Colors.blue[700],
+          Expanded(
+            child: Text(
+              value,
+              style: TextStyle(color: Colors.blue[600]),
             ),
           ),
         ],
