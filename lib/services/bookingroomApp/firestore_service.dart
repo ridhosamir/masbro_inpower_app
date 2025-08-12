@@ -85,6 +85,25 @@ class FirestoreService {
     }
   }
 
+  /// Menyimpan penilaian (rating dan komentar) untuk sebuah booking.
+  Future<void> submitBookingRating({
+    required String bookingId,
+    required double rating,
+    String? comment,
+  }) async {
+    try {
+      final dataToUpdate = {
+        'rating': rating,
+        'ratingComment': comment,
+        'ratingDate': Timestamp.now(),
+      };
+      await _bookingsCollection.doc(bookingId).update(dataToUpdate);
+    } catch (e) {
+      debugPrint('Error submitting booking rating: $e');
+      throw e;
+    }
+  }
+
   /// Menghapus ruangan.
   Future<void> deleteRoom(String roomId) async {
     try {
@@ -235,18 +254,18 @@ class FirestoreService {
   /// Membuat booking baru.
   Future<void> createBooking(BookingModel booking) async {
     try {
-      // Cek konflik hanya jika ruangan sudah ditentukan saat pembuatan booking
-      if (booking.roomId.isNotEmpty && booking.roomName != 'Belum Ditentukan') {
-        final isConflict = await checkBookingConflict(
-          booking.roomId,
-          booking.usageStartDate,
-          booking.usageEndDate,
-        );
-        if (isConflict) {
-          throw Exception(
-              'Jadwal bentrok! Ruangan ini sudah dipesan pada rentang waktu yang sama.');
-        }
-      }
+      // // Cek konflik hanya jika ruangan sudah ditentukan saat pembuatan booking
+      // if (booking.roomId.isNotEmpty && booking.roomName != 'Belum Ditentukan') {
+      //   final isConflict = await checkBookingConflict(
+      //     booking.roomId,
+      //     booking.usageStartDate,
+      //     booking.usageEndDate,
+      //   );
+      //   if (isConflict) {
+      //     throw Exception(
+      //         'Jadwal bentrok! Ruangan ini sudah dipesan pada rentang waktu yang sama.');
+      //   }
+      // }
       await _bookingsCollection.add(booking.toMap());
     } catch (e) {
       debugPrint('Error creating booking: $e');
