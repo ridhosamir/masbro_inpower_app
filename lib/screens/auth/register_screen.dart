@@ -8,7 +8,7 @@ import 'package:masbro_inpower_app/screens/admin/admin_dashboard.dart';
 import 'package:masbro_inpower_app/widgets/custom_button.dart';
 import 'package:masbro_inpower_app/widgets/custom_text_field.dart';
 import 'package:masbro_inpower_app/utils/constants.dart';
-
+//register
 class RegisterScreen extends StatefulWidget {
   @override
   _RegisterScreenState createState() => _RegisterScreenState();
