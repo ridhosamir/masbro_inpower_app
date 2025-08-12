@@ -4,7 +4,7 @@ const admin = require("firebase-admin");
 const logger = require("firebase-functions/logger");
 admin.initializeApp();
 const db = admin.firestore();
-//index
+
 
 /**
  * Cloud Function untuk membuat user baru oleh admin tanpa mengubah auth state admin
