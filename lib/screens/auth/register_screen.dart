@@ -1,15 +1,13 @@
-// File: screens/auth/register_screen.dart - FULL CODE COMPLETE
-
 import 'package:flutter/material.dart';
-import 'package:masbro_inpower_app/screens/auth/login_screen.dart';
-import 'package:masbro_inpower_app/services/user_service.dart';
 import 'package:provider/provider.dart';
+import 'package:firebase_auth/firebase_auth.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
-import '../../services/auth_service.dart';
-import '../../widgets/custom_button.dart';
-import '../../widgets/custom_text_field.dart';
-import '../../utils/constants.dart';
-
+import 'package:masbro_inpower_app/services/auth_service.dart';
+import 'package:masbro_inpower_app/screens/auth/login_screen.dart';
+import 'package:masbro_inpower_app/screens/admin/admin_dashboard.dart';
+import 'package:masbro_inpower_app/widgets/custom_button.dart';
+import 'package:masbro_inpower_app/widgets/custom_text_field.dart';
+import 'package:masbro_inpower_app/utils/constants.dart';
 class RegisterScreen extends StatefulWidget {
   @override
   _RegisterScreenState createState() => _RegisterScreenState();
@@ -21,18 +19,20 @@ class _RegisterScreenState extends State<RegisterScreen> {
   final _emailController = TextEditingController();
   final _passwordController = TextEditingController();
   final _confirmPasswordController = TextEditingController();
+
   String _selectedRole = Constants.ROLE_EMPLOYEE;
   bool _isLoading = false;
   bool _isAdmin = false;
+  bool _isDriver = false; // Flag untuk driver option
 
   @override
   void initState() {
     super.initState();
-    _checkIfAdmin();
+    _checkAdminStatus();
     print('🚀 RegisterScreen initialized');
   }
 
-  Future<void> _checkIfAdmin() async {
+  Future<void> _checkAdminStatus() async {
     final authService = Provider.of<AuthService>(context, listen: false);
     if (authService.user != null) {
       try {
@@ -57,39 +57,6 @@ class _RegisterScreenState extends State<RegisterScreen> {
     super.dispose();
   }
 
-  // Fungsi untuk mengecek apakah user adalah driver
-  bool _isDriverUser(String name, String email) {
-    String nameLower = name.toLowerCase();
-    String emailLower = email.toLowerCase();
-    bool isDriver =
-        nameLower.contains('driver') || emailLower.contains('driver');
-    print('🚗 Driver check for "$name" / "$email": $isDriver');
-    return isDriver;
-  }
-
-  // Fungsi untuk membuat dokumen driver (backup jika AuthService gagal)
-  Future<void> _createDriverDocument(
-      String uid, String name, String email) async {
-    try {
-      print('🚗 Creating backup driver document for: $name');
-      await FirebaseFirestore.instance.collection('drivers').doc(uid).set({
-        'createdAt': Timestamp.now(),
-        'currentVehicleId': null,
-        'currentVehicleName': null,
-        'email': email,
-        'isAvailable': true,
-        'name': name,
-        'status': 'active',
-        'uid': uid,
-        'updatedAt': Timestamp.now(),
-      });
-      print('✅ Backup driver document created successfully for: $name');
-    } catch (e) {
-      print('❌ Error creating backup driver document: $e');
-      throw e;
-    }
-  }
-
   Future<void> _register() async {
     if (!_formKey.currentState!.validate()) {
       print('❌ Form validation failed');
@@ -99,137 +66,124 @@ class _RegisterScreenState extends State<RegisterScreen> {
     setState(() => _isLoading = true);
 
     final authService = Provider.of<AuthService>(context, listen: false);
+    final email = _emailController.text.trim();
+    final password = _passwordController.text;
+    final name = _nameController.text.trim();
 
-    String? error;
-    String? newUserUid;
-    bool driverDocumentCreated = false;
+    print('🚀 Starting registration process...');
+    print(
+        '📝 User details: $name ($email) - Role: $_selectedRole, Driver: $_isDriver');
 
     try {
-      print('🚀 Starting registration process...');
-      print(
-          '📝 User details: ${_nameController.text.trim()} (${_emailController.text.trim()}) - Role: $_selectedRole');
+      String? error;
 
-      if (authService.user != null && _isAdmin) {
+      if (_isAdmin) {
         print('👨‍💼 Admin creating new user');
-        // Admin is creating a new user
+
+        // Simpan informasi admin sebelum membuat user baru
+        final currentUser = authService.user;
+        print('👨‍💼 Current admin before creation: ${currentUser?.email}');
+
         error = await authService.createUserAsAdmin(
-          _emailController.text.trim(),
-          _passwordController.text,
-          _nameController.text.trim(),
+          email,
+          password,
+          name,
           _selectedRole,
+          isDriver: _isDriver,
         );
 
-        // Jika berhasil dan tidak ada error, ambil UID user yang baru dibuat
-        if (error == null) {
-          print('✅ Admin user creation successful, finding new user UID...');
-          // Cari user yang baru dibuat berdasarkan email
-          QuerySnapshot userQuery = await FirebaseFirestore.instance
-              .collection('users')
-              .where('email', isEqualTo: _emailController.text.trim())
-              .get();
+        // Verifikasi admin masih login setelah pembuatan user
+        final adminAfterCreation = authService.user;
+        print('👨‍💼 Admin after creation: ${adminAfterCreation?.email}');
 
-          if (userQuery.docs.isNotEmpty) {
-            newUserUid = userQuery.docs.first.id;
-            print('✅ Found new user UID: $newUserUid');
-          } else {
-            print('❌ Could not find newly created user in Firestore');
-          }
+        if (error == null) {
+          print('✅ Admin user creation successful');
+          _showSuccessAndReturn();
+          return;
         }
       } else {
         print('👤 Normal user registration');
-        // Normal registration
         error = await authService.signUp(
-          _emailController.text.trim(),
-          _passwordController.text,
-          _nameController.text.trim(),
+          email,
+          password,
+          name,
           _selectedRole,
+          isDriver: _isDriver,
         );
 
-        // Jika berhasil, ambil UID dari current user
-        if (error == null && authService.user != null) {
-          newUserUid = authService.user!.uid;
-          print('✅ Normal registration successful, UID: $newUserUid');
+        if (error == null) {
+          print('✅ Normal registration successful');
+          Navigator.pushReplacement(
+            context,
+            MaterialPageRoute(builder: (context) => LoginScreen()),
+          );
+          return;
         }
       }
 
-      // Verifikasi apakah driver document sudah dibuat oleh AuthService
-      if (error == null &&
-          newUserUid != null &&
-          _selectedRole == Constants.ROLE_TECHNICIAN &&
-          _isDriverUser(
-              _nameController.text.trim(), _emailController.text.trim())) {
-        print('🔍 Checking if driver document already exists...');
-
-        // Cek apakah driver document sudah ada
-        DocumentSnapshot driverCheck = await FirebaseFirestore.instance
-            .collection('drivers')
-            .doc(newUserUid)
-            .get();
-
-        if (driverCheck.exists) {
-          print('✅ Driver document already exists (created by AuthService)');
-          driverDocumentCreated = true;
-        } else {
-          print('⚠️ Driver document not found, creating backup...');
-          try {
-            await _createDriverDocument(newUserUid, _nameController.text.trim(),
-                _emailController.text.trim());
-            driverDocumentCreated = true;
-            print(
-                '✅ Backup driver document created for technician: ${_nameController.text.trim()}');
-          } catch (driverError) {
-            print(
-                '❌ Warning: Failed to create backup driver document: $driverError');
-            // Tidak menggagalkan registrasi jika pembuatan driver document gagal
-          }
-        }
-      }
-    } catch (e) {
-      error = 'Terjadi kesalahan: $e';
-      print('💥 Registration process error: $e');
-    }
-
-    setState(() => _isLoading = false);
-
-    if (error != null) {
       print('❌ Registration failed: $error');
+      _showErrorSnackBar(error ?? 'Unknown error occurred');
+    } on FirebaseAuthException catch (e) {
+      print('🔥 Firebase Auth Error: ${e.message}');
+      _showErrorSnackBar('Authentication Error: ${e.message}');
+    } catch (e) {
+      print('💥 Unexpected Error: $e');
+      _showErrorSnackBar('Error: ${e.toString()}');
+    } finally {
+      if (mounted) {
+        setState(() => _isLoading = false);
+      }
+    }
+  }
+
+  void _showErrorSnackBar(String message) {
+    if (mounted) {
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
-          content: Text(error),
+          content: Text(message),
           backgroundColor: Colors.red,
           duration: Duration(seconds: 4),
           behavior: SnackBarBehavior.floating,
+          action: SnackBarAction(
+            label: 'Dismiss',
+            textColor: Colors.white,
+            onPressed: () {
+              ScaffoldMessenger.of(context).hideCurrentSnackBar();
+            },
+          ),
         ),
       );
-    } else {
-      String successMessage = 'Account created successfully!';
+    }
+  }
 
-      // Tambahkan pesan khusus jika driver document juga dibuat
-      if (_selectedRole == Constants.ROLE_TECHNICIAN &&
-          _isDriverUser(
-              _nameController.text.trim(), _emailController.text.trim()) &&
-          driverDocumentCreated) {
-        successMessage += '\n🚗 Driver profile also created automatically.';
-      }
+  void _showSuccessAndReturn() {
+    print('✅ User created successfully, returning to admin dashboard');
 
-      print('✅ Registration completed successfully');
-
+    if (mounted) {
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
-          content: Text(successMessage),
+          content: Row(
+            children: [
+              Icon(Icons.check_circle, color: Colors.white),
+              SizedBox(width: 8),
+              Text('User created successfully!'),
+            ],
+          ),
           backgroundColor: Colors.green,
-          duration: Duration(seconds: 3),
+          duration: Duration(seconds: 2),
           behavior: SnackBarBehavior.floating,
         ),
       );
-      Navigator.pop(context);
+
+      // PERBAIKAN: Gunakan Navigator.pop() instead of pushReplacement
+      // untuk kembali ke AdminDashboard yang sudah ada
+      Navigator.pop(context, true); // Pass true untuk indicate success
     }
   }
 
   @override
   Widget build(BuildContext context) {
-    final authService = Provider.of<AuthService>(context);
-    bool isAdminCreatingAccount = authService.user != null && _isAdmin;
+    bool isAdminCreatingAccount = _isAdmin;
 
     return Scaffold(
       body: Container(
@@ -259,7 +213,7 @@ class _RegisterScreenState extends State<RegisterScreen> {
                     child: Column(
                       mainAxisSize: MainAxisSize.min,
                       children: [
-                        // Back Button
+                        // Back Button and Title
                         Row(
                           children: [
                             IconButton(
@@ -292,6 +246,7 @@ class _RegisterScreenState extends State<RegisterScreen> {
                           labelText: 'Full Name',
                           hintText: 'Enter your full name',
                           controller: _nameController,
+                          prefixIcon: Icons.person,
                           validator: (value) {
                             if (value == null || value.isEmpty) {
                               return 'Please enter your name';
@@ -309,12 +264,14 @@ class _RegisterScreenState extends State<RegisterScreen> {
                           labelText: 'Email',
                           hintText: 'Enter your email',
                           controller: _emailController,
+                          prefixIcon: Icons.email,
                           keyboardType: TextInputType.emailAddress,
                           validator: (value) {
                             if (value == null || value.isEmpty) {
                               return 'Please enter your email';
                             }
-                            if (!RegExp(r'^[\w-\.]+@([\w-]+\.)+[\w-]{2,4}$')
+                            if (!RegExp(r'^[\w-\.]+@([\w-]+\.)+[\w-]{2,4}'
+                )
                                 .hasMatch(value)) {
                               return 'Please enter a valid email';
                             }
@@ -328,6 +285,7 @@ class _RegisterScreenState extends State<RegisterScreen> {
                           labelText: 'Password',
                           hintText: 'Enter your password',
                           controller: _passwordController,
+                          prefixIcon: Icons.lock,
                           obscureText: true,
                           validator: (value) {
                             if (value == null || value.isEmpty) {
@@ -346,6 +304,7 @@ class _RegisterScreenState extends State<RegisterScreen> {
                           labelText: 'Confirm Password',
                           hintText: 'Confirm your password',
                           controller: _confirmPasswordController,
+                          prefixIcon: Icons.lock_outline,
                           obscureText: true,
                           validator: (value) {
                             if (value == null || value.isEmpty) {
@@ -400,8 +359,6 @@ class _RegisterScreenState extends State<RegisterScreen> {
                                     'Complete maintenance tasks',
                                     Icons.engineering,
                                   ),
-
-                                  // Only show admin option if current user is admin
                                   if (_isAdmin)
                                     Column(
                                       children: [
@@ -419,53 +376,112 @@ class _RegisterScreenState extends State<RegisterScreen> {
                             ),
                           ],
                         ),
+                        SizedBox(height: 16),
 
-                        // Info Box untuk Driver
-                        if (_selectedRole == Constants.ROLE_TECHNICIAN &&
-                            _isDriverUser(
-                                _nameController.text, _emailController.text))
+                        // Driver Option (visible only for Technician role)
+                        if (_selectedRole == Constants.ROLE_TECHNICIAN)
                           Container(
-                            margin: EdgeInsets.only(top: 16),
+                            margin: EdgeInsets.only(bottom: 16),
                             padding: EdgeInsets.all(12),
                             decoration: BoxDecoration(
-                              color: Colors.blue[50],
+                              color: _isDriver
+                                  ? Colors.green[50]
+                                  : Colors.blue[50],
                               borderRadius: BorderRadius.circular(8),
-                              border: Border.all(color: Colors.blue[200]!),
+                              border: Border.all(
+                                color: _isDriver
+                                    ? Colors.green[300]!
+                                    : Colors.blue[200]!,
+                              ),
                             ),
-                            child: Row(
+                            child: Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
                               children: [
-                                Icon(Icons.drive_eta,
-                                    color: Colors.blue[700], size: 24),
-                                SizedBox(width: 12),
-                                Expanded(
-                                  child: Column(
-                                    crossAxisAlignment:
-                                        CrossAxisAlignment.start,
-                                    children: [
-                                      Text(
-                                        'Driver Profile Detected',
-                                        style: TextStyle(
-                                          color: Colors.blue[700],
-                                          fontWeight: FontWeight.bold,
-                                          fontSize: 14,
-                                        ),
+                                Row(
+                                  children: [
+                                    Icon(
+                                      Icons.drive_eta,
+                                      color: _isDriver
+                                          ? Colors.green[700]
+                                          : Colors.blue[700],
+                                      size: 20,
+                                    ),
+                                    SizedBox(width: 8),
+                                    Text(
+                                      'Driver Capabilities',
+                                      style: TextStyle(
+                                        fontWeight: FontWeight.bold,
+                                        color: _isDriver
+                                            ? Colors.green[700]
+                                            : Colors.blue[700],
                                       ),
-                                      SizedBox(height: 4),
-                                      Text(
-                                        'Technician with name/email containing "driver" will automatically get driver privileges for vehicle assignment.',
-                                        style: TextStyle(
-                                          color: Colors.blue[600],
-                                          fontSize: 12,
-                                        ),
-                                      ),
-                                    ],
+                                    ),
+                                  ],
+                                ),
+                                SizedBox(height: 8),
+                                Text(
+                                  'Enable this technician to drive vehicles and fulfill transportation requests',
+                                  style: TextStyle(
+                                    fontSize: 13,
+                                    color: _isDriver
+                                        ? Colors.green[800]
+                                        : Colors.blue[800],
                                   ),
                                 ),
+                                SizedBox(height: 8),
+                                SwitchListTile(
+                                  title: Text(
+                                    'Enable Driver Role',
+                                    style: TextStyle(
+                                      fontSize: 14,
+                                      fontWeight: FontWeight.w500,
+                                      color: _isDriver
+                                          ? Colors.green[700]
+                                          : Colors.blue[700],
+                                    ),
+                                  ),
+                                  value: _isDriver,
+                                  onChanged: (value) {
+                                    setState(() {
+                                      _isDriver = value;
+                                    });
+                                    print('🚗 Driver flag changed to: $_isDriver');
+                                  },
+                                  activeColor: Colors.green,
+                                  contentPadding: EdgeInsets.zero,
+                                  dense: true,
+                                ),
+                                if (_isDriver)
+                                  Container(
+                                    margin: EdgeInsets.only(top: 8),
+                                    padding: EdgeInsets.all(8),
+                                    decoration: BoxDecoration(
+                                      color: Colors.green[100],
+                                      borderRadius: BorderRadius.circular(4),
+                                    ),
+                                    child: Row(
+                                      children: [
+                                        Icon(
+                                          Icons.check_circle,
+                                          color: Colors.green[700],
+                                          size: 16,
+                                        ),
+                                        SizedBox(width: 8),
+                                        Expanded(
+                                          child: Text(
+                                            'This technician will be available in the driver assignment system',
+                                            style: TextStyle(
+                                              fontSize: 12,
+                                              color: Colors.green[800],
+                                            ),
+                                          ),
+                                        ),
+                                      ],
+                                    ),
+                                  ),
                               ],
                             ),
                           ),
-
-                        SizedBox(height: 24),
 
                         // Register Button
                         CustomButton(
@@ -480,7 +496,11 @@ class _RegisterScreenState extends State<RegisterScreen> {
                         // Login Link - only show for non-admin users
                         if (!isAdminCreatingAccount)
                           TextButton(
-                            onPressed: () => Navigator.pop(context),
+                            onPressed: () => Navigator.pushReplacement(
+                              context,
+                              MaterialPageRoute(
+                                  builder: (context) => LoginScreen()),
+                            ),
                             child: RichText(
                               text: TextSpan(
                                 text: "Already have an account? ",
@@ -508,12 +528,26 @@ class _RegisterScreenState extends State<RegisterScreen> {
                               borderRadius: BorderRadius.circular(4),
                               border: Border.all(color: Colors.grey[300]!),
                             ),
-                            child: Text(
-                              'Debug: Admin mode active',
-                              style: TextStyle(
-                                fontSize: 10,
-                                color: Colors.grey[600],
-                              ),
+                            child: Column(
+                              mainAxisSize: MainAxisSize.min,
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                Text(
+                                  'Debug: Admin mode active',
+                                  style: TextStyle(
+                                    fontSize: 10,
+                                    color: Colors.grey[600],
+                                  ),
+                                ),
+                                if (_selectedRole == Constants.ROLE_TECHNICIAN)
+                                  Text(
+                                    'Driver enabled: $_isDriver',
+                                    style: TextStyle(
+                                      fontSize: 10,
+                                      color: _isDriver ? Colors.green : Colors.grey[600],
+                                    ),
+                                  ),
+                              ],
                             ),
                           ),
                       ],
@@ -536,6 +570,10 @@ class _RegisterScreenState extends State<RegisterScreen> {
       onChanged: (value) {
         setState(() {
           _selectedRole = value!;
+          // Reset driver flag when changing roles
+          if (_selectedRole != Constants.ROLE_TECHNICIAN) {
+            _isDriver = false;
+          }
         });
         print('🎯 Role selected: $_selectedRole');
       },
