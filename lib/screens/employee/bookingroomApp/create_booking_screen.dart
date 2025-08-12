@@ -403,22 +403,42 @@ class _CreateBookingScreenState extends State<CreateBookingScreen> {
     return Column(
       children: [
         _buildDatePicker('Pilih Tanggal Acara', _selectedDate, (date) {
-          setState(() => _selectedDate = date);
+          setState(() {
+            _selectedDate = date;
+            final now = DateTime.now();
+            final isToday = date.year == now.year &&
+                date.month == now.month &&
+                date.day == now.day;
+            if (isToday && _startTime != null) {
+              final nowInMinutes = now.hour * 60 + now.minute;
+              final startTimeInMinutes =
+                  _startTime!.hour * 60 + _startTime!.minute;
+              if (startTimeInMinutes < nowInMinutes) {
+                _startTime = null; // Reset jam mulai
+                _endTime = null; // Reset jam selesai juga
+              }
+            }
+          });
         }),
         const SizedBox(height: 16),
         Row(
           children: [
             Expanded(
-              child: _buildTimePicker('Jam Mulai', _startTime, (time) {
-                setState(() {
-                  _startTime = time;
-                  if (_endTime != null &&
-                      (_endTime!.hour * 60 + _endTime!.minute) <=
-                          (_startTime!.hour * 60 + _startTime!.minute)) {
-                    _endTime = null;
-                  }
-                });
-              }),
+              child: _buildTimePicker(
+                'Jam Mulai',
+                _startTime,
+                (time) {
+                  setState(() {
+                    _startTime = time;
+                    if (_endTime != null &&
+                        (_endTime!.hour * 60 + _endTime!.minute) <=
+                            (_startTime!.hour * 60 + _startTime!.minute)) {
+                      _endTime = null;
+                    }
+                  });
+                },
+                selectedDate: _selectedDate,
+              ),
             ),
             const SizedBox(width: 16),
             Expanded(
@@ -510,13 +530,35 @@ class _CreateBookingScreenState extends State<CreateBookingScreen> {
 
   Widget _buildTimePicker(
       String label, TimeOfDay? value, Function(TimeOfDay) onPicked,
-      {TimeOfDay? startTimeFilter}) {
+      {TimeOfDay? startTimeFilter, DateTime? selectedDate}) {
     // Membuat daftar waktu dengan kelipatan 30 menit
     List<TimeOfDay> times = List.generate(48, (index) {
       final hour = index ~/ 2;
       final minute = (index % 2) * 30;
       return TimeOfDay(hour: hour, minute: minute);
     });
+
+    // Filter jam mulai berdasarkan waktu sekarang jika tanggal yang dipilih adalah hari ini
+    if (label == 'Jam Mulai' && selectedDate != null) {
+      final now = DateTime.now();
+      final isToday = selectedDate.year == now.year &&
+          selectedDate.month == now.month &&
+          selectedDate.day == now.day;
+
+      if (isToday) {
+        final nowInMinutes = now.hour * 60 + now.minute;
+        times = times.where((time) {
+          final timeInMinutes = time.hour * 60 + time.minute;
+          // Tampilkan waktu yang akan datang atau sama dengan waktu sekarang
+          return timeInMinutes >= nowInMinutes;
+        }).toList();
+
+        // Jika waktu yang sudah terpilih menjadi tidak valid (sudah lewat), reset value
+        if (value != null && !times.contains(value)) {
+          value = null;
+        }
+      }
+    }
 
     // Filter daftar waktu jika startTimeFilter diberikan
     if (startTimeFilter != null) {

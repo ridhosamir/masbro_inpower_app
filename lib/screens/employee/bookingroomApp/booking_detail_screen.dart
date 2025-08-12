@@ -1,11 +1,43 @@
 import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
 import '../../../models/bookingroomApp/booking_model.dart';
+import 'package:flutter_rating_bar/flutter_rating_bar.dart';
+import '../../../services/bookingroomApp/firestore_service.dart';
 
-class BookingDetailScreen extends StatelessWidget {
+class BookingDetailScreen extends StatefulWidget {
   final BookingModel booking;
 
   const BookingDetailScreen({super.key, required this.booking});
+
+  @override
+  State<BookingDetailScreen> createState() => _BookingDetailScreenState();
+}
+
+class _BookingDetailScreenState extends State<BookingDetailScreen> {
+  final FirestoreService _firestoreService = FirestoreService();
+  final TextEditingController _commentController = TextEditingController();
+  double _rating = 0.0;
+  bool _isSubmitting = false;
+  late BookingModel _currentBooking;
+
+  @override
+  void initState() {
+    super.initState();
+    _currentBooking = widget.booking;
+
+    if (_currentBooking.rating != null) {
+      _rating = _currentBooking.rating!;
+    }
+    if (_currentBooking.ratingComment != null) {
+      _commentController.text = _currentBooking.ratingComment!;
+    }
+  }
+
+  @override
+  void dispose() {
+    _commentController.dispose();
+    super.dispose();
+  }
 
   String _formatBookingDuration(DateTime start, DateTime end) {
     // Cek apakah booking dalam satu hari yang sama
@@ -27,6 +59,173 @@ class BookingDetailScreen extends StatelessWidget {
     }
   }
 
+  Future<void> _submitRating() async {
+    if (_rating == 0) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('Silakan berikan minimal 1 bintang.'),
+          backgroundColor: Colors.orange,
+        ),
+      );
+      return;
+    }
+
+    setState(() => _isSubmitting = true);
+
+    try {
+      await _firestoreService.submitBookingRating(
+        bookingId: _currentBooking.id,
+        rating: _rating,
+        comment: _commentController.text.trim(),
+      );
+
+      // Perbarui UI secara lokal untuk respons instan
+      setState(() {
+        _currentBooking = _currentBooking.copyWith(
+          rating: _rating,
+          ratingComment: _commentController.text.trim(),
+          ratingDate: DateTime.now(),
+        );
+      });
+
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text('Terima kasih! Penilaian Anda telah disimpan.'),
+            backgroundColor: Colors.green,
+          ),
+        );
+      }
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('Gagal mengirim penilaian: $e'),
+            backgroundColor: Colors.red,
+          ),
+        );
+      }
+    } finally {
+      if (mounted) {
+        setState(() => _isSubmitting = false);
+      }
+    }
+  }
+
+  Widget _buildRatingSection() {
+    final bool hasRated = _currentBooking.rating != null;
+
+    return Container(
+      padding: const EdgeInsets.all(16),
+      decoration: BoxDecoration(
+        color: Colors.amber[50],
+        borderRadius: BorderRadius.circular(12),
+        border: Border.all(color: Colors.amber[200]!),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.center,
+        children: [
+          Text(
+            hasRated ? 'Penilaian Anda' : 'Beri Penilaian Kesiapan Ruangan',
+            style: TextStyle(
+              fontSize: 16,
+              fontWeight: FontWeight.w600,
+              color: Colors.amber[800],
+            ),
+          ),
+          const SizedBox(height: 16),
+          RatingBar.builder(
+            initialRating: _rating,
+            minRating: 1,
+            direction: Axis.horizontal,
+            itemCount: 5,
+            itemPadding: const EdgeInsets.symmetric(horizontal: 4.0),
+            itemBuilder: (context, _) => const Icon(
+              Icons.star,
+              color: Colors.amber,
+            ),
+            onRatingUpdate: (rating) {
+              if (!hasRated) {
+                setState(() {
+                  _rating = rating;
+                });
+              }
+            },
+            ignoreGestures: hasRated,
+          ),
+          const SizedBox(height: 16),
+          if (!hasRated) ...[
+            // --- Form untuk memberi rating ---
+            TextField(
+              controller: _commentController,
+              maxLines: 3,
+              decoration: InputDecoration(
+                hintText: 'Tulis ulasan Anda (opsional)...',
+                border: OutlineInputBorder(
+                  borderRadius: BorderRadius.circular(8),
+                  borderSide: BorderSide.none,
+                ),
+                filled: true,
+                fillColor: Colors.white,
+              ),
+            ),
+            const SizedBox(height: 16),
+            ElevatedButton.icon(
+              onPressed: _isSubmitting ? null : _submitRating,
+              style: ElevatedButton.styleFrom(
+                backgroundColor: Colors.green[500],
+                foregroundColor: Colors.white,
+                minimumSize: const Size(double.infinity, 48),
+                shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(8),
+                ),
+              ),
+              icon: _isSubmitting
+                  ? Container(
+                      width: 20,
+                      height: 20,
+                      child: const CircularProgressIndicator(
+                          color: Colors.white, strokeWidth: 2),
+                    )
+                  : const Icon(Icons.send_outlined),
+              label: Text(_isSubmitting ? 'Mengirim...' : 'Kirim Penilaian'),
+            ),
+          ] else ...[
+            // --- Tampilan setelah memberi rating ---
+            const Divider(height: 20),
+            if (_currentBooking.ratingComment != null &&
+                _currentBooking.ratingComment!.isNotEmpty)
+              Container(
+                width: double.infinity,
+                padding: const EdgeInsets.all(12),
+                decoration: BoxDecoration(
+                  color: Colors.white,
+                  borderRadius: BorderRadius.circular(8),
+                  border: Border.all(color: Colors.grey[200]!),
+                ),
+                child: Text(
+                  '"${_currentBooking.ratingComment!}"',
+                  textAlign: TextAlign.center,
+                  style: TextStyle(
+                    fontStyle: FontStyle.italic,
+                    color: Colors.grey[700],
+                  ),
+                ),
+              )
+            else
+              Text(
+                'Terima kasih atas penilaian Anda!',
+                style: TextStyle(
+                  color: Colors.green[700],
+                  fontWeight: FontWeight.w500,
+                ),
+              ),
+          ]
+        ],
+      ),
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
@@ -43,45 +242,51 @@ class BookingDetailScreen extends StatelessWidget {
             _buildStatusBox(context),
             const SizedBox(height: 24),
 
+            if (_currentBooking.status == 'approved' &&
+                DateTime.now().isAfter(_currentBooking.usageEndDate)) ...[
+              _buildRatingSection(),
+              const SizedBox(height: 24),
+            ],
+
             // --- Informasi Booking ---
             _buildSectionTitle('Informasi Booking'),
             const SizedBox(height: 12),
             _buildInfoCard([
-              _buildInfoRow(
-                  Icons.meeting_room_outlined, 'Ruangan', booking.roomName),
-              _buildInfoRow(
-                  Icons.person_outline, 'Dipesan oleh', booking.employeeName),
+              _buildInfoRow(Icons.meeting_room_outlined, 'Ruangan',
+                  _currentBooking.roomName),
+              _buildInfoRow(Icons.person_outline, 'Dipesan oleh',
+                  _currentBooking.employeeName),
               _buildInfoRow(
                   Icons.calendar_today,
                   'Jadwal Acara',
-                  _formatBookingDuration(
-                      booking.usageStartDate, booking.usageEndDate)),
+                  _formatBookingDuration(_currentBooking.usageStartDate,
+                      _currentBooking.usageEndDate)),
               _buildInfoRow(Icons.local_activity_outlined, 'Jenis Kegiatan',
-                  booking.activityType),
+                  _currentBooking.activityType),
               _buildInfoRow(Icons.group_outlined, 'Jumlah Peserta',
-                  '${booking.numberOfParticipants} orang'),
+                  '${_currentBooking.numberOfParticipants} orang'),
             ]),
             const SizedBox(height: 24),
 
             // --- Agenda Acara ---
             _buildSectionTitle('Agenda Acara'),
             const SizedBox(height: 12),
-            _buildDescriptionBox(booking.eventAgenda),
+            _buildDescriptionBox(_currentBooking.eventAgenda),
 
             // --- Kebutuhan Tambahan ---
             const SizedBox(height: 24),
             _buildSectionTitle('Kebutuhan Tambahan'),
             const SizedBox(height: 12),
-            _buildDescriptionBox(booking.needs),
+            _buildDescriptionBox(_currentBooking.needs),
 
             // --- Catatan Pembatalan (jika ada) ---
-            if ((booking.status == 'approved' ||
-                    booking.status == 'cancelled') &&
-                booking.completionReason != null &&
-                booking.completionReason!.isNotEmpty) ...[
+            if ((_currentBooking.status == 'approved' ||
+                    _currentBooking.status == 'cancelled') &&
+                _currentBooking.completionReason != null &&
+                _currentBooking.completionReason!.isNotEmpty) ...[
               const SizedBox(height: 24),
               _buildSectionTitle(
-                booking.status == 'approved'
+                _currentBooking.status == 'approved'
                     ? 'Catatan Persetujuan'
                     : 'Alasan Pembatalan',
               ),
@@ -101,50 +306,50 @@ class BookingDetailScreen extends StatelessWidget {
       width: double.infinity,
       padding: const EdgeInsets.all(20),
       decoration: BoxDecoration(
-        color: booking.getStatusColor().withOpacity(0.1),
+        color: _currentBooking.getStatusColor().withOpacity(0.1),
         borderRadius: BorderRadius.circular(12),
-        border: Border.all(color: booking.getStatusColor()),
+        border: Border.all(color: _currentBooking.getStatusColor()),
       ),
       child: Column(
         children: [
           Icon(
-            booking.getStatusIcon(),
-            color: booking.getStatusColor(),
+            _currentBooking.getStatusIcon(),
+            color: _currentBooking.getStatusColor(),
             size: 48,
           ),
           const SizedBox(height: 12),
           Text(
-            'Status: ${booking.getStatusDisplayName()}',
+            'Status: ${_currentBooking.getStatusDisplayName()}',
             style: TextStyle(
               fontSize: 18,
               fontWeight: FontWeight.bold,
-              color: booking.getStatusColor(),
+              color: _currentBooking.getStatusColor(),
             ),
           ),
           const SizedBox(height: 8),
           Text(
-            'Dibuat pada ${DateFormat('d MMMM yyyy, HH:mm', 'id_ID').format(booking.createdAt)}',
+            'Dibuat pada ${DateFormat('d MMMM yyyy, HH:mm', 'id_ID').format(_currentBooking.createdAt)}',
             style: TextStyle(color: Colors.grey[600], fontSize: 14),
           ),
-          if (booking.status == 'approved' &&
-              booking.completionDate != null) ...[
+          if (_currentBooking.status == 'approved' &&
+              _currentBooking.completionDate != null) ...[
             const SizedBox(height: 8),
             Text(
-              'Disetujui pada ${DateFormat('dd MMM yyyy, HH:mm', 'id_ID').format(booking.completionDate!)}',
+              'Disetujui pada ${DateFormat('dd MMM yyyy, HH:mm', 'id_ID').format(_currentBooking.completionDate!)}',
               style: TextStyle(
-                color: booking.getStatusColor().withOpacity(0.8),
+                color: _currentBooking.getStatusColor().withOpacity(0.8),
                 fontSize: 14,
                 fontWeight: FontWeight.w500,
               ),
             ),
           ],
-          if (booking.status == 'cancelled' &&
-              booking.completionDate != null) ...[
+          if (_currentBooking.status == 'cancelled' &&
+              _currentBooking.completionDate != null) ...[
             const SizedBox(height: 8),
             Text(
-              'Dibatalkan pada ${DateFormat('dd MMM yyyy, HH:mm', 'id_ID').format(booking.completionDate!)}',
+              'Dibatalkan pada ${DateFormat('dd MMM yyyy, HH:mm', 'id_ID').format(_currentBooking.completionDate!)}',
               style: TextStyle(
-                color: booking.getStatusColor().withOpacity(0.8),
+                color: _currentBooking.getStatusColor().withOpacity(0.8),
                 fontSize: 14,
                 fontWeight: FontWeight.w500,
               ),
@@ -174,7 +379,7 @@ class BookingDetailScreen extends StatelessWidget {
 
   // Helper widget untuk kotak alasan pembatalan
   Widget _buildReasonBox() {
-    bool isApproved = booking.status == 'approved';
+    bool isApproved = _currentBooking.status == 'approved';
 
     Color backgroundColor = isApproved ? Colors.green[50]! : Colors.red[50]!;
     Color borderColor = isApproved ? Colors.green[200]! : Colors.red[200]!;
@@ -189,7 +394,7 @@ class BookingDetailScreen extends StatelessWidget {
         border: Border.all(color: borderColor),
       ),
       child: Text(
-        booking.completionReason!,
+        _currentBooking.completionReason!,
         style: TextStyle(fontSize: 15, height: 1.5, color: textColor),
       ),
     );

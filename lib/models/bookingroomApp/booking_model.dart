@@ -17,6 +17,9 @@ class BookingModel {
   final DateTime createdAt;
   final String? completionReason;
   final DateTime? completionDate;
+  final double? rating;
+  final String? ratingComment;
+  final DateTime? ratingDate;
 
   BookingModel({
     required this.id,
@@ -34,6 +37,9 @@ class BookingModel {
     required this.createdAt,
     this.completionReason,
     this.completionDate,
+    this.rating,
+    this.ratingComment,
+    this.ratingDate,
   });
 
   factory BookingModel.fromFirestore(DocumentSnapshot doc) {
@@ -57,6 +63,11 @@ class BookingModel {
       completionDate: data['completionDate'] != null
           ? (data['completionDate'] as Timestamp).toDate()
           : null,
+      rating: (data['rating'] as num?)?.toDouble(),
+      ratingComment: data['ratingComment'],
+      ratingDate: data['ratingDate'] != null
+          ? (data['ratingDate'] as Timestamp).toDate()
+          : null,
     );
   }
 
@@ -77,6 +88,9 @@ class BookingModel {
       'completionReason': completionReason,
       'completionDate':
           completionDate != null ? Timestamp.fromDate(completionDate!) : null,
+      'rating': rating,
+      'ratingComment': ratingComment,
+      'ratingDate': ratingDate != null ? Timestamp.fromDate(ratingDate!) : null,
     };
   }
 
@@ -135,6 +149,9 @@ class BookingModel {
     DateTime? createdAt,
     String? completionReason,
     DateTime? completionDate,
+    double? rating,
+    String? ratingComment,
+    DateTime? ratingDate,
   }) {
     return BookingModel(
       id: id ?? this.id,
@@ -152,6 +169,9 @@ class BookingModel {
       createdAt: createdAt ?? this.createdAt,
       completionReason: completionReason ?? this.completionReason,
       completionDate: completionDate ?? this.completionDate,
+      rating: rating ?? this.rating,
+      ratingComment: ratingComment ?? this.ratingComment,
+      ratingDate: ratingDate ?? this.ratingDate,
     );
   }
 }

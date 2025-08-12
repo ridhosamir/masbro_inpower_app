@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
+import 'package:flutter_rating_bar/flutter_rating_bar.dart';
 import '../../../models/bookingroomApp/booking_model.dart';
 import '../../../models/bookingroomApp/room_model.dart';
 import '../../../services/bookingroomApp/firestore_service.dart';
@@ -152,13 +153,32 @@ class _BookingDetailScreenState extends State<BookingDetailScreen> {
             : BookingType.beberapaHari;
 
     // State untuk durasi Harian
-    DateTime selectedDate = booking.usageStartDate;
-    TimeOfDay startTime = TimeOfDay.fromDateTime(booking.usageStartDate);
-    TimeOfDay endTime = TimeOfDay.fromDateTime(booking.usageEndDate);
+    DateTime? selectedDate = booking.usageStartDate;
+    TimeOfDay? startTime = TimeOfDay.fromDateTime(booking.usageStartDate);
+    TimeOfDay? endTime = TimeOfDay.fromDateTime(booking.usageEndDate);
 
     // State untuk durasi Beberapa Hari
-    DateTime startDateMulti = booking.usageStartDate;
-    DateTime endDateMulti = booking.usageEndDate;
+    DateTime? startDateMulti = booking.usageStartDate;
+    DateTime? endDateMulti =
+        DateUtils.isSameDay(booking.usageStartDate, booking.usageEndDate)
+            ? null
+            : booking.usageEndDate;
+
+    // Variabel untuk menandai jika jadwal sudah lewat
+    bool isOutdated = false;
+
+    // --- Logika untuk mereset tanggal yang sudah lewat ---
+    final now = DateTime.now();
+    final today = DateTime(now.year, now.month, now.day);
+
+    if (booking.usageStartDate.isBefore(today)) {
+      isOutdated = true;
+      selectedDate = null;
+      startTime = null;
+      endTime = null;
+      startDateMulti = null;
+      endDateMulti = null;
+    }
 
     return showModalBottomSheet<bool>(
       context: context,
@@ -177,13 +197,17 @@ class _BookingDetailScreenState extends State<BookingDetailScreen> {
               DateTime finalEndDate;
 
               if (bookingType == BookingType.harian) {
-                finalStartDate = DateTime(selectedDate.year, selectedDate.month,
-                    selectedDate.day, startTime.hour, startTime.minute);
-                finalEndDate = DateTime(selectedDate.year, selectedDate.month,
-                    selectedDate.day, endTime.hour, endTime.minute);
+                finalStartDate = DateTime(
+                    selectedDate!.year,
+                    selectedDate!.month,
+                    selectedDate!.day,
+                    startTime!.hour,
+                    startTime!.minute);
+                finalEndDate = DateTime(selectedDate!.year, selectedDate!.month,
+                    selectedDate!.day, endTime!.hour, endTime!.minute);
               } else {
-                finalStartDate = startDateMulti;
-                finalEndDate = endDateMulti;
+                finalStartDate = startDateMulti!;
+                finalEndDate = endDateMulti!;
               }
 
               // CEK KONFLIK JADWAL TERLEBIH DAHULU
@@ -433,46 +457,84 @@ class _BookingDetailScreenState extends State<BookingDetailScreen> {
               TimeOfDay? currentTime,
               TimeOfDay? endTime, {
               required Function(DateTime) onDateChanged,
-              required Function(TimeOfDay) onStartTimeChanged,
-              required Function(TimeOfDay) onEndTimeChanged,
+              required Function(TimeOfDay?) onStartTimeChanged,
+              required Function(TimeOfDay?) onEndTimeChanged,
             }) {
               return Column(
                 children: [
-                  _buildDatePicker(context, 'Pilih Tanggal Acara', currentDate,
-                      (date) {
-                    setState(() => onDateChanged(date));
-                  }),
+                  FormField<DateTime>(
+                    initialValue: currentDate,
+                    validator: (value) {
+                      if (value == null) {
+                        return 'Tanggal acara wajib diisi';
+                      }
+                      return null;
+                    },
+                    builder: (FormFieldState<DateTime> state) {
+                      return _buildDatePicker(
+                          context, 'Pilih Tanggal Acara', state.value, (date) {
+                        setState(() {
+                          onDateChanged(date);
+                          state.didChange(date);
+                          final now = DateTime.now();
+                          final isToday = date.year == now.year &&
+                              date.month == now.month &&
+                              date.day == now.day;
+
+                          // Logika tambahan untuk reset jam mulai jika sudah lewat
+                          if (isToday && currentTime != null) {
+                            final nowInMinutes = now.hour * 60 + now.minute;
+                            final startTimeInMinutes =
+                                currentTime.hour * 60 + currentTime.minute;
+                            if (startTimeInMinutes < nowInMinutes) {
+                              // Jika jam mulai yang dipilih sudah lewat, reset keduanya
+                              onStartTimeChanged(null);
+                              onEndTimeChanged(null);
+                            }
+                          }
+                          // Logika tambahan untuk reset jam selesai jika sudah lewat
+                          if (isToday && endTime != null) {
+                            final nowInMinutes = now.hour * 60 + now.minute;
+                            final endTimeInMinutes =
+                                endTime.hour * 60 + endTime.minute;
+                            if (endTimeInMinutes < nowInMinutes) {
+                              onEndTimeChanged(null);
+                            }
+                          }
+                        });
+                      }, errorText: state.errorText);
+                    },
+                  ),
                   const SizedBox(height: 16),
                   Row(
                     children: [
                       Expanded(
-                        child: _buildTimePicker(
-                          context,
-                          'Jam Mulai',
-                          currentTime,
-                          (time) {
-                            setState(() {
-                              onStartTimeChanged(time);
-                              if (endTime != null &&
-                                  (endTime.hour * 60 + endTime.minute) <=
-                                      (time.hour * 60 + time.minute)) {
-                                onEndTimeChanged(TimeOfDay(
-                                    hour: time.hour + 1, minute: time.minute));
-                              }
-                            });
-                          },
-                        ),
-                      ),
+                          child: _buildTimePicker(
+                              context, 'Jam Mulai', currentTime,
+                              (newStartTime) {
+                        setState(() {
+                          onStartTimeChanged(newStartTime);
+                          // Reset end time if it's before new start time
+                          if (newStartTime != null) {
+                            // Jika jam selesai lebih awal dari jam mulai baru, kosongkan jam selesai
+                            if (endTime != null &&
+                                (endTime.hour * 60 + endTime.minute) <=
+                                    (newStartTime.hour * 60 +
+                                        newStartTime.minute)) {
+                              onEndTimeChanged(null);
+                            }
+                          } else {
+                            // Jika jam mulai dikosongkan, jam selesai juga harus kosong
+                            onEndTimeChanged(null);
+                          }
+                        });
+                      }, selectedDate: currentDate)),
                       const SizedBox(width: 16),
                       Expanded(
-                        child: _buildTimePicker(
-                          context,
-                          'Jam Selesai',
-                          endTime,
-                          (time) => setState(() => onEndTimeChanged(time)),
-                          startTimeFilter: currentTime,
-                        ),
-                      ),
+                          child: _buildTimePicker(
+                              context, 'Jam Selesai', endTime, (newEndTime) {
+                        setState(() => onEndTimeChanged(newEndTime));
+                      }, startTimeFilter: currentTime)),
                     ],
                   )
                 ],
@@ -485,27 +547,59 @@ class _BookingDetailScreenState extends State<BookingDetailScreen> {
               DateTime? currentStartDate,
               DateTime? currentEndDate, {
               required Function(DateTime) onStartDateChanged,
-              required Function(DateTime) onEndDateChanged,
+              required Function(DateTime?) onEndDateChanged,
             }) {
               return Column(
                 children: [
-                  _buildDatePicker(context, 'Tanggal Mulai', currentStartDate,
-                      (date) {
-                    setState(() {
-                      onStartDateChanged(date);
-                      if (currentEndDate != null &&
-                          date.isAfter(currentEndDate)) {
-                        onEndDateChanged(date.add(const Duration(days: 1)));
+                  FormField<DateTime>(
+                    initialValue: currentStartDate,
+                    validator: (value) {
+                      if (value == null) {
+                        return 'Tanggal mulai wajib diisi';
                       }
-                    });
-                  }),
+                      if (currentEndDate != null &&
+                          value.isAfter(currentEndDate)) {
+                        return 'Tanggal mulai tidak boleh melebihi tanggal selesai!';
+                      }
+                      return null;
+                    },
+                    builder: (FormFieldState<DateTime> state) {
+                      return _buildDatePicker(
+                          context, 'Tanggal Mulai', state.value, (date) {
+                        setState(() {
+                          onStartDateChanged(date);
+                          state.didChange(date);
+                          if (currentEndDate != null &&
+                              !currentEndDate.isAfter(date)) {
+                            onEndDateChanged(date.add(const Duration(days: 1)));
+                          }
+                        });
+                      }, errorText: state.errorText);
+                    },
+                  ),
                   const SizedBox(height: 16),
-                  _buildDatePicker(
-                    context,
-                    'Tanggal Selesai',
-                    currentEndDate,
-                    (date) => setState(() => onEndDateChanged(date)),
-                    firstDate: currentStartDate,
+                  FormField<DateTime>(
+                    key: ValueKey(currentEndDate),
+                    initialValue: currentEndDate,
+                    validator: (value) {
+                      if (value == null) {
+                        return 'Tanggal selesai wajib diisi';
+                      }
+                      return null;
+                    },
+                    builder: (FormFieldState<DateTime> state) {
+                      return _buildDatePicker(
+                          context, 'Tanggal Selesai', state.value, (date) {
+                        setState(() {
+                          onEndDateChanged(date);
+                          state.didChange(date);
+                        });
+                      },
+                          firstDate:
+                              currentStartDate?.add(const Duration(days: 1)) ??
+                                  DateTime.now().add(const Duration(days: 1)),
+                          errorText: state.errorText);
+                    },
                   ),
                 ],
               );
@@ -694,6 +788,15 @@ class _BookingDetailScreenState extends State<BookingDetailScreen> {
                                 },
                               ),
                               const SizedBox(height: 16),
+
+                              // Peringatan jika jadwal sudah lewat
+                              if (isOutdated) ...[
+                                const SizedBox(height: 12),
+                                _buildWarningBox(
+                                    'Jadwal sudah terlewat, silakan input ulang.'),
+                                const SizedBox(height: 12),
+                              ],
+                              const SizedBox(height: 16),
                               SegmentedButton<BookingType>(
                                 segments: const [
                                   ButtonSegment(
@@ -711,7 +814,74 @@ class _BookingDetailScreenState extends State<BookingDetailScreen> {
                                 onSelectionChanged:
                                     (Set<BookingType> newSelection) {
                                   setModalState(() {
-                                    bookingType = newSelection.first;
+                                    final newType = newSelection.first;
+                                    if (newType == bookingType) return;
+
+                                    final oldType = bookingType;
+                                    bookingType = newType;
+
+                                    // Logic perpindahan dari Beberapa Hari ke Harian
+                                    if (oldType == BookingType.beberapaHari &&
+                                        newType == BookingType.harian &&
+                                        startDateMulti != null) {
+                                      selectedDate = startDateMulti;
+                                      // Cek apakah tanggal sudah kadaluarsa
+                                      final now = DateTime.now();
+                                      final today = DateTime(
+                                          now.year, now.month, now.day);
+
+                                      if (selectedDate!.isBefore(today)) {
+                                        // Jika sudah kadaluarsa, reset semua
+                                        selectedDate = null;
+                                        startTime = null;
+                                        endTime = null;
+                                      } else {
+                                        // Jika belum kadaluarsa, pertahankan waktu jika ada
+                                        if (startTime == null &&
+                                            endTime == null) {
+                                          // Jika belum ada waktu, ambil dari booking asli jika masih valid
+                                          final originalStart =
+                                              TimeOfDay.fromDateTime(
+                                                  booking.usageStartDate);
+                                          final originalEnd =
+                                              TimeOfDay.fromDateTime(
+                                                  booking.usageEndDate);
+
+                                          // Cek apakah waktu asli masih valid untuk hari ini
+                                          final isToday =
+                                              selectedDate!.year == now.year &&
+                                                  selectedDate!.month ==
+                                                      now.month &&
+                                                  selectedDate!.day == now.day;
+
+                                          if (!isToday ||
+                                              (originalStart.hour * 60 +
+                                                      originalStart.minute) >=
+                                                  (now.hour * 60 +
+                                                      now.minute)) {
+                                            startTime = originalStart;
+                                            endTime = originalEnd;
+                                          }
+                                        }
+                                      }
+                                    }
+                                    // Logic perpindahan dari Harian ke Beberapa Hari
+                                    else if (oldType == BookingType.harian &&
+                                        newType == BookingType.beberapaHari &&
+                                        selectedDate != null) {
+                                      startDateMulti = selectedDate;
+                                      endDateMulti = null;
+                                      // Cek apakah tanggal sudah kadaluarsa
+                                      final now = DateTime.now();
+                                      final today = DateTime(
+                                          now.year, now.month, now.day);
+
+                                      if (startDateMulti!.isBefore(today)) {
+                                        // Jika sudah kadaluarsa, reset semua
+                                        startDateMulti = null;
+                                        endDateMulti = null;
+                                      }
+                                    }
                                   });
                                 },
                               ),
@@ -733,7 +903,13 @@ class _BookingDetailScreenState extends State<BookingDetailScreen> {
                                   setModalState,
                                   startDateMulti,
                                   endDateMulti,
-                                  onStartDateChanged: (d) => startDateMulti = d,
+                                  onStartDateChanged: (d) {
+                                    startDateMulti = d;
+                                    if (endDateMulti != null &&
+                                        d.isAfter(endDateMulti!)) {
+                                      endDateMulti = null;
+                                    }
+                                  },
                                   onEndDateChanged: (d) => endDateMulti = d,
                                 ),
                               const SizedBox(height: 24),
@@ -811,6 +987,87 @@ class _BookingDetailScreenState extends State<BookingDetailScreen> {
     }
   }
 
+  Widget _buildRatingDisplaySection() {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        _buildSectionTitle('Penilaian dari Pemesan'),
+        const SizedBox(height: 12),
+        Container(
+          width: double.infinity,
+          padding: const EdgeInsets.all(16),
+          decoration: BoxDecoration(
+            color: Colors.amber[50],
+            borderRadius: BorderRadius.circular(12),
+            border: Border.all(color: Colors.amber[200]!),
+          ),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Row(
+                children: [
+                  // Menampilkan bintang rating (read-only)
+                  RatingBar.builder(
+                    initialRating: _currentBooking.rating ?? 0.0,
+                    minRating: 1,
+                    direction: Axis.horizontal,
+                    itemCount: 5,
+                    itemSize: 22.0,
+                    itemBuilder: (context, _) => const Icon(
+                      Icons.star,
+                      color: Colors.amber,
+                    ),
+                    onRatingUpdate: (rating) {},
+                    ignoreGestures: true,
+                  ),
+                  const SizedBox(width: 8),
+                  Text(
+                    '(${_currentBooking.rating?.toStringAsFixed(1) ?? '0.0'})',
+                    style: TextStyle(
+                      fontSize: 16,
+                      fontWeight: FontWeight.bold,
+                      color: Colors.amber[800],
+                    ),
+                  ),
+                ],
+              ),
+              // Menampilkan ulasan/komentar jika ada
+              if (_currentBooking.ratingComment != null &&
+                  _currentBooking.ratingComment!.isNotEmpty) ...[
+                const Divider(height: 24),
+                Text(
+                  'Ulasan:',
+                  style: TextStyle(
+                    fontWeight: FontWeight.w600,
+                    color: Colors.grey[700],
+                    fontSize: 14,
+                  ),
+                ),
+                const SizedBox(height: 8),
+                Container(
+                  width: double.infinity,
+                  padding: const EdgeInsets.all(12),
+                  decoration: BoxDecoration(
+                    color: Colors.white,
+                    borderRadius: BorderRadius.circular(8),
+                  ),
+                  child: Text(
+                    '"${_currentBooking.ratingComment!}"',
+                    style: TextStyle(
+                      fontStyle: FontStyle.italic,
+                      color: Colors.grey[800],
+                      height: 1.4,
+                    ),
+                  ),
+                ),
+              ]
+            ],
+          ),
+        ),
+      ],
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     final dateFormat = DateFormat('EEEE, d MMMM yyyy, HH:mm', 'id_ID');
@@ -865,6 +1122,10 @@ class _BookingDetailScreenState extends State<BookingDetailScreen> {
               ),
               const SizedBox(height: 12),
               _buildReasonBox(),
+            ],
+            if (_currentBooking.rating != null) ...[
+              const SizedBox(height: 24),
+              _buildRatingDisplaySection(),
             ],
             const SizedBox(height: 24),
             if (_currentBooking.status == 'open') ...[
@@ -998,13 +1259,13 @@ class _BookingDetailScreenState extends State<BookingDetailScreen> {
 
   Widget _buildDatePicker(BuildContext context, String label, DateTime? value,
       Function(DateTime) onPicked,
-      {DateTime? firstDate}) {
+      {DateTime? firstDate, String? errorText}) {
     return InkWell(
       onTap: () async {
         final DateTime? pickedDate = await showDatePicker(
           context: context,
           initialDate: value ?? firstDate ?? DateTime.now(),
-          firstDate: firstDate ?? DateTime(2024),
+          firstDate: firstDate ?? DateTime.now(),
           lastDate: DateTime(2030),
         );
         if (pickedDate != null) onPicked(pickedDate);
@@ -1015,6 +1276,8 @@ class _BookingDetailScreenState extends State<BookingDetailScreen> {
           border: const OutlineInputBorder(),
           contentPadding:
               const EdgeInsets.symmetric(horizontal: 12, vertical: 15),
+          errorText: errorText,
+          helperText: errorText == null ? ' ' : null,
         ),
         child: Row(
           mainAxisAlignment: MainAxisAlignment.spaceBetween,
@@ -1030,13 +1293,32 @@ class _BookingDetailScreenState extends State<BookingDetailScreen> {
   }
 
   Widget _buildTimePicker(BuildContext context, String label, TimeOfDay? value,
-      Function(TimeOfDay) onPicked,
-      {TimeOfDay? startTimeFilter}) {
+      Function(TimeOfDay?) onPicked,
+      {TimeOfDay? startTimeFilter, DateTime? selectedDate}) {
     List<TimeOfDay> times = List.generate(48, (index) {
       final hour = index ~/ 2;
       final minute = (index % 2) * 30;
       return TimeOfDay(hour: hour, minute: minute);
     });
+
+    if (label == 'Jam Mulai' && selectedDate != null) {
+      final now = DateTime.now();
+      final isToday = selectedDate.year == now.year &&
+          selectedDate.month == now.month &&
+          selectedDate.day == now.day;
+
+      if (isToday) {
+        final nowInMinutes = now.hour * 60 + now.minute;
+        times = times.where((time) {
+          final timeInMinutes = time.hour * 60 + time.minute;
+          return timeInMinutes >= nowInMinutes;
+        }).toList();
+
+        if (value != null && !times.contains(value)) {
+          value = null;
+        }
+      }
+    }
 
     if (startTimeFilter != null) {
       final startTimeInMinutes =
@@ -1045,6 +1327,10 @@ class _BookingDetailScreenState extends State<BookingDetailScreen> {
         final currentTimeInMinutes = time.hour * 60 + time.minute;
         return currentTimeInMinutes > startTimeInMinutes;
       }).toList();
+
+      if (value != null && !times.contains(value)) {
+        value = null;
+      }
     }
 
     return DropdownButtonFormField<TimeOfDay>(
@@ -1054,6 +1340,7 @@ class _BookingDetailScreenState extends State<BookingDetailScreen> {
         border: const OutlineInputBorder(),
         contentPadding:
             const EdgeInsets.symmetric(horizontal: 12, vertical: 15),
+        helperText: ' ',
       ),
       menuMaxHeight: 200,
       hint: times.isEmpty ? const Text('Pilih Jam Mulai') : null,
@@ -1064,11 +1351,30 @@ class _BookingDetailScreenState extends State<BookingDetailScreen> {
         );
       }).toList(),
       onChanged: (newValue) {
-        if (newValue != null) {
-          onPicked(newValue);
-        }
+        onPicked(newValue);
       },
-      validator: (val) => val == null ? 'Wajib diisi' : null,
+      validator: (val) {
+        if (val == null) {
+          return 'Wajib diisi';
+        }
+
+        if (selectedDate != null) {
+          final now = DateTime.now();
+          final isToday = selectedDate.year == now.year &&
+              selectedDate.month == now.month &&
+              selectedDate.day == now.day;
+
+          if (isToday) {
+            final selectedTimeInMinutes = val.hour * 60 + val.minute;
+            final nowInMinutes = now.hour * 60 + now.minute;
+
+            if (selectedTimeInMinutes < nowInMinutes) {
+              return 'Waktu yang dipilih sudah lewat';
+            }
+          }
+        }
+        return null;
+      },
     );
   }
 
@@ -1195,6 +1501,39 @@ class _BookingDetailScreenState extends State<BookingDetailScreen> {
         ],
       ),
       child: Column(children: children),
+    );
+  }
+
+  // Widget baru untuk menampilkan pesan peringatan
+  Widget _buildWarningBox(String message) {
+    return Container(
+      width: double.infinity,
+      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+      decoration: BoxDecoration(
+        color: Colors.red.withOpacity(0.1),
+        borderRadius: BorderRadius.circular(8),
+        border: Border.all(color: Colors.red.withOpacity(0.4)),
+      ),
+      child: Row(
+        children: [
+          Icon(
+            Icons.warning_amber_rounded,
+            size: 18,
+            color: Colors.red[700],
+          ),
+          const SizedBox(width: 10),
+          Expanded(
+            child: Text(
+              message,
+              style: TextStyle(
+                fontSize: 13,
+                color: Colors.red[800],
+                fontWeight: FontWeight.w500,
+              ),
+            ),
+          ),
+        ],
+      ),
     );
   }
 

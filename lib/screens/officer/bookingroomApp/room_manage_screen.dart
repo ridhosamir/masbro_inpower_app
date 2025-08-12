@@ -224,7 +224,7 @@ class _RoomBookingManagementScreenState
                 child: ElevatedButton(
                   onPressed: _isLoading ? null : _hideForm,
                   style: ElevatedButton.styleFrom(
-                      backgroundColor: Colors.grey[300]),
+                      backgroundColor: Colors.grey[500]),
                   child: const Text('Batal'),
                 ),
               ),

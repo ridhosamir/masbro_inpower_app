@@ -582,6 +582,41 @@ class _EmployeeDashboardBookingRoomState
                   _buildStatusChip(booking.status),
                 ],
               ),
+              if (booking.status == 'approved' &&
+                  DateTime.now().isAfter(booking.usageEndDate) &&
+                  booking.rating == null) ...[
+                const SizedBox(height: 12),
+                Container(
+                  width: double.infinity,
+                  padding:
+                      const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+                  decoration: BoxDecoration(
+                    color: Colors.amber.withOpacity(0.15),
+                    borderRadius: BorderRadius.circular(8),
+                    border: Border.all(color: Colors.amber.withOpacity(0.5)),
+                  ),
+                  child: Row(
+                    children: [
+                      Icon(
+                        Icons.star_border,
+                        size: 16,
+                        color: Colors.amber[800],
+                      ),
+                      const SizedBox(width: 8),
+                      Expanded(
+                        child: Text(
+                          'Acara telah selesai, Anda bisa mengisi penilaian kesiapan dan fasilitas ruangan.',
+                          style: TextStyle(
+                            fontSize: 12,
+                            color: Colors.amber[800],
+                            fontWeight: FontWeight.w500,
+                          ),
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+              ],
               const SizedBox(height: 12),
               Text(
                 'Agenda Acara:',
