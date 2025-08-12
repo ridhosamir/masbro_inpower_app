@@ -5,6 +5,7 @@ import '../../../models/user_model.dart';
 import '../../../services/maintenanceApp/firestore_service.dart';
 import '../../../services/user_service.dart';
 import '../../../widgets/custom_button.dart';
+import 'package:cloud_firestore/cloud_firestore.dart';
 
 class AssignTechnicianScreen extends StatefulWidget {
   final ReportModel report;
@@ -19,6 +20,7 @@ class AssignTechnicianScreen extends StatefulWidget {
 class _AssignTechnicianScreenState extends State<AssignTechnicianScreen> {
   final FirestoreService _firestoreService = FirestoreService();
   final UserService _userService = UserService();
+  final FirebaseFirestore _firestore = FirebaseFirestore.instance;
   List<UserModel> _technicians = [];
   UserModel? _selectedTechnician;
   bool _isLoading = false;
@@ -51,24 +53,40 @@ class _AssignTechnicianScreenState extends State<AssignTechnicianScreen> {
     setState(() => _isLoading = true);
 
     try {
-      final technicians = await _userService.getTechnicians();
+      // 1. Get all technicians from users collection
+      final allTechnicians = await _userService.getTechnicians();
+
+      // 2. Get all driver UIDs from drivers collection
+      final driversSnapshot = await _firestore.collection('drivers').get();
+      final driverUIDs = driversSnapshot.docs.map((doc) => doc.id).toSet();
+
+      print('Found ${allTechnicians.length} total technicians');
+      print('Found ${driverUIDs.length} drivers in drivers collection');
+
+      // 3. Filter technicians who are not in drivers collection
+      final nonDriverTechnicians = allTechnicians.where((technician) {
+        final isNotDriver = !driverUIDs.contains(technician.uid);
+
+        if (!isNotDriver) {
+          print(
+              'Filtering out technician-driver: ${technician.name} (${technician.uid})');
+        }
+
+        return isNotDriver;
+      }).toList();
+
+      print('Final filtered technicians: ${nonDriverTechnicians.length}');
+
       if (mounted) {
         setState(() {
-          // Filter out technicians containing "driver" in their name or email
-          _technicians = technicians.where((tech) {
-            final nameContainsDriver =
-                tech.name.toLowerCase().contains('driver');
-            final emailContainsDriver =
-                tech.email.toLowerCase().contains('driver');
-            return !nameContainsDriver && !emailContainsDriver;
-          }).toList();
-
+          _technicians = nonDriverTechnicians;
           // Sort by rating initially
           _sortTechnicians();
           _isLoading = false;
         });
       }
     } catch (e) {
+      print('Error loading non-driver technicians: $e');
       if (mounted) {
         setState(() => _isLoading = false);
 

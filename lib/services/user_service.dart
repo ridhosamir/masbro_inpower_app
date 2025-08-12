@@ -1,4 +1,4 @@
-// File: services/user_service.dart - FULL CODE WITH MIGRATION
+// File: services/user_service.dart - FIXED CODE WITH MIGRATION
 
 import 'package:flutter/material.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
@@ -181,7 +181,7 @@ class UserService extends ChangeNotifier {
     return nameLower.contains('driver') || emailLower.contains('driver');
   }
 
-  // NEW: Get all available drivers (technicians with driver documents)
+  // Get all available drivers (technicians with driver documents)
   Future<List<UserModel>> getAvailableDrivers() async {
     try {
       // Get available drivers from drivers collection
@@ -210,7 +210,7 @@ class UserService extends ChangeNotifier {
     }
   }
 
-  // NEW: Update driver availability
+  // Update driver availability
   Future<void> updateDriverAvailability(String uid, bool isAvailable) async {
     try {
       await _firestore.collection('drivers').doc(uid).update({
@@ -224,7 +224,7 @@ class UserService extends ChangeNotifier {
     }
   }
 
-  // NEW: Assign vehicle to driver
+  // Assign vehicle to driver
   Future<void> assignVehicleToDriver(
       String driverUid, String? vehicleId, String? vehicleName) async {
     try {
@@ -240,7 +240,7 @@ class UserService extends ChangeNotifier {
     }
   }
 
-  // NEW: Get driver info by UID
+  // Get driver info by UID
   Future<Map<String, dynamic>?> getDriverInfo(String uid) async {
     try {
       DocumentSnapshot doc =
@@ -351,7 +351,7 @@ class UserService extends ChangeNotifier {
     }
   }
 
-  // NEW: Get all drivers (for debugging)
+  // Get all drivers (for debugging)
   Future<List<Map<String, dynamic>>> getAllDrivers() async {
     try {
       QuerySnapshot driversQuery = await _firestore.collection('drivers').get();
@@ -366,14 +366,15 @@ class UserService extends ChangeNotifier {
     }
   }
 
-  // NEW: Manually create driver document for specific user
-  Future<String?> createDriverDocumentForUser(String uid) async {
+  // Manually create driver document for specific user
+  Future<String?> createDriverDocumentForUser(String uid,
+      {bool force = false}) async {
     try {
       // Get user data
       UserModel userData = await getUserData(uid);
 
-      // Check if user is technician
-      if (userData.role != 'technician') {
+      // Check if user is technician (skip check if force=true)
+      if (!force && userData.role != 'technician') {
         return 'User must be a technician to become a driver';
       }
 
@@ -382,6 +383,17 @@ class UserService extends ChangeNotifier {
           await _firestore.collection('drivers').doc(uid).get();
 
       if (existingDriver.exists) {
+        // If driver exists but is inactive, we can reactivate it
+        Map<String, dynamic> driverData =
+            existingDriver.data() as Map<String, dynamic>;
+        if (driverData['status'] == 'inactive') {
+          await _firestore.collection('drivers').doc(uid).update({
+            'isAvailable': true,
+            'status': 'active',
+            'updatedAt': Timestamp.now(),
+          });
+          return null; // Success - reactivated
+        }
         return 'Driver document already exists for this user';
       }
 
@@ -407,8 +419,9 @@ class UserService extends ChangeNotifier {
     }
   }
 
-  // NEW: Remove driver document for specific user
-  Future<String?> removeDriverDocumentForUser(String uid) async {
+  // Remove driver document for specific user (or mark as inactive)
+  Future<String?> removeDriverDocumentForUser(String uid,
+      {bool hardDelete = false}) async {
     try {
       // Check if driver document exists
       DocumentSnapshot driverDoc =
@@ -418,10 +431,20 @@ class UserService extends ChangeNotifier {
         return 'Driver document does not exist for this user';
       }
 
-      // Delete driver document
-      await _firestore.collection('drivers').doc(uid).delete();
+      if (hardDelete) {
+        // Hard delete - remove document completely
+        await _firestore.collection('drivers').doc(uid).delete();
+        print('✅ Driver document deleted for: $uid');
+      } else {
+        // Soft delete - mark as inactive
+        await _firestore.collection('drivers').doc(uid).update({
+          'isAvailable': false,
+          'status': 'inactive',
+          'updatedAt': Timestamp.now(),
+        });
+        print('✅ Driver document marked inactive for: $uid');
+      }
 
-      print('✅ Driver document removed for: $uid');
       return null; // Success
     } catch (e) {
       String errorMsg = 'Error removing driver document: $e';

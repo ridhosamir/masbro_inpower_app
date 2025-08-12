@@ -70,9 +70,7 @@ class _AssignDriverVehicleScreenState extends State<AssignDriverVehicleScreen> {
       for (var driverDoc in availableDriversSnapshot.docs) {
         try {
           final userData = await _userService.getUserData(driverDoc.id);
-          if (userData.name.toLowerCase().contains('driver')) {
-            availableTechnicians.add(userData);
-          }
+          availableTechnicians.add(userData);
         } catch (e) {
           print('Error fetching user data for driver ${driverDoc.id}: $e');
         }
