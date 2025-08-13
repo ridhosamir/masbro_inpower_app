@@ -511,3 +511,313 @@ exports.aggregateMaintenanceRating = onDocumentCreated("technician_ratings/{rati
     logger.error(`Error memicu agregasi dari maintenanceApp untuk teknisi ${ratingData.technicianId}`, error);
   }
 });
+/**
+ * Cloud Function untuk menghitung ulang rata-rata rating driver
+ * berdasarkan semua rating yang diterima
+ */
+async function updateDriverStats(driverId) {
+  if (!driverId) {
+    logger.log("driverId tidak diberikan ke fungsi inti.");
+    return null;
+  }
+  logger.log(`Memulai kalkulasi statistik driver untuk: ${driverId}`);
+
+  try {
+    // Ambil semua rating untuk driver ini
+    const ratingsSnapshot = await db.collection("driver_ratings").where("driverId", "==", driverId).get();
+    const totalRatings = ratingsSnapshot.docs.length;
+
+    if (totalRatings === 0) {
+      logger.log(`Tidak ada rating ditemukan untuk driver ${driverId}. Reset ke 0.`);
+      const driverRef = db.collection("drivers").doc(driverId);
+      return driverRef.update({ 
+        averageRating: 0, 
+        totalRatings: 0,
+        updatedAt: admin.firestore.FieldValue.serverTimestamp()
+      });
+    }
+
+    let sumOfRatings = 0;
+    ratingsSnapshot.docs.forEach((doc) => {
+      sumOfRatings += doc.data().rating;
+    });
+    const averageRating = sumOfRatings / totalRatings;
+
+    const driverRef = db.collection("drivers").doc(driverId);
+    logger.info(`Memperbarui driver ${driverId}: averageRating=${averageRating.toFixed(2)}, totalRatings=${totalRatings}`);
+
+    return driverRef.update({
+      averageRating: averageRating,
+      totalRatings: totalRatings,
+      updatedAt: admin.firestore.FieldValue.serverTimestamp()
+    });
+  } catch (error) {
+    logger.error(`Error updating driver stats for ${driverId}:`, error);
+    throw error;
+  }
+}
+
+/**
+ * Cloud Function untuk menghitung ulang rata-rata rating vehicle
+ * berdasarkan semua rating yang diterima
+ */
+async function updateVehicleStats(vehicleId) {
+  if (!vehicleId) {
+    logger.log("vehicleId tidak diberikan ke fungsi inti.");
+    return null;
+  }
+  logger.log(`Memulai kalkulasi statistik vehicle untuk: ${vehicleId}`);
+
+  try {
+    // Ambil semua rating untuk vehicle ini
+    const ratingsSnapshot = await db.collection("vehicle_ratings").where("vehicleId", "==", vehicleId).get();
+    const totalRatings = ratingsSnapshot.docs.length;
+
+    if (totalRatings === 0) {
+      logger.log(`Tidak ada rating ditemukan untuk vehicle ${vehicleId}. Reset ke 0.`);
+      const vehicleRef = db.collection("vehicles").doc(vehicleId);
+      return vehicleRef.update({ 
+        averageRating: 0, 
+        totalRatings: 0,
+        updatedAt: admin.firestore.FieldValue.serverTimestamp()
+      });
+    }
+
+    let sumOfRatings = 0;
+    ratingsSnapshot.docs.forEach((doc) => {
+      sumOfRatings += doc.data().rating;
+    });
+    const averageRating = sumOfRatings / totalRatings;
+
+    const vehicleRef = db.collection("vehicles").doc(vehicleId);
+    logger.info(`Memperbarui vehicle ${vehicleId}: averageRating=${averageRating.toFixed(2)}, totalRatings=${totalRatings}`);
+
+    return vehicleRef.update({
+      averageRating: averageRating,
+      totalRatings: totalRatings,
+      updatedAt: admin.firestore.FieldValue.serverTimestamp()
+    });
+  } catch (error) {
+    logger.error(`Error updating vehicle stats for ${vehicleId}:`, error);
+    throw error;
+  }
+}
+
+/**
+ * Trigger untuk menghitung ulang rating driver saat rating baru dibuat
+ */
+exports.aggregateDriverRating = onDocumentCreated("driver_ratings/{ratingId}", async (event) => {
+  const snapshot = event.data;
+  if (!snapshot) {
+    logger.error("Event tidak memiliki data snapshot.");
+    return;
+  }
+  
+  const ratingData = snapshot.data();
+  try {
+    await updateDriverStats(ratingData.driverId);
+    logger.info(`✅ Driver stats updated for rating: ${event.params.ratingId}`);
+  } catch (error) {
+    logger.error(`❌ Error updating driver stats for rating ${event.params.ratingId}:`, error);
+  }
+});
+
+/**
+ * Trigger untuk menghitung ulang rating vehicle saat rating baru dibuat
+ */
+exports.aggregateVehicleRating = onDocumentCreated("vehicle_ratings/{ratingId}", async (event) => {
+  const snapshot = event.data;
+  if (!snapshot) {
+    logger.error("Event tidak memiliki data snapshot.");
+    return;
+  }
+  
+  const ratingData = snapshot.data();
+  try {
+    await updateVehicleStats(ratingData.vehicleId);
+    logger.info(`✅ Vehicle stats updated for rating: ${event.params.ratingId}`);
+  } catch (error) {
+    logger.error(`❌ Error updating vehicle stats for rating ${event.params.ratingId}:`, error);
+  }
+});
+
+/**
+ * Cloud Function untuk membuat atau memperbarui driver/vehicle secara batch
+ * Berguna untuk migrasi data existing atau sync data
+ */
+exports.syncDriverVehicleRatings = onCall({ region: "asia-southeast1" }, async (request) => {
+  try {
+    // Verifikasi admin
+    if (!request.auth) {
+      throw new functions.https.HttpsError("unauthenticated", "Harus login sebagai admin");
+    }
+
+    const callerUid = request.auth.uid;
+    const callerDoc = await db.collection("users").doc(callerUid).get();
+    if (!callerDoc.exists || callerDoc.data().role !== "admin") {
+      throw new functions.https.HttpsError("permission-denied", "Hanya admin yang dapat menjalankan sync");
+    }
+
+    logger.info(`Admin ${callerUid} memulai sync driver/vehicle ratings`);
+
+    // Sync semua driver ratings
+    const driversSnapshot = await db.collection("drivers").get();
+    const driverPromises = driversSnapshot.docs.map(doc => updateDriverStats(doc.id));
+    await Promise.all(driverPromises);
+
+    // Sync semua vehicle ratings  
+    const vehiclesSnapshot = await db.collection("vehicles").get();
+    const vehiclePromises = vehiclesSnapshot.docs.map(doc => updateVehicleStats(doc.id));
+    await Promise.all(vehiclePromises);
+
+    logger.info(`✅ Sync completed: ${driversSnapshot.docs.length} drivers, ${vehiclesSnapshot.docs.length} vehicles`);
+
+    return {
+      success: true,
+      message: `Successfully synced ratings for ${driversSnapshot.docs.length} drivers and ${vehiclesSnapshot.docs.length} vehicles`,
+      driversCount: driversSnapshot.docs.length,
+      vehiclesCount: vehiclesSnapshot.docs.length
+    };
+
+  } catch (error) {
+    logger.error(`❌ Error in syncDriverVehicleRatings:`, error);
+    throw new functions.https.HttpsError("internal", `Sync failed: ${error.message}`);
+  }
+});
+
+/**
+ * Cloud Function untuk mendapatkan statistik rating driver
+ */
+exports.getDriverRatingStats = onCall({ region: "asia-southeast1" }, async (request) => {
+  try {
+    if (!request.auth) {
+      throw new functions.https.HttpsError("unauthenticated", "Harus login");
+    }
+
+    const { driverId } = request.data;
+    if (!driverId) {
+      throw new functions.https.HttpsError("invalid-argument", "driverId diperlukan");
+    }
+
+    // Ambil data driver
+    const driverDoc = await db.collection("drivers").doc(driverId).get();
+    if (!driverDoc.exists) {
+      throw new functions.https.HttpsError("not-found", "Driver tidak ditemukan");
+    }
+
+    // Ambil rating statistics
+    const ratingsSnapshot = await db.collection("driver_ratings")
+      .where("driverId", "==", driverId)
+      .orderBy("timestamp", "desc")
+      .get();
+
+    const reviews = [];
+    let totalRating = 0;
+    
+    ratingsSnapshot.docs.forEach(doc => {
+      const data = doc.data();
+      totalRating += data.rating;
+      
+      if (data.review) {
+        reviews.push({
+          rating: data.rating,
+          review: data.review,
+          timestamp: data.timestamp,
+          requestId: data.requestId
+        });
+      }
+    });
+
+    const driverData = driverDoc.data();
+    const averageRating = ratingsSnapshot.docs.length > 0 ? totalRating / ratingsSnapshot.docs.length : 0;
+
+    return {
+      success: true,
+      data: {
+        driverInfo: {
+          name: driverData.name,
+          email: driverData.email,
+          isAvailable: driverData.isAvailable
+        },
+        ratingStats: {
+          averageRating: averageRating,
+          totalRatings: ratingsSnapshot.docs.length,
+          recentReviews: reviews.slice(0, 10) // 10 review terbaru
+        }
+      }
+    };
+
+  } catch (error) {
+    logger.error(`Error getting driver stats:`, error);
+    throw new functions.https.HttpsError("internal", `Failed to get stats: ${error.message}`);
+  }
+});
+
+/**
+ * Cloud Function untuk mendapatkan statistik rating vehicle
+ */
+exports.getVehicleRatingStats = onCall({ region: "asia-southeast1" }, async (request) => {
+  try {
+    if (!request.auth) {
+      throw new functions.https.HttpsError("unauthenticated", "Harus login");
+    }
+
+    const { vehicleId } = request.data;
+    if (!vehicleId) {
+      throw new functions.https.HttpsError("invalid-argument", "vehicleId diperlukan");
+    }
+
+    // Ambil data vehicle
+    const vehicleDoc = await db.collection("vehicles").doc(vehicleId).get();
+    if (!vehicleDoc.exists) {
+      throw new functions.https.HttpsError("not-found", "Vehicle tidak ditemukan");
+    }
+
+    // Ambil rating statistics
+    const ratingsSnapshot = await db.collection("vehicle_ratings")
+      .where("vehicleId", "==", vehicleId)
+      .orderBy("timestamp", "desc")
+      .get();
+
+    const reviews = [];
+    let totalRating = 0;
+    
+    ratingsSnapshot.docs.forEach(doc => {
+      const data = doc.data();
+      totalRating += data.rating;
+      
+      if (data.review) {
+        reviews.push({
+          rating: data.rating,
+          review: data.review,
+          timestamp: data.timestamp,
+          requestId: data.requestId
+        });
+      }
+    });
+
+    const vehicleData = vehicleDoc.data();
+    const averageRating = ratingsSnapshot.docs.length > 0 ? totalRating / ratingsSnapshot.docs.length : 0;
+
+    return {
+      success: true,
+      data: {
+        vehicleInfo: {
+          model: vehicleData.model,
+          licensePlate: vehicleData.licensePlate,
+          capacity: vehicleData.capacity,
+          isAvailable: vehicleData.isAvailable
+        },
+        ratingStats: {
+          averageRating: averageRating,
+          totalRatings: ratingsSnapshot.docs.length,
+          recentReviews: reviews.slice(0, 10) // 10 review terbaru
+        }
+      }
+    };
+
+  } catch (error) {
+    logger.error(`Error getting vehicle stats:`, error);
+    throw new functions.https.HttpsError("internal", `Failed to get stats: ${error.message}`);
+  }
+});

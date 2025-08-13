@@ -743,40 +743,82 @@ class FirestoreService {
   }
 
   /// Get technician rating data - Use this method to get rating info for display
-  Future<Map<String, dynamic>> getTechnicianRatingData(
+Future<Map<String, dynamic>> getTechnicianRatingData(
       String technicianId) async {
     try {
-      // First try to get rating from user document
-      final userDoc = await _usersCollection.doc(technicianId).get();
+      // Get all ratings for this technician from ratings collection
+      final ratingsSnapshot = await _ratingsCollection
+          .where('technicianId', isEqualTo: technicianId)
+          .get();
 
-      if (userDoc.exists) {
-        final userData = userDoc.data() as Map<String, dynamic>;
+      if (ratingsSnapshot.docs.isEmpty) {
+        return {
+          'averageRating': 0.0,
+          'totalRatings': 0,
+        };
+      }
 
-        if (userData['averageRating'] != null &&
-            userData['totalRatings'] != null) {
-          // Convert to proper types
-          double averageRating = userData['averageRating'] is int
-              ? (userData['averageRating'] as int).toDouble()
-              : userData['averageRating'] as double;
+      // Extract all report IDs from the ratings
+      List<String> reportIds = ratingsSnapshot.docs.map((doc) {
+        final data = doc.data() as Map<String, dynamic>;
+        return data['reportId'] as String;
+      }).toList();
 
-          int totalRatings = userData['totalRatings'] as int;
+      // Get reports to filter for maintenance reports only
+      final reportsSnapshot = await _reportsCollection
+          .where(FieldPath.documentId, whereIn: reportIds)
+          .get();
 
-          return {
-            'averageRating': averageRating,
-            'totalRatings': totalRatings,
-            'source': 'user_document',
-          };
+      // Create a map of report IDs for quick lookup
+      Map<String, bool> maintenanceReportIds = {};
+      for (var doc in reportsSnapshot.docs) {
+        // We're considering all reports from the reports collection as maintenance reports
+        maintenanceReportIds[doc.id] = true;
+      }
+
+      // Filter ratings to only include ones from maintenance reports
+      List<Map<String, dynamic>> maintenanceRatings = [];
+
+      for (var doc in ratingsSnapshot.docs) {
+        final data = doc.data() as Map<String, dynamic>;
+        final reportId = data['reportId'] as String;
+
+        // Only include if the report ID exists in our maintenance reports
+        if (maintenanceReportIds.containsKey(reportId)) {
+          maintenanceRatings.add(data);
         }
       }
 
-      // If user document doesn't have rating data, calculate from ratings collection
-      final ratingData =
-          await _calculateAverageRatingFromCollection(technicianId);
-      ratingData['source'] = 'ratings_collection';
+      // If no maintenance ratings were found
+      if (maintenanceRatings.isEmpty) {
+        return {
+          'averageRating': 0.0,
+          'totalRatings': 0,
+        };
+      }
 
-      return ratingData;
+      // Calculate average from filtered maintenance ratings
+      double totalRating = 0;
+      final totalRatings = maintenanceRatings.length;
+
+      for (var data in maintenanceRatings) {
+        final rating = data['rating'] is int
+            ? (data['rating'] as int).toDouble()
+            : data['rating'] as double;
+        totalRating += rating;
+      }
+
+      final averageRating = totalRating / totalRatings;
+
+      print(
+          'Calculated MAINTENANCE rating for technician $technicianId: $averageRating from $totalRatings ratings');
+
+      return {
+        'averageRating': averageRating,
+        'totalRatings': totalRatings,
+      };
     } catch (e) {
-      print('Error getting technician rating data: $e');
+      print('Error getting technician maintenance rating data: $e');
       return {
         'averageRating': 0.0,
         'totalRatings': 0,
@@ -784,6 +826,7 @@ class FirestoreService {
       };
     }
   }
+
 
   /// Get technician reviews
   Future<List<Map<String, dynamic>>> getTechnicianReviews(
