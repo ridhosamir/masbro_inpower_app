@@ -99,7 +99,7 @@ class _OfficerDashboardState extends State<OfficerDashboard>
   }
 
   // Fungsi untuk mendapatkan data rating teknisi
-  Future<Map<String, dynamic>> _getTechnicianRating(String technicianId) async {
+Future<Map<String, dynamic>> _getTechnicianRating(String technicianId) async {
     try {
       return await _firestoreService.getTechnicianRatingData(technicianId);
     } catch (e) {

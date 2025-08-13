@@ -6,113 +6,52 @@ class RideRequestModel {
   final String employeeId;
   final String employeeName;
   final String pickupLocation;
-  final DateTime pickupDateTime;
   final String dropoffLocation;
+  final DateTime pickupDateTime;
   final DateTime? returnDateTime;
   final int passengerCapacity;
   final String description;
   final String status; // 'open', 'inProgress', 'completed'
   final DateTime createdAt;
+  final DateTime? assignedAt;
+  final DateTime? completedAt;
   final String? driverId;
   final String? driverName;
   final String? vehicleId;
   final String? vehicleName;
-  final DateTime? assignedAt;
-  final DateTime? completedAt;
   final String? completionNote;
+
+  // Rating fields
+  final double? driverRating;
+  final String? driverReview;
+  final double? vehicleRating;
+  final String? vehicleReview;
 
   RideRequestModel({
     required this.id,
     required this.employeeId,
     required this.employeeName,
     required this.pickupLocation,
-    required this.pickupDateTime,
     required this.dropoffLocation,
+    required this.pickupDateTime,
     this.returnDateTime,
     required this.passengerCapacity,
     required this.description,
     required this.status,
     required this.createdAt,
+    this.assignedAt,
+    this.completedAt,
     this.driverId,
     this.driverName,
     this.vehicleId,
     this.vehicleName,
-    this.assignedAt,
-    this.completedAt,
     this.completionNote,
+    this.driverRating,
+    this.driverReview,
+    this.vehicleRating,
+    this.vehicleReview,
   });
 
-  // Copy with method for creating a modified version of the object
-  RideRequestModel copyWith({
-    String? id,
-    String? employeeId,
-    String? employeeName,
-    String? pickupLocation,
-    DateTime? pickupDateTime,
-    String? dropoffLocation,
-    DateTime? returnDateTime,
-    int? passengerCapacity,
-    String? description,
-    String? status,
-    DateTime? createdAt,
-    String? driverId,
-    String? driverName,
-    String? vehicleId,
-    String? vehicleName,
-    DateTime? assignedAt,
-    DateTime? completedAt,
-    String? completionNote,
-  }) {
-    return RideRequestModel(
-      id: id ?? this.id,
-      employeeId: employeeId ?? this.employeeId,
-      employeeName: employeeName ?? this.employeeName,
-      pickupLocation: pickupLocation ?? this.pickupLocation,
-      pickupDateTime: pickupDateTime ?? this.pickupDateTime,
-      dropoffLocation: dropoffLocation ?? this.dropoffLocation,
-      returnDateTime: returnDateTime ?? this.returnDateTime,
-      passengerCapacity: passengerCapacity ?? this.passengerCapacity,
-      description: description ?? this.description,
-      status: status ?? this.status,
-      createdAt: createdAt ?? this.createdAt,
-      driverId: driverId ?? this.driverId,
-      driverName: driverName ?? this.driverName,
-      vehicleId: vehicleId ?? this.vehicleId,
-      vehicleName: vehicleName ?? this.vehicleName,
-      assignedAt: assignedAt ?? this.assignedAt,
-      completedAt: completedAt ?? this.completedAt,
-      completionNote: completionNote ?? this.completionNote,
-    );
-  }
-
-  // Convert model to a Map for Firestore
-  Map<String, dynamic> toMap() {
-    return {
-      'employeeId': employeeId,
-      'employeeName': employeeName,
-      'pickupLocation': pickupLocation,
-      'pickupDateTime': Timestamp.fromDate(pickupDateTime),
-      'dropoffLocation': dropoffLocation,
-      'returnDateTime': returnDateTime != null
-          ? Timestamp.fromDate(returnDateTime!)
-          : null,
-      'passengerCapacity': passengerCapacity,
-      'description': description,
-      'status': status,
-      'createdAt': Timestamp.fromDate(createdAt),
-      'driverId': driverId,
-      'driverName': driverName,
-      'vehicleId': vehicleId,
-      'vehicleName': vehicleName,
-      'assignedAt': assignedAt != null ? Timestamp.fromDate(assignedAt!) : null,
-      'completedAt': completedAt != null
-          ? Timestamp.fromDate(completedAt!)
-          : null,
-      'completionNote': completionNote,
-    };
-  }
-
-  // Create a model from a Firestore document
   factory RideRequestModel.fromSnapshot(DocumentSnapshot doc) {
     final data = doc.data() as Map<String, dynamic>;
     return RideRequestModel(
@@ -120,30 +59,73 @@ class RideRequestModel {
       employeeId: data['employeeId'] ?? '',
       employeeName: data['employeeName'] ?? '',
       pickupLocation: data['pickupLocation'] ?? '',
-      pickupDateTime: (data['pickupDateTime'] as Timestamp).toDate(),
       dropoffLocation: data['dropoffLocation'] ?? '',
+      pickupDateTime: data['pickupDateTime'] != null
+          ? (data['pickupDateTime'] as Timestamp).toDate()
+          : DateTime.now(),
       returnDateTime: data['returnDateTime'] != null
           ? (data['returnDateTime'] as Timestamp).toDate()
           : null,
       passengerCapacity: data['passengerCapacity'] ?? 1,
       description: data['description'] ?? '',
       status: data['status'] ?? 'open',
-      createdAt: (data['createdAt'] as Timestamp).toDate(),
-      driverId: data['driverId'],
-      driverName: data['driverName'],
-      vehicleId: data['vehicleId'],
-      vehicleName: data['vehicleName'],
+      createdAt: data['createdAt'] != null
+          ? (data['createdAt'] as Timestamp).toDate()
+          : DateTime.now(),
       assignedAt: data['assignedAt'] != null
           ? (data['assignedAt'] as Timestamp).toDate()
           : null,
       completedAt: data['completedAt'] != null
           ? (data['completedAt'] as Timestamp).toDate()
           : null,
+      driverId: data['driverId'],
+      driverName: data['driverName'],
+      vehicleId: data['vehicleId'],
+      vehicleName: data['vehicleName'],
       completionNote: data['completionNote'],
+      driverRating: data['driverRating'] != null
+          ? (data['driverRating'] is int
+              ? (data['driverRating'] as int).toDouble()
+              : data['driverRating'] as double)
+          : null,
+      driverReview: data['driverReview'],
+      vehicleRating: data['vehicleRating'] != null
+          ? (data['vehicleRating'] is int
+              ? (data['vehicleRating'] as int).toDouble()
+              : data['vehicleRating'] as double)
+          : null,
+      vehicleReview: data['vehicleReview'],
     );
   }
 
-  // Helper method to get status color for UI
+  Map<String, dynamic> toMap() {
+    return {
+      'employeeId': employeeId,
+      'employeeName': employeeName,
+      'pickupLocation': pickupLocation,
+      'dropoffLocation': dropoffLocation,
+      'pickupDateTime': Timestamp.fromDate(pickupDateTime),
+      'returnDateTime':
+          returnDateTime != null ? Timestamp.fromDate(returnDateTime!) : null,
+      'passengerCapacity': passengerCapacity,
+      'description': description,
+      'status': status,
+      'createdAt': Timestamp.fromDate(createdAt),
+      'assignedAt': assignedAt != null ? Timestamp.fromDate(assignedAt!) : null,
+      'completedAt':
+          completedAt != null ? Timestamp.fromDate(completedAt!) : null,
+      'driverId': driverId,
+      'driverName': driverName,
+      'vehicleId': vehicleId,
+      'vehicleName': vehicleName,
+      'completionNote': completionNote,
+      'driverRating': driverRating,
+      'driverReview': driverReview,
+      'vehicleRating': vehicleRating,
+      'vehicleReview': vehicleReview,
+    };
+  }
+
   Color getStatusColor() {
     switch (status) {
       case 'open':
@@ -157,7 +139,6 @@ class RideRequestModel {
     }
   }
 
-  // Helper method to get status icon for UI
   IconData getStatusIcon() {
     switch (status) {
       case 'open':
@@ -171,7 +152,6 @@ class RideRequestModel {
     }
   }
 
-  // Helper method to get status display name for UI
   String getStatusDisplayName() {
     switch (status) {
       case 'open':
@@ -184,6 +164,29 @@ class RideRequestModel {
         return status;
     }
   }
+
+  // Helper methods for ratings
+  bool hasDriverRating() {
+    return driverRating != null;
+  }
+
+  bool hasDriverReview() {
+    return driverReview != null && driverReview!.isNotEmpty;
+  }
+
+  bool hasVehicleRating() {
+    return vehicleRating != null;
+  }
+
+  bool hasVehicleReview() {
+    return vehicleReview != null && vehicleReview!.isNotEmpty;
+  }
+
+  bool canBeRated() {
+    return status == 'completed' && driverId != null && vehicleId != null;
+  }
+
+  bool isFullyRated() {
+    return hasDriverRating() && hasVehicleRating();
+  }
 }
-
-

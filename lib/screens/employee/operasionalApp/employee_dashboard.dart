@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'package:intl/intl.dart';
+import 'package:flutter_rating_bar/flutter_rating_bar.dart';
 import '../../../services/auth_service.dart';
 import '../../../services/operasionalApp/firestore_service.dart';
 import '../../../services/user_service.dart';
@@ -22,7 +23,7 @@ class _EmployeeDashboardState extends State<EmployeeDashboardOprational>
   late TabController _tabController;
   TextEditingController _searchController = TextEditingController();
   String _searchQuery = '';
-  String _selectedFilter = 'all'; // Add filter state
+  String _selectedFilter = 'all';
 
   @override
   void initState() {
@@ -907,6 +908,115 @@ class _EmployeeDashboardState extends State<EmployeeDashboardOprational>
                   ),
                 ),
               ],
+
+              // Rating prompt for completed requests
+              if (request.status == 'completed' &&
+                  request.driverId != null &&
+                  !request.isFullyRated()) ...[
+                SizedBox(height: 12),
+                Container(
+                  width: double.infinity,
+                  padding: EdgeInsets.all(12),
+                  decoration: BoxDecoration(
+                    color: Colors.amber[50],
+                    borderRadius: BorderRadius.circular(8),
+                    border: Border.all(color: Colors.amber[200]!),
+                  ),
+                  child: Row(
+                    children: [
+                      Icon(Icons.star_rate, color: Colors.amber[700], size: 20),
+                      SizedBox(width: 8),
+                      Expanded(
+                        child: Text(
+                          'Please rate your ride experience',
+                          style: TextStyle(
+                            fontSize: 12,
+                            color: Colors.amber[700],
+                            fontWeight: FontWeight.w500,
+                          ),
+                        ),
+                      ),
+                      Icon(Icons.arrow_forward_ios,
+                          color: Colors.amber[700], size: 12),
+                    ],
+                  ),
+                ),
+              ],
+
+              // Show submitted ratings if available
+              if (request.status == 'completed' && request.isFullyRated()) ...[
+                SizedBox(height: 12),
+                Container(
+                  width: double.infinity,
+                  padding: EdgeInsets.all(12),
+                  decoration: BoxDecoration(
+                    color: Colors.green[50],
+                    borderRadius: BorderRadius.circular(8),
+                    border: Border.all(color: Colors.green[200]!),
+                  ),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Row(
+                        children: [
+                          Icon(Icons.check_circle,
+                              color: Colors.green[700], size: 16),
+                          SizedBox(width: 8),
+                          Text(
+                            'Thank you for your ratings!',
+                            style: TextStyle(
+                              fontSize: 12,
+                              color: Colors.green[700],
+                              fontWeight: FontWeight.w500,
+                            ),
+                          ),
+                        ],
+                      ),
+                      SizedBox(height: 4),
+                      Row(
+                        children: [
+                          Text(
+                            'Driver: ',
+                            style: TextStyle(
+                              fontSize: 11,
+                              color: Colors.green[600],
+                            ),
+                          ),
+                          RatingBarIndicator(
+                            rating: request.driverRating ?? 0,
+                            itemBuilder: (context, index) => Icon(
+                              Icons.star,
+                              color: Colors.amber,
+                            ),
+                            itemCount: 5,
+                            itemSize: 12.0,
+                            direction: Axis.horizontal,
+                          ),
+                          SizedBox(width: 8),
+                          Text(
+                            'Vehicle: ',
+                            style: TextStyle(
+                              fontSize: 11,
+                              color: Colors.green[600],
+                            ),
+                          ),
+                          RatingBarIndicator(
+                            rating: request.vehicleRating ?? 0,
+                            itemBuilder: (context, index) => Icon(
+                              Icons.star,
+                              color: Colors.amber,
+                            ),
+                            itemCount: 5,
+                            itemSize: 12.0,
+                            direction: Axis.horizontal,
+                          ),
+                        ],
+                      ),
+                    ],
+                  ),
+                ),
+              ],
+
               if (request.status == 'completed' &&
                   request.completionNote != null) ...[
                 SizedBox(height: 12),

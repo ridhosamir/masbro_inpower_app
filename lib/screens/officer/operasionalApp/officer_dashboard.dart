@@ -5,6 +5,8 @@ import '../../../services/auth_service.dart';
 import '../../../services/operasionalApp/firestore_service.dart';
 import '../../../services/user_service.dart';
 import '../../../models/operasionalApp/ride_request_model.dart';
+import '../../../models/operasionalApp/driver_model.dart';
+import '../../../models/operasionalApp/vehicle_model.dart';
 import '../../../models/user_model.dart';
 import '../../../widgets/custom_text_field.dart';
 import 'vehicle_manage_screen.dart';
@@ -29,13 +31,18 @@ class _OfficerDashboardState extends State<OfficerDashboardOprational>
   final _completionReasonController = TextEditingController();
   bool _isCompleting = false;
 
+  List<DriverModel> _drivers = [];
+  List<VehicleModel> _vehicles = [];
+  bool _loadingDrivers = false;
+  bool _loadingVehicles = false;
+
   @override
   void initState() {
     super.initState();
     _tabController = TabController(length: 4, vsync: this);
     _loadUserData();
+    _loadDriversAndVehicles();
 
-    // Run sync on app startup to fix any inconsistent driver/vehicle status
     WidgetsBinding.instance.addPostFrameCallback((_) {
       _firestoreService.syncDriverVehicleStatus();
     });
@@ -67,6 +74,65 @@ class _OfficerDashboardState extends State<OfficerDashboardOprational>
     }
   }
 
+  Future<void> _loadDriversAndVehicles() async {
+    setState(() {
+      _loadingDrivers = true;
+      _loadingVehicles = true;
+    });
+
+    try {
+      _firestoreService.getDrivers().listen((drivers) {
+        if (mounted) {
+          setState(() {
+            _drivers = drivers;
+            _loadingDrivers = false;
+          });
+        }
+      });
+
+      _firestoreService.getVehicles().listen((vehicles) {
+        if (mounted) {
+          setState(() {
+            _vehicles = vehicles;
+            _loadingVehicles = false;
+          });
+        }
+      });
+    } catch (e) {
+      print('Error loading drivers and vehicles: $e');
+      if (mounted) {
+        setState(() {
+          _loadingDrivers = false;
+          _loadingVehicles = false;
+        });
+      }
+    }
+  }
+
+  Future<Map<String, dynamic>> _getDriverRating(String driverId) async {
+    try {
+      return await _firestoreService.getDriverRatingData(driverId);
+    } catch (e) {
+      print('Error getting driver rating: $e');
+      return {
+        'averageRating': 0.0,
+        'totalRatings': 0,
+      };
+    }
+  }
+
+  Future<Map<String, dynamic>> _getVehicleRating(String vehicleId) async {
+    try {
+      return await _firestoreService.getVehicleRatingData(vehicleId);
+    } catch (e) {
+      print('Error getting vehicle rating: $e');
+      return {
+        'averageRating': 0.0,
+        'totalRatings': 0,
+      };
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
@@ -83,7 +149,6 @@ class _OfficerDashboardState extends State<OfficerDashboardOprational>
                 titlePadding: EdgeInsets.symmetric(horizontal: 16, vertical: 8),
                 background: Stack(
                   children: [
-                    // Gradient background
                     Container(
                       decoration: BoxDecoration(
                         gradient: LinearGradient(
@@ -96,8 +161,6 @@ class _OfficerDashboardState extends State<OfficerDashboardOprational>
                         ),
                       ),
                     ),
-
-                    // Decorative pattern
                     Positioned(
                       right: -30,
                       top: -20,
@@ -110,7 +173,6 @@ class _OfficerDashboardState extends State<OfficerDashboardOprational>
                         ),
                       ),
                     ),
-
                     Positioned(
                       left: -60,
                       bottom: -40,
@@ -123,8 +185,6 @@ class _OfficerDashboardState extends State<OfficerDashboardOprational>
                         ),
                       ),
                     ),
-
-                    // User info content
                     SafeArea(
                       child: Padding(
                         padding: EdgeInsets.fromLTRB(20, 10, 20, 50),
@@ -134,7 +194,6 @@ class _OfficerDashboardState extends State<OfficerDashboardOprational>
                             if (currentUser != null) ...[
                               Row(
                                 children: [
-                                  // User avatar
                                   Container(
                                     width: 48,
                                     height: 48,
@@ -151,8 +210,6 @@ class _OfficerDashboardState extends State<OfficerDashboardOprational>
                                     ),
                                   ),
                                   SizedBox(width: 14),
-
-                                  // User details
                                   Expanded(
                                     child: Column(
                                       crossAxisAlignment:
@@ -184,8 +241,6 @@ class _OfficerDashboardState extends State<OfficerDashboardOprational>
                                   ),
                                 ],
                               ),
-
-                              // Quick stats
                               Padding(
                                 padding: EdgeInsets.only(top: 16, left: 4),
                                 child: Text(
@@ -197,7 +252,6 @@ class _OfficerDashboardState extends State<OfficerDashboardOprational>
                                   ),
                                 ),
                               ),
-
                               SizedBox(height: 8),
                               StreamBuilder<List<RideRequestModel>>(
                                 stream: _firestoreService.getRideRequests(),
@@ -347,12 +401,9 @@ class _OfficerDashboardState extends State<OfficerDashboardOprational>
         body: Column(
           children: [
             // Statistics Cards
-            Container(
-              padding: EdgeInsets.all(16),
-              child: _buildStatisticsCards(),
-            ),
+            _buildStatisticsCards(),
 
-            // Quick Action Buttons - MODIFIED THIS SECTION TO MAKE BUTTON WIDER
+            // Quick Action Buttons
             Container(
               padding: EdgeInsets.symmetric(horizontal: 18, vertical: 8),
               child: Column(
@@ -367,7 +418,32 @@ class _OfficerDashboardState extends State<OfficerDashboardOprational>
                     ),
                   ),
                   SizedBox(height: 15),
-                  // Remove the Row and make the button take full width
+                  Row(
+                    children: [
+                      Expanded(
+                        child: _buildActionButton(
+                          icon: Icons.star_border,
+                          label: 'Vehicle Ratings',
+                          color: Colors.green,
+                          onTap: () {
+                            _showVehicleRatingsDialog();
+                          },
+                        ),
+                      ),
+                      SizedBox(width: 12),
+                      Expanded(
+                        child: _buildActionButton(
+                          icon: Icons.star,
+                          label: 'Driver Ratings',
+                          color: Colors.blue,
+                          onTap: () {
+                            _showDriverRatingsDialog();
+                          },
+                        ),
+                      ),
+                    ],
+                  ),
+                  SizedBox(height: 12),
                   _buildActionButton(
                     icon: Icons.directions_car,
                     label: 'Vehicle Management',
@@ -487,80 +563,6 @@ class _OfficerDashboardState extends State<OfficerDashboardOprational>
     );
   }
 
-  // Helper method for syncing driver and vehicle status
-  Future<void> _syncDriverVehicleStatus() async {
-    try {
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: Text('Syncing driver and vehicle status...'),
-          backgroundColor: Colors.blue,
-          behavior: SnackBarBehavior.floating,
-        ),
-      );
-
-      await _firestoreService.syncDriverVehicleStatus();
-
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: Text('Driver and vehicle status synchronized successfully'),
-          backgroundColor: Colors.green,
-          behavior: SnackBarBehavior.floating,
-        ),
-      );
-    } catch (e) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: Text('Error synchronizing status: $e'),
-          backgroundColor: Colors.red,
-          behavior: SnackBarBehavior.floating,
-        ),
-      );
-    }
-  }
-
-  // Helper method for action button
-  Widget _buildActionButton({
-    required IconData icon,
-    required String label,
-    required Color color,
-    required VoidCallback onTap,
-  }) {
-    return InkWell(
-      onTap: onTap,
-      borderRadius: BorderRadius.circular(12),
-      child: Container(
-        padding: EdgeInsets.symmetric(vertical: 16, horizontal: 20),
-        decoration: BoxDecoration(
-          color: color.withOpacity(0.1),
-          borderRadius: BorderRadius.circular(12),
-          border: Border.all(color: color.withOpacity(0.3)),
-        ),
-        child: Row(
-          children: [
-            Icon(
-              icon,
-              color: color,
-              size: 28,
-            ),
-            SizedBox(width: 12),
-            Expanded(
-              child: Text(
-                label,
-                style: TextStyle(
-                  color: color,
-                  fontSize: 14,
-                  fontWeight: FontWeight.w600,
-                ),
-                maxLines: 2,
-                overflow: TextOverflow.ellipsis,
-              ),
-            ),
-          ],
-        ),
-      ),
-    );
-  }
-
   Widget _buildStatisticsCards() {
     return StreamBuilder<List<RideRequestModel>>(
       stream: _firestoreService.getRideRequests(),
@@ -578,44 +580,47 @@ class _OfficerDashboardState extends State<OfficerDashboardOprational>
                 r.createdAt.day == today.day)
             .length;
 
-        return Row(
-          children: [
-            Expanded(
-              child: _buildStatCard(
-                title: 'All Requests',
-                count: requests.length,
-                icon: Icons.assignment,
-                color: Colors.blue,
+        return Container(
+          padding: EdgeInsets.all(16),
+          child: Row(
+            children: [
+              Expanded(
+                child: _buildStatCard(
+                  title: 'All Requests',
+                  count: requests.length,
+                  icon: Icons.assignment,
+                  color: Colors.blue,
+                ),
               ),
-            ),
-            SizedBox(width: 8),
-            Expanded(
-              child: _buildStatCard(
-                title: 'Open',
-                count: open,
-                icon: Icons.pending,
-                color: Colors.orange,
+              SizedBox(width: 8),
+              Expanded(
+                child: _buildStatCard(
+                  title: 'Open',
+                  count: open,
+                  icon: Icons.pending,
+                  color: Colors.orange,
+                ),
               ),
-            ),
-            SizedBox(width: 8),
-            Expanded(
-              child: _buildStatCard(
-                title: 'Today',
-                count: todayRequests,
-                icon: Icons.today,
-                color: Colors.purple,
+              SizedBox(width: 8),
+              Expanded(
+                child: _buildStatCard(
+                  title: 'Today',
+                  count: todayRequests,
+                  icon: Icons.today,
+                  color: Colors.purple,
+                ),
               ),
-            ),
-            SizedBox(width: 8),
-            Expanded(
-              child: _buildStatCard(
-                title: 'In Progress',
-                count: inProgress,
-                icon: Icons.directions_car,
-                color: Colors.blue,
+              SizedBox(width: 8),
+              Expanded(
+                child: _buildStatCard(
+                  title: 'In Progress',
+                  count: inProgress,
+                  icon: Icons.directions_car,
+                  color: Colors.blue,
+                ),
               ),
-            ),
-          ],
+            ],
+          ),
         );
       },
     );
@@ -665,6 +670,381 @@ class _OfficerDashboardState extends State<OfficerDashboardOprational>
     );
   }
 
+  void _showDriverRatingsDialog() {
+    showDialog(
+      context: context,
+      builder: (context) {
+        return AlertDialog(
+          title: Row(
+            children: [
+              Icon(Icons.star, color: Colors.blue),
+              SizedBox(width: 8),
+              Text('Driver Ratings'),
+            ],
+          ),
+          content: Container(
+            width: double.maxFinite,
+            child: _loadingDrivers
+                ? Center(
+                    child: Column(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        CircularProgressIndicator(),
+                        SizedBox(height: 16),
+                        Text('Loading drivers...'),
+                      ],
+                    ),
+                  )
+                : _drivers.isEmpty
+                    ? Center(
+                        child: Text('No drivers found.'),
+                      )
+                    : ListView.builder(
+                        shrinkWrap: true,
+                        itemCount: _drivers.length,
+                        itemBuilder: (context, index) {
+                          final driver = _drivers[index];
+                          return _buildDriverRatingItem(driver);
+                        },
+                      ),
+          ),
+          actions: [
+            TextButton(
+              onPressed: () {
+                Navigator.pop(context);
+              },
+              child: Text('Close'),
+            ),
+          ],
+        );
+      },
+    );
+  }
+
+  void _showVehicleRatingsDialog() {
+    showDialog(
+      context: context,
+      builder: (context) {
+        return AlertDialog(
+          title: Row(
+            children: [
+              Icon(Icons.star, color: Colors.green),
+              SizedBox(width: 8),
+              Text('Vehicle Ratings'),
+            ],
+          ),
+          content: Container(
+            width: double.maxFinite,
+            child: _loadingVehicles
+                ? Center(
+                    child: Column(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        CircularProgressIndicator(),
+                        SizedBox(height: 16),
+                        Text('Loading vehicles...'),
+                      ],
+                    ),
+                  )
+                : _vehicles.isEmpty
+                    ? Center(
+                        child: Text('No vehicles found.'),
+                      )
+                    : ListView.builder(
+                        shrinkWrap: true,
+                        itemCount: _vehicles.length,
+                        itemBuilder: (context, index) {
+                          final vehicle = _vehicles[index];
+                          return _buildVehicleRatingItem(vehicle);
+                        },
+                      ),
+          ),
+          actions: [
+            TextButton(
+              onPressed: () {
+                Navigator.pop(context);
+              },
+              child: Text('Close'),
+            ),
+          ],
+        );
+      },
+    );
+  }
+
+  Widget _buildDriverRatingItem(DriverModel driver) {
+    return FutureBuilder<Map<String, dynamic>>(
+      future: _getDriverRating(driver.id),
+      builder: (context, snapshot) {
+        double averageRating = 0.0;
+        int totalRatings = 0;
+
+        if (snapshot.hasData) {
+          averageRating = snapshot.data!['averageRating'] ?? 0.0;
+          totalRatings = snapshot.data!['totalRatings'] ?? 0;
+        }
+
+        return Card(
+          margin: EdgeInsets.symmetric(vertical: 6),
+          child: ListTile(
+            leading: Container(
+              width: 40,
+              height: 40,
+              decoration: BoxDecoration(
+                color: Colors.blue[100],
+                borderRadius: BorderRadius.circular(20),
+              ),
+              child: Icon(
+                Icons.person,
+                color: Colors.blue[700],
+                size: 20,
+              ),
+            ),
+            title: Text(
+              driver.name,
+              style: TextStyle(fontWeight: FontWeight.bold),
+            ),
+            subtitle: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                SizedBox(height: 4),
+                Row(
+                  children: [
+                    Container(
+                      padding: EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+                      decoration: BoxDecoration(
+                        color: driver.isAvailable
+                            ? Colors.green[50]
+                            : Colors.red[50],
+                        borderRadius: BorderRadius.circular(4),
+                        border: Border.all(
+                          color: driver.isAvailable
+                              ? Colors.green[300]!
+                              : Colors.red[300]!,
+                        ),
+                      ),
+                      child: Text(
+                        driver.isAvailable ? 'Available' : 'Busy',
+                        style: TextStyle(
+                          fontSize: 10,
+                          color: driver.isAvailable
+                              ? Colors.green[700]
+                              : Colors.red[700],
+                          fontWeight: FontWeight.bold,
+                        ),
+                      ),
+                    ),
+                  ],
+                ),
+              ],
+            ),
+            trailing: Column(
+              mainAxisAlignment: MainAxisAlignment.center,
+              crossAxisAlignment: CrossAxisAlignment.end,
+              children: [
+                Row(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    Icon(Icons.star, color: Colors.amber, size: 16),
+                    SizedBox(width: 4),
+                    Text(
+                      averageRating.toStringAsFixed(1),
+                      style: TextStyle(
+                        fontWeight: FontWeight.bold,
+                        fontSize: 16,
+                      ),
+                    ),
+                  ],
+                ),
+                SizedBox(height: 4),
+                Text(
+                  '($totalRatings ${totalRatings == 1 ? "rating" : "ratings"})',
+                  style: TextStyle(
+                    fontSize: 12,
+                    color: Colors.grey[600],
+                  ),
+                ),
+              ],
+            ),
+          ),
+        );
+      },
+    );
+  }
+
+  Widget _buildVehicleRatingItem(VehicleModel vehicle) {
+    return FutureBuilder<Map<String, dynamic>>(
+      future: _getVehicleRating(vehicle.id),
+      builder: (context, snapshot) {
+        double averageRating = 0.0;
+        int totalRatings = 0;
+
+        if (snapshot.hasData) {
+          averageRating = snapshot.data!['averageRating'] ?? 0.0;
+          totalRatings = snapshot.data!['totalRatings'] ?? 0;
+        }
+
+        return Card(
+          margin: EdgeInsets.symmetric(vertical: 6),
+          child: ListTile(
+            leading: Container(
+              width: 40,
+              height: 40,
+              decoration: BoxDecoration(
+                color: Colors.green[100],
+                borderRadius: BorderRadius.circular(20),
+              ),
+              child: Icon(
+                Icons.directions_car,
+                color: Colors.green[700],
+                size: 20,
+              ),
+            ),
+            title: Text(
+              vehicle.vehicleModel ?? 'Unknown Model',
+              style: TextStyle(fontWeight: FontWeight.bold),
+            ),
+            subtitle: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text('License: ${vehicle.licensePlate}'),
+                SizedBox(height: 4),
+                Row(
+                  children: [
+                    Container(
+                      padding: EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+                      decoration: BoxDecoration(
+                        color: vehicle.isAvailable
+                            ? Colors.green[50]
+                            : Colors.red[50],
+                        borderRadius: BorderRadius.circular(4),
+                        border: Border.all(
+                          color: vehicle.isAvailable
+                              ? Colors.green[300]!
+                              : Colors.red[300]!,
+                        ),
+                      ),
+                      child: Text(
+                        vehicle.isAvailable ? 'Available' : 'In Use',
+                        style: TextStyle(
+                          fontSize: 10,
+                          color: vehicle.isAvailable
+                              ? Colors.green[700]
+                              : Colors.red[700],
+                          fontWeight: FontWeight.bold,
+                        ),
+                      ),
+                    ),
+                  ],
+                ),
+              ],
+            ),
+            trailing: Column(
+              mainAxisAlignment: MainAxisAlignment.center,
+              crossAxisAlignment: CrossAxisAlignment.end,
+              children: [
+                Row(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    Icon(Icons.star, color: Colors.amber, size: 16),
+                    SizedBox(width: 4),
+                    Text(
+                      averageRating.toStringAsFixed(1),
+                      style: TextStyle(
+                        fontWeight: FontWeight.bold,
+                        fontSize: 16,
+                      ),
+                    ),
+                  ],
+                ),
+                SizedBox(height: 4),
+                Text(
+                  '($totalRatings ${totalRatings == 1 ? "rating" : "ratings"})',
+                  style: TextStyle(
+                    fontSize: 12,
+                    color: Colors.grey[600],
+                  ),
+                ),
+              ],
+            ),
+          ),
+        );
+      },
+    );
+  }
+
+  Future<void> _syncDriverVehicleStatus() async {
+    try {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text('Syncing driver and vehicle status...'),
+          backgroundColor: Colors.blue,
+          behavior: SnackBarBehavior.floating,
+        ),
+      );
+
+      await _firestoreService.syncDriverVehicleStatus();
+
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text('Driver and vehicle status synchronized successfully'),
+          backgroundColor: Colors.green,
+          behavior: SnackBarBehavior.floating,
+        ),
+      );
+    } catch (e) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text('Error synchronizing status: $e'),
+          backgroundColor: Colors.red,
+          behavior: SnackBarBehavior.floating,
+        ),
+      );
+    }
+  }
+
+  Widget _buildActionButton({
+    required IconData icon,
+    required String label,
+    required Color color,
+    required VoidCallback onTap,
+  }) {
+    return InkWell(
+      onTap: onTap,
+      borderRadius: BorderRadius.circular(12),
+      child: Container(
+        padding: EdgeInsets.symmetric(vertical: 16, horizontal: 20),
+        decoration: BoxDecoration(
+          color: color.withOpacity(0.1),
+          borderRadius: BorderRadius.circular(12),
+          border: Border.all(color: color.withOpacity(0.3)),
+        ),
+        child: Row(
+          children: [
+            Icon(
+              icon,
+              color: color,
+              size: 28,
+            ),
+            SizedBox(width: 12),
+            Expanded(
+              child: Text(
+                label,
+                style: TextStyle(
+                  color: color,
+                  fontSize: 14,
+                  fontWeight: FontWeight.w600,
+                ),
+                maxLines: 2,
+                overflow: TextOverflow.ellipsis,
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
   Widget _buildRequestsList(String status) {
     return StreamBuilder<List<RideRequestModel>>(
       stream: _firestoreService.getRideRequests(),
@@ -708,12 +1088,10 @@ class _OfficerDashboardState extends State<OfficerDashboardOprational>
 
         List<RideRequestModel> requests = snapshot.data ?? [];
 
-        // Filter requests based on status
         if (status != 'all') {
           requests = requests.where((r) => r.status == status).toList();
         }
 
-        // Apply search filter
         if (_searchQuery.isNotEmpty) {
           requests = requests
               .where((r) =>
@@ -740,7 +1118,6 @@ class _OfficerDashboardState extends State<OfficerDashboardOprational>
               .toList();
         }
 
-        // Apply additional filter
         if (_selectedFilter != 'all') {
           switch (_selectedFilter) {
             case 'today':
@@ -765,7 +1142,6 @@ class _OfficerDashboardState extends State<OfficerDashboardOprational>
           }
         }
 
-        // Sort requests by creation date (newest first)
         requests.sort((a, b) => b.createdAt.compareTo(a.createdAt));
 
         if (requests.isEmpty) {
@@ -801,7 +1177,6 @@ class _OfficerDashboardState extends State<OfficerDashboardOprational>
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              // Header with pickup location and status
               Row(
                 mainAxisAlignment: MainAxisAlignment.spaceBetween,
                 children: [
@@ -851,8 +1226,6 @@ class _OfficerDashboardState extends State<OfficerDashboardOprational>
                 ],
               ),
               SizedBox(height: 16),
-
-              // Reporter and date info
               Row(
                 children: [
                   Icon(Icons.person, size: 16, color: Colors.grey[500]),
@@ -878,8 +1251,6 @@ class _OfficerDashboardState extends State<OfficerDashboardOprational>
                 ],
               ),
               SizedBox(height: 12),
-
-              // Pickup and Return Time
               Row(
                 children: [
                   Icon(Icons.event, size: 16, color: Colors.grey[500]),
@@ -907,8 +1278,6 @@ class _OfficerDashboardState extends State<OfficerDashboardOprational>
                 ],
               ),
               SizedBox(height: 12),
-
-              // Description
               Container(
                 width: double.infinity,
                 padding: EdgeInsets.all(12),
@@ -927,8 +1296,6 @@ class _OfficerDashboardState extends State<OfficerDashboardOprational>
                   overflow: TextOverflow.ellipsis,
                 ),
               ),
-
-              // Action buttons for open requests
               if (request.status == 'open') ...[
                 SizedBox(height: 16),
                 Row(
@@ -968,8 +1335,6 @@ class _OfficerDashboardState extends State<OfficerDashboardOprational>
                   ],
                 ),
               ],
-
-              // Show driver and vehicle info for inProgress requests
               if (request.status == 'inProgress') ...[
                 SizedBox(height: 16),
                 if (request.driverName != null && request.vehicleName != null)
@@ -1051,8 +1416,6 @@ class _OfficerDashboardState extends State<OfficerDashboardOprational>
                     ),
                   ),
               ],
-
-              // Show completion notes for completed requests
               if (request.status == 'completed' &&
                   request.completionNote != null) ...[
                 SizedBox(height: 12),
@@ -1088,6 +1451,85 @@ class _OfficerDashboardState extends State<OfficerDashboardOprational>
                     ],
                   ),
                 ),
+              ],
+              if (request.status == 'completed') ...[
+                if (request.driverRating != null &&
+                    request.driverId != null) ...[
+                  SizedBox(height: 8),
+                  Container(
+                    width: double.infinity,
+                    padding: EdgeInsets.all(8),
+                    decoration: BoxDecoration(
+                      color: Colors.blue[50],
+                      borderRadius: BorderRadius.circular(8),
+                      border: Border.all(color: Colors.blue[200]!),
+                    ),
+                    child: Row(
+                      children: [
+                        Icon(Icons.person, color: Colors.blue[700], size: 16),
+                        SizedBox(width: 8),
+                        Text(
+                          'Driver Rating: ${request.driverRating!.toStringAsFixed(1)}',
+                          style: TextStyle(
+                            fontSize: 12,
+                            color: Colors.blue[800],
+                            fontWeight: FontWeight.w500,
+                          ),
+                        ),
+                        SizedBox(width: 4),
+                        Icon(Icons.star, color: Colors.amber, size: 14),
+                        Spacer(),
+                        if (request.driverName != null)
+                          Text(
+                            '${request.driverName}',
+                            style: TextStyle(
+                              fontSize: 12,
+                              color: Colors.grey[600],
+                            ),
+                          ),
+                      ],
+                    ),
+                  ),
+                ],
+                if (request.vehicleRating != null &&
+                    request.vehicleId != null) ...[
+                  SizedBox(height: 8),
+                  Container(
+                    width: double.infinity,
+                    padding: EdgeInsets.all(8),
+                    decoration: BoxDecoration(
+                      color: Colors.green[50],
+                      borderRadius: BorderRadius.circular(8),
+                      border: Border.all(color: Colors.green[200]!),
+                    ),
+                    child: Row(
+                      children: [
+                        Icon(Icons.directions_car,
+                            color: Colors.green[700], size: 16),
+                        SizedBox(width: 8),
+                        Text(
+                          'Vehicle Rating: ${request.vehicleRating!.toStringAsFixed(1)}',
+                          style: TextStyle(
+                            fontSize: 12,
+                            color: Colors.green[800],
+                            fontWeight: FontWeight.w500,
+                          ),
+                        ),
+                        SizedBox(width: 4),
+                        Icon(Icons.star, color: Colors.amber, size: 14),
+                        Spacer(),
+                        if (request.vehicleName != null)
+                          Text(
+                            '${request.vehicleName}',
+                            style: TextStyle(
+                              fontSize: 12,
+                              color: Colors.grey[600],
+                            ),
+                          ),
+                      ],
+                    ),
+                  ),
+                ],
               ],
             ],
           ),
@@ -1252,7 +1694,6 @@ class _OfficerDashboardState extends State<OfficerDashboardOprational>
   }
 
   void _navigateToAssignDriverVehicle(RideRequestModel request) {
-    // Check if request already has an assigned driver and vehicle
     if (request.driverId != null && request.vehicleId != null) {
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
@@ -1270,7 +1711,6 @@ class _OfficerDashboardState extends State<OfficerDashboardOprational>
         builder: (context) => AssignDriverVehicleScreen(request: request),
       ),
     ).then((result) {
-      // Refresh the UI when returning from assignment screen
       if (result == true) {
         setState(() {});
       }
@@ -1336,8 +1776,7 @@ class _OfficerDashboardState extends State<OfficerDashboardOprational>
         vehicleId: request.vehicleId,
       );
 
-      Navigator.pop(context); // Close dialog
-
+      Navigator.pop(context);
       setState(() => _isCompleting = false);
 
       ScaffoldMessenger.of(context).showSnackBar(
@@ -1349,8 +1788,7 @@ class _OfficerDashboardState extends State<OfficerDashboardOprational>
       );
     } catch (e) {
       setState(() => _isCompleting = false);
-
-      Navigator.pop(context); // Close dialog
+      Navigator.pop(context);
 
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(

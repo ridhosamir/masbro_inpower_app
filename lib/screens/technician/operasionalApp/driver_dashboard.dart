@@ -43,10 +43,72 @@ class _DriverDashboardState extends State<DriverDashboard>
 
     if (authService.user != null) {
       final userData = await userService.getUserData(authService.user!.uid);
+
+      // Tambahkan ini untuk mengambil rating driver
+      final ratingData =
+          await _firestoreService.getDriverRatingData(authService.user!.uid);
+
       setState(() {
-        currentUser = userData;
+        currentUser = userData.copyWith(
+          averageRating: ratingData['averageRating'],
+          totalRatings: ratingData['totalRatings'],
+        );
       });
     }
+  }
+  Widget _buildRatingSection() {
+    if (currentUser == null) return SizedBox();
+
+    final hasRating = currentUser!.averageRating != null &&
+        currentUser!.totalRatings != null &&
+        currentUser!.totalRatings! > 0;
+
+    return Container(
+      padding: EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+      decoration: BoxDecoration(
+        color: Colors.white.withOpacity(0.15),
+        borderRadius: BorderRadius.circular(12),
+        border: Border.all(color: Colors.white.withOpacity(0.3)),
+      ),
+      child: Row(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Icon(
+            Icons.star,
+            color: Colors.amber[300],
+            size: 18,
+          ),
+          SizedBox(width: 6),
+          if (hasRating) ...[
+            Text(
+              '${currentUser!.averageRating!.toStringAsFixed(1)}',
+              style: TextStyle(
+                color: Colors.white,
+                fontSize: 15,
+                fontWeight: FontWeight.bold,
+              ),
+            ),
+            SizedBox(width: 4),
+            Text(
+              '(${currentUser!.totalRatings} ${currentUser!.totalRatings! > 1 ? 'ratings' : 'rating'})',
+              style: TextStyle(
+                color: Colors.white.withOpacity(0.9),
+                fontSize: 12,
+              ),
+            ),
+          ] else ...[
+            Text(
+              'No ratings yet',
+              style: TextStyle(
+                color: Colors.white.withOpacity(0.8),
+                fontSize: 13,
+                fontStyle: FontStyle.italic,
+              ),
+            ),
+          ],
+        ],
+      ),
+    );
   }
 
   @override
@@ -58,7 +120,7 @@ class _DriverDashboardState extends State<DriverDashboard>
         headerSliverBuilder: (context, innerBoxIsScrolled) {
           return [
             SliverAppBar(
-              expandedHeight: 180,
+              expandedHeight: 220, // Increased height to accommodate rating
               floating: false,
               automaticallyImplyLeading: false,
               pinned: true,
@@ -169,49 +231,64 @@ class _DriverDashboardState extends State<DriverDashboard>
                                 ],
                               ),
 
-                              // Quick stats
+                              // Rating Display Section
                               Padding(
                                 padding: EdgeInsets.only(top: 16, left: 4),
-                                child: Text(
-                                  'Manage your assigned rides',
-                                  style: TextStyle(
-                                    color: Colors.white.withOpacity(0.85),
-                                    fontSize: 14,
-                                    fontWeight: FontWeight.w500,
-                                  ),
-                                ),
+                                child: _buildRatingSection(),
                               ),
 
-                              SizedBox(height: 8),
-                              StreamBuilder<List<RideRequestModel>>(
-                                stream:
-                                    _firestoreService.getRideRequestsByDriver(
-                                  authService.user!.uid,
-                                ),
-                                builder: (context, snapshot) {
-                                  final requests = snapshot.data ?? [];
-                                  final inProgress = requests
-                                      .where((r) => r.status == 'inProgress')
-                                      .length;
-
-                                  if (requests.isEmpty) {
-                                    return Text(
-                                      'No rides assigned yet',
+                              // Quick stats
+                              Padding(
+                                padding: EdgeInsets.only(
+                                    top: 8, left: 4), // Reduced top padding
+                                child: Column(
+                                  mainAxisSize: MainAxisSize.min, // Important
+                                  crossAxisAlignment: CrossAxisAlignment.start,
+                                  children: [
+                                    Text(
+                                      'Manage your assigned rides',
                                       style: TextStyle(
-                                        color: Colors.white.withOpacity(0.7),
-                                        fontSize: 12,
+                                        color: Colors.white.withOpacity(0.85),
+                                        fontSize: 14,
+                                        fontWeight: FontWeight.w500,
                                       ),
-                                    );
-                                  }
-
-                                  return Text(
-                                    '${requests.length} total rides · $inProgress in progress',
-                                    style: TextStyle(
-                                      color: Colors.white.withOpacity(0.7),
-                                      fontSize: 12,
                                     ),
-                                  );
-                                },
+                                    SizedBox(height: 4), // Reduced spacing
+                                    StreamBuilder<List<RideRequestModel>>(
+                                      stream: _firestoreService
+                                          .getRideRequestsByDriver(
+                                        authService.user!.uid,
+                                      ),
+                                      builder: (context, snapshot) {
+                                        final requests = snapshot.data ?? [];
+                                        final inProgress = requests
+                                            .where(
+                                                (r) => r.status == 'inProgress')
+                                            .length;
+
+                                        if (requests.isEmpty) {
+                                          return Text(
+                                            'No rides assigned yet',
+                                            style: TextStyle(
+                                              color:
+                                                  Colors.white.withOpacity(0.7),
+                                              fontSize: 12,
+                                            ),
+                                          );
+                                        }
+
+                                        return Text(
+                                          '${requests.length} total rides · $inProgress in progress',
+                                          style: TextStyle(
+                                            color:
+                                                Colors.white.withOpacity(0.7),
+                                            fontSize: 12,
+                                          ),
+                                        );
+                                      },
+                                    ),
+                                  ],
+                                ),
                               ),
                             ],
                           ],
@@ -1188,6 +1265,79 @@ class _DriverDashboardState extends State<DriverDashboard>
               'Member Since',
               DateFormat('dd MMM yyyy').format(currentUser!.createdAt),
             ),
+            // Add rating information to profile
+            if (currentUser!.averageRating != null &&
+                currentUser!.totalRatings != null &&
+                currentUser!.totalRatings! > 0) ...[
+              Divider(height: 20),
+              Text(
+                'Performance Rating',
+                style: TextStyle(
+                  fontWeight: FontWeight.bold,
+                  fontSize: 16,
+                  color: Colors.amber[800],
+                ),
+              ),
+              SizedBox(height: 8),
+              Row(
+                children: [
+                  // Star rating display
+                  Row(
+                    children: List.generate(5, (index) {
+                      return Icon(
+                        index < (currentUser!.averageRating ?? 0).floor()
+                            ? Icons.star
+                            : index <
+                                        (currentUser!.averageRating ?? 0)
+                                            .ceil() &&
+                                    (currentUser!.averageRating ?? 0).floor() !=
+                                        (currentUser!.averageRating ?? 0).ceil()
+                                ? Icons.star_half
+                                : Icons.star_border,
+                        color: Colors.amber,
+                        size: 20,
+                      );
+                    }),
+                  ),
+                  SizedBox(width: 8),
+                  Text(
+                    '${currentUser!.averageRating!.toStringAsFixed(1)}',
+                    style: TextStyle(
+                      fontSize: 16,
+                      fontWeight: FontWeight.bold,
+                      color: Colors.amber[800],
+                    ),
+                  ),
+                ],
+              ),
+              SizedBox(height: 4),
+              Text(
+                'Based on ${currentUser!.totalRatings} ${currentUser!.totalRatings! > 1 ? 'ratings' : 'rating'}',
+                style: TextStyle(
+                  fontSize: 12,
+                  color: Colors.grey[600],
+                ),
+              ),
+            ] else ...[
+              Divider(height: 20),
+              Text(
+                'Performance Rating',
+                style: TextStyle(
+                  fontWeight: FontWeight.bold,
+                  fontSize: 16,
+                  color: Colors.grey[600],
+                ),
+              ),
+              SizedBox(height: 8),
+              Text(
+                'No ratings received yet',
+                style: TextStyle(
+                  fontSize: 14,
+                  color: Colors.grey[500],
+                  fontStyle: FontStyle.italic,
+                ),
+              ),
+            ],
           ],
         ),
         actions: [

@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
+import 'package:flutter_rating_bar/flutter_rating_bar.dart';
 import '../../../models/operasionalApp/ride_request_model.dart';
 import '../../../services/operasionalApp/firestore_service.dart';
 import '../../../widgets/custom_button.dart';
@@ -17,7 +18,8 @@ class RideRequestDetailScreen extends StatefulWidget {
       _RideRequestDetailScreenState();
 }
 
-class _RideRequestDetailScreenState extends State<RideRequestDetailScreen> {
+class _RideRequestDetailScreenState
+    extends State<RideRequestDetailScreen> {
   final OperasionalFirestoreService _firestoreService =
       OperasionalFirestoreService();
   final _completionNoteController = TextEditingController();
@@ -31,6 +33,8 @@ class _RideRequestDetailScreenState extends State<RideRequestDetailScreen> {
 
   @override
   Widget build(BuildContext context) {
+    final request = widget.request;
+
     return Scaffold(
       appBar: AppBar(
         title: Text('Request Details'),
@@ -47,40 +51,40 @@ class _RideRequestDetailScreenState extends State<RideRequestDetailScreen> {
               width: double.infinity,
               padding: EdgeInsets.all(20),
               decoration: BoxDecoration(
-                color: widget.request.getStatusColor().withOpacity(0.1),
+                color: request.getStatusColor().withOpacity(0.1),
                 borderRadius: BorderRadius.circular(12),
-                border: Border.all(color: widget.request.getStatusColor()),
+                border: Border.all(color: request.getStatusColor()),
               ),
               child: Column(
                 children: [
                   Icon(
-                    widget.request.getStatusIcon(),
-                    color: widget.request.getStatusColor(),
+                    request.getStatusIcon(),
+                    color: request.getStatusColor(),
                     size: 48,
                   ),
                   SizedBox(height: 12),
                   Text(
-                    'Status: ${widget.request.getStatusDisplayName()}',
+                    'Status: ${request.getStatusDisplayName()}',
                     style: TextStyle(
                       fontSize: 18,
                       fontWeight: FontWeight.bold,
-                      color: widget.request.getStatusColor(),
+                      color: request.getStatusColor(),
                     ),
                   ),
                   SizedBox(height: 8),
                   Text(
-                    'Created on ${DateFormat('dd MMM yyyy, HH:mm').format(widget.request.createdAt)}',
+                    'Created on ${DateFormat('dd MMM yyyy, HH:mm').format(request.createdAt)}',
                     style: TextStyle(
                       color: Colors.grey[600],
                       fontSize: 14,
                     ),
                   ),
                   // Show assignment date when status is in progress
-                  if (widget.request.status == 'inProgress' &&
-                      widget.request.assignedAt != null) ...[
+                  if (request.status == 'inProgress' &&
+                      request.assignedAt != null) ...[
                     SizedBox(height: 8),
                     Text(
-                      'Assigned on ${DateFormat('dd MMM yyyy, HH:mm').format(widget.request.assignedAt!)}',
+                      'Assigned on ${DateFormat('dd MMM yyyy, HH:mm').format(request.assignedAt!)}',
                       style: TextStyle(
                         color: Colors.blue[600],
                         fontSize: 14,
@@ -89,11 +93,11 @@ class _RideRequestDetailScreenState extends State<RideRequestDetailScreen> {
                     ),
                   ],
                   // Show completion date when status is completed
-                  if (widget.request.status == 'completed' &&
-                      widget.request.completedAt != null) ...[
+                  if (request.status == 'completed' &&
+                      request.completedAt != null) ...[
                     SizedBox(height: 8),
                     Text(
-                      'Completed on ${DateFormat('dd MMM yyyy, HH:mm').format(widget.request.completedAt!)}',
+                      'Completed on ${DateFormat('dd MMM yyyy, HH:mm').format(request.completedAt!)}',
                       style: TextStyle(
                         color: Colors.green[600],
                         fontSize: 14,
@@ -106,6 +110,223 @@ class _RideRequestDetailScreenState extends State<RideRequestDetailScreen> {
             ),
             SizedBox(height: 20),
 
+            // Employee Ratings Display (Read-only for Officer)
+            if (request.status == 'completed' &&
+                (request.hasDriverRating() || request.hasVehicleRating())) ...[
+              _buildSectionTitle('Employee Ratings'),
+              SizedBox(height: 12),
+
+              // Driver Rating Display
+              if (request.hasDriverRating()) ...[
+                Container(
+                  width: double.infinity,
+                  padding: EdgeInsets.all(16),
+                  decoration: BoxDecoration(
+                    color: Colors.blue[50],
+                    borderRadius: BorderRadius.circular(12),
+                    border: Border.all(color: Colors.blue[200]!),
+                  ),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Row(
+                        children: [
+                          Icon(Icons.person, color: Colors.blue[700], size: 20),
+                          SizedBox(width: 8),
+                          Text(
+                            'Driver Rating: ${request.driverName}',
+                            style: TextStyle(
+                              fontSize: 16,
+                              fontWeight: FontWeight.bold,
+                              color: Colors.blue[800],
+                            ),
+                          ),
+                        ],
+                      ),
+                      SizedBox(height: 12),
+                      Row(
+                        children: [
+                          RatingBarIndicator(
+                            rating: request.driverRating!,
+                            itemBuilder: (context, index) => Icon(
+                              Icons.star,
+                              color: Colors.amber,
+                            ),
+                            itemCount: 5,
+                            itemSize: 20.0,
+                            direction: Axis.horizontal,
+                          ),
+                          SizedBox(width: 12),
+                          Text(
+                            '${request.driverRating!.toStringAsFixed(1)} / 5.0',
+                            style: TextStyle(
+                              fontWeight: FontWeight.bold,
+                              color: Colors.blue[800],
+                              fontSize: 16,
+                            ),
+                          ),
+                        ],
+                      ),
+                      if (request.hasDriverReview()) ...[
+                        SizedBox(height: 12),
+                        Container(
+                          width: double.infinity,
+                          padding: EdgeInsets.all(12),
+                          decoration: BoxDecoration(
+                            color: Colors.white,
+                            borderRadius: BorderRadius.circular(8),
+                            border: Border.all(color: Colors.blue[200]!),
+                          ),
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              Text(
+                                'Employee Review:',
+                                style: TextStyle(
+                                  fontSize: 12,
+                                  fontWeight: FontWeight.bold,
+                                  color: Colors.blue[700],
+                                ),
+                              ),
+                              SizedBox(height: 4),
+                              Text(
+                                request.driverReview!,
+                                style: TextStyle(
+                                  color: Colors.grey[700],
+                                  fontStyle: FontStyle.italic,
+                                ),
+                              ),
+                            ],
+                          ),
+                        ),
+                      ],
+                    ],
+                  ),
+                ),
+                SizedBox(height: 12),
+              ],
+
+              // Vehicle Rating Display
+              if (request.hasVehicleRating()) ...[
+                Container(
+                  width: double.infinity,
+                  padding: EdgeInsets.all(16),
+                  decoration: BoxDecoration(
+                    color: Colors.green[50],
+                    borderRadius: BorderRadius.circular(12),
+                    border: Border.all(color: Colors.green[200]!),
+                  ),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Row(
+                        children: [
+                          Icon(Icons.directions_car,
+                              color: Colors.green[700], size: 20),
+                          SizedBox(width: 8),
+                          Text(
+                            'Vehicle Rating: ${request.vehicleName}',
+                            style: TextStyle(
+                              fontSize: 16,
+                              fontWeight: FontWeight.bold,
+                              color: Colors.green[800],
+                            ),
+                          ),
+                        ],
+                      ),
+                      SizedBox(height: 12),
+                      Row(
+                        children: [
+                          RatingBarIndicator(
+                            rating: request.vehicleRating!,
+                            itemBuilder: (context, index) => Icon(
+                              Icons.star,
+                              color: Colors.amber,
+                            ),
+                            itemCount: 5,
+                            itemSize: 20.0,
+                            direction: Axis.horizontal,
+                          ),
+                          SizedBox(width: 12),
+                          Text(
+                            '${request.vehicleRating!.toStringAsFixed(1)} / 5.0',
+                            style: TextStyle(
+                              fontWeight: FontWeight.bold,
+                              color: Colors.green[800],
+                              fontSize: 16,
+                            ),
+                          ),
+                        ],
+                      ),
+                      if (request.hasVehicleReview()) ...[
+                        SizedBox(height: 12),
+                        Container(
+                          width: double.infinity,
+                          padding: EdgeInsets.all(12),
+                          decoration: BoxDecoration(
+                            color: Colors.white,
+                            borderRadius: BorderRadius.circular(8),
+                            border: Border.all(color: Colors.green[200]!),
+                          ),
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              Text(
+                                'Employee Review:',
+                                style: TextStyle(
+                                  fontSize: 12,
+                                  fontWeight: FontWeight.bold,
+                                  color: Colors.green[700],
+                                ),
+                              ),
+                              SizedBox(height: 4),
+                              Text(
+                                request.vehicleReview!,
+                                style: TextStyle(
+                                  color: Colors.grey[700],
+                                  fontStyle: FontStyle.italic,
+                                ),
+                              ),
+                            ],
+                          ),
+                        ),
+                      ],
+                    ],
+                  ),
+                ),
+                SizedBox(height: 12),
+              ],
+
+              // No ratings message
+              if (!request.hasDriverRating() &&
+                  !request.hasVehicleRating()) ...[
+                Container(
+                  width: double.infinity,
+                  padding: EdgeInsets.all(16),
+                  decoration: BoxDecoration(
+                    color: Colors.grey[50],
+                    borderRadius: BorderRadius.circular(12),
+                    border: Border.all(color: Colors.grey[200]!),
+                  ),
+                  child: Row(
+                    children: [
+                      Icon(Icons.star_border,
+                          color: Colors.grey[600], size: 20),
+                      SizedBox(width: 12),
+                      Text(
+                        'Employee has not provided ratings yet',
+                        style: TextStyle(
+                          color: Colors.grey[600],
+                          fontStyle: FontStyle.italic,
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+              ],
+              SizedBox(height: 20),
+            ],
+
             // Basic Information Section
             _buildSectionTitle('Request Information'),
             SizedBox(height: 12),
@@ -113,35 +334,34 @@ class _RideRequestDetailScreenState extends State<RideRequestDetailScreen> {
               _buildInfoRow(
                 Icons.location_on,
                 'Pickup',
-                widget.request.pickupLocation,
+                request.pickupLocation,
               ),
               _buildInfoRow(
                 Icons.location_on,
                 'Dropoff',
-                widget.request.dropoffLocation,
+                request.dropoffLocation,
               ),
               _buildInfoRow(
                 Icons.calendar_today,
                 'Pickup Date',
-                DateFormat('dd MMM yyyy, HH:mm')
-                    .format(widget.request.pickupDateTime),
+                DateFormat('dd MMM yyyy, HH:mm').format(request.pickupDateTime),
               ),
-              if (widget.request.returnDateTime != null)
+              if (request.returnDateTime != null)
                 _buildInfoRow(
                   Icons.calendar_today,
                   'Return Date',
                   DateFormat('dd MMM yyyy, HH:mm')
-                      .format(widget.request.returnDateTime!),
+                      .format(request.returnDateTime!),
                 ),
               _buildInfoRow(
                 Icons.group,
                 'Passengers',
-                '${widget.request.passengerCapacity}',
+                '${request.passengerCapacity}',
               ),
               _buildInfoRow(
                 Icons.person,
                 'Requester',
-                widget.request.employeeName,
+                request.employeeName,
               ),
             ]),
             SizedBox(height: 20),
@@ -158,7 +378,7 @@ class _RideRequestDetailScreenState extends State<RideRequestDetailScreen> {
                 border: Border.all(color: Colors.grey[200]!),
               ),
               child: Text(
-                widget.request.description,
+                request.description,
                 style: TextStyle(
                   fontSize: 16,
                   height: 1.5,
@@ -168,8 +388,8 @@ class _RideRequestDetailScreenState extends State<RideRequestDetailScreen> {
             ),
 
             // Driver and Vehicle Information (if assigned)
-            if (widget.request.status == 'inProgress' &&
-                widget.request.driverName != null) ...[
+            if (request.status == 'inProgress' &&
+                request.driverName != null) ...[
               SizedBox(height: 20),
               _buildSectionTitle('Assigned Driver'),
               SizedBox(height: 12),
@@ -202,7 +422,7 @@ class _RideRequestDetailScreenState extends State<RideRequestDetailScreen> {
                         crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
                           Text(
-                            widget.request.driverName ?? 'Not assigned',
+                            request.driverName ?? 'Not assigned',
                             style: TextStyle(
                               fontSize: 16,
                               fontWeight: FontWeight.bold,
@@ -211,7 +431,7 @@ class _RideRequestDetailScreenState extends State<RideRequestDetailScreen> {
                           ),
                           SizedBox(height: 4),
                           Text(
-                            'Assigned to handle your transportation request',
+                            'Assigned to handle this transportation request',
                             style: TextStyle(
                               fontSize: 14,
                               color: Colors.blue[600],
@@ -223,7 +443,7 @@ class _RideRequestDetailScreenState extends State<RideRequestDetailScreen> {
                   ],
                 ),
               ),
-              if (widget.request.vehicleName != null) ...[
+              if (request.vehicleName != null) ...[
                 SizedBox(height: 12),
                 _buildSectionTitle('Assigned Vehicle'),
                 SizedBox(height: 12),
@@ -253,7 +473,7 @@ class _RideRequestDetailScreenState extends State<RideRequestDetailScreen> {
                       SizedBox(width: 12),
                       Expanded(
                         child: Text(
-                          widget.request.vehicleName ?? 'Not assigned',
+                          request.vehicleName ?? 'Not assigned',
                           style: TextStyle(
                             fontSize: 16,
                             fontWeight: FontWeight.bold,
@@ -268,8 +488,8 @@ class _RideRequestDetailScreenState extends State<RideRequestDetailScreen> {
             ],
 
             // Completion Notes (if completed)
-            if (widget.request.status == 'completed' &&
-                widget.request.completionNote != null) ...[
+            if (request.status == 'completed' &&
+                request.completionNote != null) ...[
               SizedBox(height: 20),
               _buildSectionTitle('Completion Notes'),
               SizedBox(height: 12),
@@ -284,7 +504,7 @@ class _RideRequestDetailScreenState extends State<RideRequestDetailScreen> {
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    if (widget.request.completedAt != null)
+                    if (request.completedAt != null)
                       Padding(
                         padding: const EdgeInsets.only(bottom: 8.0),
                         child: Row(
@@ -294,7 +514,7 @@ class _RideRequestDetailScreenState extends State<RideRequestDetailScreen> {
                             SizedBox(width: 8),
                             Expanded(
                               child: Text(
-                                'Completed on: ${DateFormat('dd MMM yyyy, HH:mm').format(widget.request.completedAt!)}',
+                                'Completed on: ${DateFormat('dd MMM yyyy, HH:mm').format(request.completedAt!)}',
                                 style: TextStyle(
                                   fontSize: 14,
                                   color: Colors.green[600],
@@ -306,7 +526,7 @@ class _RideRequestDetailScreenState extends State<RideRequestDetailScreen> {
                         ),
                       ),
                     Text(
-                      widget.request.completionNote!,
+                      request.completionNote!,
                       style: TextStyle(
                         fontSize: 16,
                         height: 1.5,
@@ -321,7 +541,7 @@ class _RideRequestDetailScreenState extends State<RideRequestDetailScreen> {
             SizedBox(height: 32),
 
             // Enhanced Action Buttons (for officers)
-            if (widget.request.status == 'open') ...[
+            if (request.status == 'open') ...[
               _buildSectionTitle('Actions'),
               SizedBox(height: 16),
               Row(
@@ -357,7 +577,7 @@ class _RideRequestDetailScreenState extends State<RideRequestDetailScreen> {
                   ),
                 ],
               ),
-            ] else if (widget.request.status == 'inProgress') ...[
+            ] else if (request.status == 'inProgress') ...[
               _buildSectionTitle('Actions'),
               SizedBox(height: 16),
               _buildElegantButton(
@@ -416,7 +636,7 @@ class _RideRequestDetailScreenState extends State<RideRequestDetailScreen> {
     required VoidCallback onPressed,
   }) {
     return Container(
-      height: 85, // Reduced height to prevent overflow
+      height: 85,
       decoration: BoxDecoration(
         gradient: gradient,
         borderRadius: BorderRadius.circular(16),
