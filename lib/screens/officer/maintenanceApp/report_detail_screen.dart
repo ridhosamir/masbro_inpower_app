@@ -182,11 +182,7 @@ class _ReportDetailScreenState extends State<ReportDetailScreen> {
             onPressed: _refreshReportData,
             tooltip: 'Refresh Report',
           ),
-          IconButton(
-            icon: Icon(Icons.share),
-            onPressed: _shareReport,
-            tooltip: 'Share Report',
-          ),
+         
         ],
       ),
       body: SingleChildScrollView(
