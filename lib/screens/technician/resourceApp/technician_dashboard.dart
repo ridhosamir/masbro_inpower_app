@@ -216,7 +216,7 @@ class _TechnicianDashboardResourceState
                                 padding:
                                     const EdgeInsets.only(top: 16, left: 4),
                                 child: Text(
-                                  'Kelola tugas resource Anda',
+                                  'Manage your resource tasks',
                                   style: TextStyle(
                                     color: Colors.white.withOpacity(0.85),
                                     fontSize: 14,
@@ -236,7 +236,7 @@ class _TechnicianDashboardResourceState
                                       .length;
                                   if (tasks.isEmpty) {
                                     return Text(
-                                      'Belum ada tugas yang ditugaskan',
+                                      'No tasks assigned yet',
                                       style: TextStyle(
                                         color: Colors.white.withOpacity(0.7),
                                         fontSize: 12,
@@ -244,7 +244,7 @@ class _TechnicianDashboardResourceState
                                     );
                                   }
                                   return Text(
-                                    '${tasks.length} total tugas · $inProgress sedang dikerjakan',
+                                    '${tasks.length} total tasks · $inProgress in progress',
                                     style: TextStyle(
                                       color: Colors.white.withOpacity(0.7),
                                       fontSize: 12,
@@ -301,7 +301,7 @@ class _TechnicianDashboardResourceState
                       child: ListTile(
                         leading: Icon(Icons.logout, color: Colors.red),
                         title:
-                            Text('Keluar', style: TextStyle(color: Colors.red)),
+                            Text('Logout', style: TextStyle(color: Colors.red)),
                         contentPadding: EdgeInsets.zero,
                       ),
                     ),
@@ -352,7 +352,7 @@ class _TechnicianDashboardResourceState
                       child: TextField(
                         controller: _searchController,
                         decoration: InputDecoration(
-                          hintText: 'Cari permintaan...',
+                          hintText: 'Search for requests...',
                           prefixIcon:
                               Icon(Icons.search, color: Colors.grey[600]),
                           suffixIcon: _searchQuery.isNotEmpty
@@ -389,7 +389,7 @@ class _TechnicianDashboardResourceState
                         Icons.filter_list,
                         color: Theme.of(context).primaryColor,
                       ),
-                      tooltip: 'Filter Permintaan',
+                      tooltip: 'Request Filter',
                     ),
                   ),
                 ],
@@ -553,7 +553,7 @@ class _TechnicianDashboardResourceState
           ),
           SizedBox(height: 16),
           Text(
-            'Tidak ada laporan yang cocok',
+            'No matching reports',
             style: TextStyle(
               fontSize: 18,
               color: Colors.grey[600],
@@ -562,7 +562,7 @@ class _TechnicianDashboardResourceState
           ),
           SizedBox(height: 8),
           Text(
-            'Coba dengan kata kunci lain atau hapus filter pencarian',
+            'Try with another keyword or clear the search filter',
             style: TextStyle(
               color: Colors.grey[500],
               fontSize: 14,
@@ -572,9 +572,8 @@ class _TechnicianDashboardResourceState
           SizedBox(height: 16),
           TextButton.icon(
             onPressed: _clearSearch,
-            icon: Icon(Icons.clear, color: Colors.blue),
-            label:
-                Text('Hapus Pencarian', style: TextStyle(color: Colors.blue)),
+            icon: Icon(Icons.clear, color: Colors.red),
+            label: Text('Clear Search', style: TextStyle(color: Colors.red)),
           ),
         ],
       ),
@@ -610,7 +609,7 @@ class _TechnicianDashboardResourceState
                 mainAxisAlignment: MainAxisAlignment.spaceBetween,
                 children: [
                   const Text(
-                    'Detail Tugas',
+                    'Task Details',
                     style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold),
                   ),
                   _buildStatusChip(task.status),
@@ -635,20 +634,20 @@ class _TechnicianDashboardResourceState
                         crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
                           _buildDetailItem(
-                            'Kebutuhan',
+                            'Need',
                             '${task.request[0].toUpperCase()}${task.request.substring(1)}',
                             task.request == 'resource'
                                 ? Icons.supervisor_account
                                 : Icons.inventory,
                           ),
                           _buildDetailItem(
-                              'Pemohon', task.requesterName, Icons.person),
+                              'Requester', task.requesterName, Icons.person),
                           if (task.timeRequired != null &&
                               task.timeRequired!.isNotEmpty)
-                            _buildDetailItem('Waktu Dibutuhkan',
+                            _buildDetailItem('Time Required',
                                 task.timeRequired!, Icons.calendar_today),
                           _buildDetailItem(
-                            'Ditugaskan',
+                            'Assigned on',
                             DateFormat('dd MMM yyyy, HH:mm', 'id_ID')
                                 .format(task.assignedAt),
                             Icons.access_time,
@@ -656,7 +655,7 @@ class _TechnicianDashboardResourceState
                           if (task.status == 'completed' &&
                               task.completedAt != null)
                             _buildDetailItem(
-                              'Selesai',
+                              'Completed on',
                               DateFormat('EEEE, d MMM yyyy, HH:mm', 'id_ID')
                                   .format(task.completedAt!),
                               Icons.check_circle,
@@ -667,7 +666,7 @@ class _TechnicianDashboardResourceState
                     // Tampilkan foto jika ini adalah permintaan item
                     if (!isResourceRequest && task.hasValidImage()) ...[
                       const SizedBox(height: 24),
-                      const Text('Foto Item',
+                      const Text('Item Photo',
                           style: TextStyle(
                               fontSize: 16, fontWeight: FontWeight.bold)),
                       const SizedBox(height: 12),
@@ -722,7 +721,7 @@ class _TechnicianDashboardResourceState
                     ],
                     const SizedBox(height: 20),
                     const Text(
-                      'Deskripsi Tugas',
+                      'Task Description',
                       style: TextStyle(
                         fontWeight: FontWeight.bold,
                         fontSize: 16,
@@ -749,7 +748,7 @@ class _TechnicianDashboardResourceState
                         task.completionNote != null) ...[
                       const SizedBox(height: 20),
                       Text(
-                        'Catatan Penyelesaian Anda',
+                        'Your Completion Notes',
                         style: TextStyle(
                           fontWeight: FontWeight.bold,
                           fontSize: 16,
@@ -782,7 +781,7 @@ class _TechnicianDashboardResourceState
               Padding(
                 padding: const EdgeInsets.all(16),
                 child: CustomButton(
-                  text: 'Tandai Selesai',
+                  text: 'Mark Complete',
                   onPressed: () => _showCompleteDialog(task),
                   backgroundColor: Colors.green,
                   icon: Icons.check_circle,
@@ -819,15 +818,14 @@ class _TechnicianDashboardResourceState
               // ),
               _buildInfoRow(
                 isResourceRequest ? Icons.supervisor_account : Icons.inventory,
-                'Kebutuhan',
+                'Need',
                 '${task.request[0].toUpperCase()}${task.request.substring(1)}',
               ),
               const SizedBox(height: 12),
-              _buildInfoRow(Icons.person_pin_circle_outlined, 'Pemohon',
+              _buildInfoRow(Icons.person_pin_circle_outlined, 'Requester',
                   task.requesterName),
               if (task.timeRequired != null && task.timeRequired!.isNotEmpty)
-                _buildInfoRow(
-                    Icons.calendar_today, 'Waktu', task.timeRequired!),
+                _buildInfoRow(Icons.calendar_today, 'Time', task.timeRequired!),
               if (!isResourceRequest && task.hasValidImage()) ...[
                 const SizedBox(height: 12),
                 SizedBox(
@@ -886,8 +884,8 @@ class _TechnicianDashboardResourceState
                   const SizedBox(width: 8),
                   Text(
                     task.status == 'completed' && task.completedAt != null
-                        ? 'Selesai: ${_getTimeAgo(task.completedAt!)}'
-                        : 'Ditugaskan: ${_getTimeAgo(task.assignedAt)}',
+                        ? 'Complete: ${_getTimeAgo(task.completedAt!)}'
+                        : 'Assign: ${_getTimeAgo(task.assignedAt)}',
                     style: TextStyle(
                       color: task.status == 'completed'
                           ? Colors.green[700]
@@ -905,7 +903,7 @@ class _TechnicianDashboardResourceState
               if (task.status == 'inProgress') ...[
                 const SizedBox(height: 16),
                 CustomButton(
-                  text: 'Tandai Selesai',
+                  text: 'Mark Complete',
                   onPressed: () => _showCompleteDialog(task),
                   backgroundColor: Colors.green,
                   icon: Icons.check_circle,
@@ -1150,11 +1148,10 @@ class _TechnicianDashboardResourceState
 
   String _getTimeAgo(DateTime dateTime) {
     final difference = DateTime.now().difference(dateTime);
-    if (difference.inDays > 0) return '${difference.inDays} hari yang lalu';
-    if (difference.inHours > 0) return '${difference.inHours} jam yang lalu';
-    if (difference.inMinutes > 0)
-      return '${difference.inMinutes} menit yang lalu';
-    return 'Baru saja';
+    if (difference.inDays > 0) return '${difference.inDays} days ago';
+    if (difference.inHours > 0) return '${difference.inHours} hours ago';
+    if (difference.inMinutes > 0) return '${difference.inMinutes} minutes ago';
+    return 'Just now';
   }
 
   void _showCompleteDialog(TaskModel task) {
@@ -1169,21 +1166,21 @@ class _TechnicianDashboardResourceState
         return StatefulBuilder(
           builder: (context, setStateDialog) {
             return AlertDialog(
-              title: const Text('Selesaikan Tugas'),
+              title: const Text('Complete the Task'),
               content: SingleChildScrollView(
                 child: Column(
                   mainAxisSize: MainAxisSize.min,
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
                     CustomTextField(
-                      labelText: 'Catatan Penyelesaian',
+                      labelText: 'Completion Notes',
                       hintText: 'Masukkan catatan pekerjaan...',
                       controller: _completionNoteController,
                       maxLines: 3,
                     ),
                     if (task.request == 'item') ...[
                       const SizedBox(height: 16),
-                      Text('Foto Item (Opsional)',
+                      Text('Item Photo (Optional)',
                           style: TextStyle(
                               fontWeight: FontWeight.bold,
                               color: Colors.grey[700])),
@@ -1223,13 +1220,13 @@ class _TechnicianDashboardResourceState
                         children: [
                           TextButton.icon(
                             icon: const Icon(Icons.photo_library),
-                            label: const Text('Galeri'),
+                            label: const Text('Gallery'),
                             onPressed: () =>
                                 _pickImage(ImageSource.gallery, setStateDialog),
                           ),
                           TextButton.icon(
                             icon: const Icon(Icons.camera_alt),
-                            label: const Text('Kamera'),
+                            label: const Text('Camera'),
                             onPressed: () =>
                                 _pickImage(ImageSource.camera, setStateDialog),
                           ),
@@ -1249,13 +1246,13 @@ class _TechnicianDashboardResourceState
               actions: [
                 TextButton(
                   onPressed: () => Navigator.pop(context),
-                  child: const Text('Batal'),
+                  child: const Text('Cancel'),
                 ),
                 TextButton(
                   onPressed: () {
                     if (_completionNoteController.text.trim().isEmpty) {
                       setStateDialog(() {
-                        dialogErrorText = 'Harap berikan catatan penyelesaian';
+                        dialogErrorText = 'Please provide completion notes';
                       });
                     } else {
                       _completeTask(task);
@@ -1266,7 +1263,7 @@ class _TechnicianDashboardResourceState
                           width: 20,
                           height: 20,
                           child: CircularProgressIndicator(strokeWidth: 2))
-                      : const Text('Selesaikan',
+                      : const Text('Complete',
                           style: TextStyle(color: Colors.green)),
                 ),
               ],
@@ -1302,7 +1299,7 @@ class _TechnicianDashboardResourceState
         Navigator.pop(context);
         ScaffoldMessenger.of(context).showSnackBar(
           const SnackBar(
-              content: Text('Tugas berhasil diselesaikan!'),
+              content: Text('Task successfully completed!'),
               backgroundColor: Colors.green),
         );
       }
@@ -1330,16 +1327,16 @@ class _TechnicianDashboardResourceState
     showDialog(
         context: context,
         builder: (context) => AlertDialog(
-              title: const Text('Informasi Profil'),
+              title: const Text('Profil Information'),
               content: Column(
                 mainAxisSize: MainAxisSize.min,
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  _buildProfileItem('Nama', currentUser!.name),
+                  _buildProfileItem('Name', currentUser!.name),
                   _buildProfileItem('Email', currentUser!.email),
-                  _buildProfileItem('Peran', currentUser!.role.toUpperCase()),
+                  _buildProfileItem('Role', currentUser!.role.toUpperCase()),
                   _buildProfileItem(
-                    'Anggota Sejak',
+                    'Technician since',
                     DateFormat('dd MMM yyyy').format(currentUser!.createdAt),
                   ),
                 ],
@@ -1347,7 +1344,7 @@ class _TechnicianDashboardResourceState
               actions: [
                 TextButton(
                   onPressed: () => Navigator.pop(context),
-                  child: const Text('Tutup'),
+                  child: const Text('Close'),
                 ),
               ],
             ));
@@ -1358,7 +1355,7 @@ class _TechnicianDashboardResourceState
       context: context,
       builder: (context) => AlertDialog(
         title: const Text(
-          'Filter Berdasarkan Waktu',
+          'Filter by Time',
           style: TextStyle(
             fontSize: 16,
           ),
@@ -1429,19 +1426,19 @@ class _TechnicianDashboardResourceState
     showDialog(
       context: context,
       builder: (context) => AlertDialog(
-        title: const Text('Keluar'),
-        content: const Text('Apakah Anda yakin ingin keluar?'),
+        title: const Text('Logout'),
+        content: const Text('Are you sure you want to logout?'),
         actions: [
           TextButton(
             onPressed: () => Navigator.pop(context),
-            child: const Text('Batal'),
+            child: const Text('Cancel'),
           ),
           TextButton(
             onPressed: () {
               Provider.of<AuthService>(context, listen: false).signOut();
               Navigator.of(context).popUntil((route) => route.isFirst);
             },
-            child: const Text('Keluar', style: TextStyle(color: Colors.red)),
+            child: const Text('Logout', style: TextStyle(color: Colors.red)),
           ),
         ],
       ),

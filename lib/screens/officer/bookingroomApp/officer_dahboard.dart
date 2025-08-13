@@ -100,7 +100,7 @@ class _OfficerDashboardBookingRoomState
           mainAxisAlignment: MainAxisAlignment.spaceBetween,
           children: [
             Text(value == null
-                ? 'Pilih tanggal'
+                ? 'Select Date'
                 : DateFormat('EEEE, d MMM yyyy', 'id_ID').format(value)),
             const Icon(Icons.calendar_month),
           ],
@@ -118,7 +118,7 @@ class _OfficerDashboardBookingRoomState
       return TimeOfDay(hour: hour, minute: minute);
     });
 
-    if (label == 'Jam Mulai' && selectedDate != null) {
+    if (label == 'Start Time' && selectedDate != null) {
       final now = DateTime.now();
       final isToday = selectedDate.year == now.year &&
           selectedDate.month == now.month &&
@@ -160,7 +160,7 @@ class _OfficerDashboardBookingRoomState
         helperText: ' ',
       ),
       menuMaxHeight: 200,
-      hint: times.isEmpty ? const Text('Pilih Jam Mulai') : null,
+      hint: times.isEmpty ? const Text('Select Start Time') : null,
       items: times.map((time) {
         return DropdownMenuItem<TimeOfDay>(
           value: time,
@@ -172,7 +172,7 @@ class _OfficerDashboardBookingRoomState
       },
       validator: (val) {
         if (val == null) {
-          return 'Wajib diisi';
+          return 'Required fields';
         }
 
         if (selectedDate != null) {
@@ -186,7 +186,7 @@ class _OfficerDashboardBookingRoomState
             final nowInMinutes = now.hour * 60 + now.minute;
 
             if (selectedTimeInMinutes < nowInMinutes) {
-              return 'Waktu yang dipilih sudah lewat';
+              return 'The selected time has passed';
             }
           }
         }
@@ -361,7 +361,7 @@ class _OfficerDashboardBookingRoomState
                     ),
                     const Spacer(),
                     Text(
-                      'Kelola dan setujui pemesanan ruangan',
+                      'Manage and approve room bookings',
                       style: TextStyle(
                           color: Colors.white.withOpacity(0.85), fontSize: 14),
                     ),
@@ -377,7 +377,7 @@ class _OfficerDashboardBookingRoomState
                             .length;
                         if (bookings.isEmpty) {
                           return Text(
-                            'Belum ada pemesanan untuk ditinjau',
+                            'There are no bookings to review yet',
                             style: TextStyle(
                               color: Colors.white.withOpacity(0.7),
                               fontSize: 12,
@@ -385,7 +385,7 @@ class _OfficerDashboardBookingRoomState
                           );
                         }
                         return Text(
-                          '${bookings.length} total pemesanan · $pending perlu persetujuan · $approved disetujui',
+                          '${bookings.length} total booking · $pending need approval · $approved approved',
                           style: TextStyle(
                               color: Colors.white.withOpacity(0.7),
                               fontSize: 12),
@@ -477,7 +477,7 @@ class _OfficerDashboardBookingRoomState
                 SizedBox(width: 16),
                 Expanded(
                   child: Text(
-                    'Manajemen Ruangan',
+                    'Room Management',
                     style: TextStyle(
                       fontSize: 16,
                       fontWeight: FontWeight.w600,
@@ -583,7 +583,7 @@ class _OfficerDashboardBookingRoomState
           ),
           SizedBox(height: 16),
           Text(
-            'Tidak ada laporan yang cocok',
+            'No matching orders found',
             style: TextStyle(
               fontSize: 18,
               color: Colors.grey[600],
@@ -592,7 +592,7 @@ class _OfficerDashboardBookingRoomState
           ),
           SizedBox(height: 8),
           Text(
-            'Coba dengan kata kunci lain atau hapus filter pencarian',
+            'Try with another keyword or clear the search filter',
             style: TextStyle(
               color: Colors.grey[500],
               fontSize: 14,
@@ -602,9 +602,8 @@ class _OfficerDashboardBookingRoomState
           SizedBox(height: 16),
           TextButton.icon(
             onPressed: _clearSearch,
-            icon: Icon(Icons.clear, color: Colors.blue),
-            label:
-                Text('Hapus Pencarian', style: TextStyle(color: Colors.blue)),
+            icon: Icon(Icons.clear, color: Colors.red),
+            label: Text('Clear Search', style: TextStyle(color: Colors.red)),
           ),
         ],
       ),
@@ -644,7 +643,7 @@ class _OfficerDashboardBookingRoomState
                         const SizedBox(width: 6),
                         Flexible(
                           child: Text(
-                            'Ruangan: ${booking.roomName}',
+                            'Room: ${booking.roomName}',
                             style: TextStyle(
                               fontSize: 13,
                               color: Colors.grey[800],
@@ -661,7 +660,7 @@ class _OfficerDashboardBookingRoomState
               ),
               const SizedBox(height: 12),
               Text(
-                'Agenda Acara:',
+                'Event Agenda:',
                 style: TextStyle(
                   fontSize: 13,
                   fontWeight: FontWeight.w600,
@@ -685,7 +684,7 @@ class _OfficerDashboardBookingRoomState
               ),
               const SizedBox(height: 12),
               _buildInfoRow(
-                  Icons.person_outline, 'Oleh: ${booking.employeeName}'),
+                  Icons.person_outline, 'by: ${booking.employeeName}'),
               const SizedBox(height: 6),
               _buildInfoRow(
                   Icons.calendar_today_outlined,
@@ -693,7 +692,7 @@ class _OfficerDashboardBookingRoomState
                       booking.usageStartDate, booking.usageEndDate)),
               const SizedBox(height: 6),
               _buildInfoRow(Icons.access_time,
-                  'Dibuat: ${_getTimeAgo(booking.createdAt)}'),
+                  'Created: ${_getTimeAgo(booking.createdAt)}'),
               if (booking.rating != null) ...[
                 const SizedBox(height: 8),
                 Container(
@@ -754,7 +753,7 @@ class _OfficerDashboardBookingRoomState
                         onPressed: () => _showManageBookingSheet(booking),
                         icon:
                             const Icon(Icons.edit_calendar_outlined, size: 16),
-                        label: const Text('Kelola Booking'),
+                        label: const Text('Manage Booking'),
                         style: ElevatedButton.styleFrom(
                           backgroundColor: Colors.blue,
                           foregroundColor: Colors.white,
@@ -769,7 +768,7 @@ class _OfficerDashboardBookingRoomState
                       child: ElevatedButton.icon(
                         onPressed: () => _showRejectDialog(booking),
                         icon: const Icon(Icons.free_cancellation, size: 16),
-                        label: const Text('Tolak Booking'),
+                        label: const Text('Reject Booking'),
                         style: ElevatedButton.styleFrom(
                           backgroundColor: Colors.red,
                           foregroundColor: Colors.white,
@@ -791,7 +790,7 @@ class _OfficerDashboardBookingRoomState
                       child: ElevatedButton.icon(
                         onPressed: () => _showManageBookingSheet(booking),
                         icon: const Icon(Icons.edit_note_outlined, size: 16),
-                        label: const Text('Edit Jadwal'),
+                        label: const Text('Update Schedule'),
                         style: ElevatedButton.styleFrom(
                           backgroundColor: Colors.orange[700],
                           foregroundColor: Colors.white,
@@ -851,7 +850,7 @@ class _OfficerDashboardBookingRoomState
           child: TextField(
             controller: _searchController,
             decoration: InputDecoration(
-              hintText: 'Cari agenda, ruangan, nama...',
+              hintText: 'Search agenda, room, name...',
               prefixIcon: Icon(Icons.search, color: Colors.grey[600]),
               suffixIcon: _searchQuery.isNotEmpty
                   ? IconButton(
@@ -879,7 +878,7 @@ class _OfficerDashboardBookingRoomState
             onPressed: _showFilterDialog,
             icon:
                 Icon(Icons.filter_list, color: Theme.of(context).primaryColor),
-            tooltip: 'Filter Waktu',
+            tooltip: 'Time Filter',
           ),
         ),
       ],
@@ -995,7 +994,7 @@ class _OfficerDashboardBookingRoomState
       backgroundColor: Colors.transparent,
       builder: (context) {
         String? selectedRoomId =
-            booking.roomName == 'Belum Ditentukan' ? null : booking.roomId;
+            booking.roomName == 'Not specified' ? null : booking.roomId;
 
         return StatefulBuilder(
           builder: (BuildContext context, StateSetter setModalState) {
@@ -1058,7 +1057,7 @@ class _OfficerDashboardBookingRoomState
                           children: [
                             Icon(Icons.warning, color: Colors.red, size: 24),
                             SizedBox(width: 8),
-                            Text('Jadwal Bentrok!'),
+                            Text('Schedule Conflict!'),
                           ],
                         ),
                         content: Column(
@@ -1066,7 +1065,7 @@ class _OfficerDashboardBookingRoomState
                           crossAxisAlignment: CrossAxisAlignment.start,
                           children: [
                             Text(
-                              'Tidak bisa menyetujui booking karena jadwal bentrok dengan agenda lain yang sudah disetujui:',
+                              'Unable to approve booking due to schedule conflict with other approved agenda:',
                               style: TextStyle(fontSize: 14),
                             ),
                             const SizedBox(height: 12),
@@ -1129,7 +1128,7 @@ class _OfficerDashboardBookingRoomState
                                                     side: BorderSide.none,
                                                   ),
                                                   child: const Text(
-                                                      'Lihat Jadwal',
+                                                      'View Details',
                                                       style: TextStyle(
                                                           fontSize: 12)),
                                                 ),
@@ -1144,7 +1143,7 @@ class _OfficerDashboardBookingRoomState
                                             ),
                                           ),
                                           Text(
-                                            '  Pemesan: ${conflictBooking.employeeName}',
+                                            '  Orderer: ${conflictBooking.employeeName}',
                                             style: TextStyle(
                                               fontSize: 12,
                                               color: Colors.grey[600],
@@ -1159,7 +1158,7 @@ class _OfficerDashboardBookingRoomState
                             ),
                             SizedBox(height: 8),
                             Text(
-                              'Silakan pilih jadwal atau ruangan lain.',
+                              'Please select another schedule or room.',
                               style: TextStyle(
                                 fontSize: 12,
                                 fontStyle: FontStyle.italic,
@@ -1192,16 +1191,16 @@ class _OfficerDashboardBookingRoomState
                 final bool? confirmed = await showDialog<bool>(
                   context: context,
                   builder: (ctx) => AlertDialog(
-                    title: const Text('Konfirmasi Persetujuan'),
+                    title: const Text('Confirmation of Approval'),
                     content: const Text(
-                        'Apakah Anda yakin ingin menyetujui pemesanan ini?'),
+                        'Are you sure you want to accept this booking?'),
                     actions: [
                       TextButton(
                           onPressed: () => Navigator.of(ctx).pop(false),
-                          child: const Text('Batal')),
+                          child: const Text('Cancel')),
                       TextButton(
                           onPressed: () => Navigator.of(ctx).pop(true),
-                          child: const Text('Ya, Setujui',
+                          child: const Text('Yes, agree',
                               style: TextStyle(color: Colors.green))),
                     ],
                   ),
@@ -1232,7 +1231,7 @@ class _OfficerDashboardBookingRoomState
                 Navigator.pop(context);
                 Navigator.pop(context);
                 ScaffoldMessenger.of(context).showSnackBar(const SnackBar(
-                  content: Text('Booking berhasil disetujui.'),
+                  content: Text('Booking successfully approved.'),
                   backgroundColor: Colors.green,
                 ));
               } catch (e) {
@@ -1245,7 +1244,7 @@ class _OfficerDashboardBookingRoomState
                     context: context,
                     builder: (ctx) => AlertDialog(
                       title: Text('Error'),
-                      content: Text('Terjadi kesalahan: ${e.toString()}'),
+                      content: Text('There is an error: ${e.toString()}'),
                       actions: [
                         TextButton(
                           onPressed: () => Navigator.of(ctx).pop(),
@@ -1274,13 +1273,13 @@ class _OfficerDashboardBookingRoomState
                     initialValue: currentDate,
                     validator: (value) {
                       if (value == null) {
-                        return 'Tanggal acara wajib diisi';
+                        return 'Event date is required';
                       }
                       return null;
                     },
                     builder: (FormFieldState<DateTime> state) {
                       return _buildDatePicker(
-                          context, 'Pilih Tanggal Acara', state.value, (date) {
+                          context, 'Select Event Date', state.value, (date) {
                         setState(() {
                           onDateChanged(date);
                           state.didChange(date);
@@ -1318,7 +1317,7 @@ class _OfficerDashboardBookingRoomState
                     children: [
                       Expanded(
                           child: _buildTimePicker(
-                              context, 'Jam Mulai', currentTime,
+                              context, 'Start Time', currentTime,
                               (newStartTime) {
                         setState(() {
                           onStartTimeChanged(newStartTime);
@@ -1339,8 +1338,8 @@ class _OfficerDashboardBookingRoomState
                       }, selectedDate: currentDate)),
                       const SizedBox(width: 16),
                       Expanded(
-                          child: _buildTimePicker(
-                              context, 'Jam Selesai', endTime, (newEndTime) {
+                          child: _buildTimePicker(context, 'End Time', endTime,
+                              (newEndTime) {
                         setState(() => onEndTimeChanged(newEndTime));
                       }, startTimeFilter: currentTime)),
                     ],
@@ -1362,17 +1361,18 @@ class _OfficerDashboardBookingRoomState
                     initialValue: currentStartDate,
                     validator: (value) {
                       if (value == null) {
-                        return 'Tanggal mulai wajib diisi';
+                        return 'Start date is required';
                       }
                       if (currentEndDate != null &&
-                          value.isAfter(currentEndDate)) {
-                        return 'Tanggal mulai tidak boleh melebihi tanggal selesai!';
+                          (value.isAfter(currentEndDate) ||
+                              DateUtils.isSameDay(value, currentEndDate))) {
+                        return 'Start date must be before event end date!';
                       }
                       return null;
                     },
                     builder: (FormFieldState<DateTime> state) {
                       return _buildDatePicker(
-                          context, 'Tanggal Mulai', state.value, (date) {
+                          context, 'Start Date', state.value, (date) {
                         setState(() {
                           onStartDateChanged(date);
                           state.didChange(date);
@@ -1386,13 +1386,13 @@ class _OfficerDashboardBookingRoomState
                     initialValue: currentEndDate,
                     validator: (value) {
                       if (value == null) {
-                        return 'Tanggal selesai wajib diisi';
+                        return 'The end date is required';
                       }
                       return null;
                     },
                     builder: (FormFieldState<DateTime> state) {
-                      return _buildDatePicker(
-                          context, 'Tanggal Selesai', state.value, (date) {
+                      return _buildDatePicker(context, 'End Date', state.value,
+                          (date) {
                         setState(() {
                           onEndDateChanged(date);
                           state.didChange(date);
@@ -1434,7 +1434,7 @@ class _OfficerDashboardBookingRoomState
                       child: Row(
                         mainAxisAlignment: MainAxisAlignment.spaceBetween,
                         children: [
-                          const Text('Kelola Booking',
+                          const Text('Manage Booking',
                               style: TextStyle(
                                   fontSize: 20, fontWeight: FontWeight.bold)),
                           _buildStatusChip('open'),
@@ -1467,18 +1467,18 @@ class _OfficerDashboardBookingRoomState
                                 child: Column(
                                   children: [
                                     _buildDetailItem(Icons.event_note,
-                                        'Agenda Acara', booking.eventAgenda),
+                                        'Event Agenda', booking.eventAgenda),
                                     _buildDetailItem(
                                         Icons.local_activity_outlined,
-                                        'Jenis Kegiatan',
+                                        'Activity Type',
                                         booking.activityType),
                                     _buildDetailItem(Icons.person_outline,
-                                        'Pemesan', booking.employeeName),
+                                        'Booker', booking.employeeName),
                                     _buildDetailItem(Icons.add_box_outlined,
-                                        'Kebutuhan', booking.needs),
+                                        'Needs', booking.needs),
                                     _buildDetailItem(
                                         Icons.groups_3_outlined,
-                                        'Jumlah Peserta',
+                                        'Number of Participants',
                                         booking.numberOfParticipants
                                             .toString()),
                                   ],
@@ -1487,7 +1487,7 @@ class _OfficerDashboardBookingRoomState
                               const SizedBox(height: 24),
 
                               // --- Form Edit ---
-                              _buildSectionTitle('Konfigurasi Ruangan & Waktu'),
+                              _buildSectionTitle('Room Configuration & Time'),
                               StreamBuilder<List<RoomModel>>(
                                 stream: _firestoreService.getRooms(),
                                 builder: (context, snapshot) {
@@ -1499,7 +1499,7 @@ class _OfficerDashboardBookingRoomState
                                   if (!snapshot.hasData ||
                                       snapshot.data!.isEmpty) {
                                     return const Text(
-                                        'Error: Tidak ada ruangan tersedia.');
+                                        'Error: No rooms available.');
                                   }
                                   final rooms = snapshot.data!;
 
@@ -1520,7 +1520,7 @@ class _OfficerDashboardBookingRoomState
                                     value: selectedRoomId,
                                     menuMaxHeight: 300,
                                     decoration: const InputDecoration(
-                                      labelText: 'Pilih Ruangan',
+                                      labelText: 'Select Room',
                                       prefixIcon:
                                           Icon(Icons.meeting_room_outlined),
                                       border: OutlineInputBorder(),
@@ -1565,7 +1565,7 @@ class _OfficerDashboardBookingRoomState
                                                   ),
                                                   const SizedBox(height: 4),
                                                   Text(
-                                                    'Kapasitas: ${room.capacity} orang',
+                                                    'Capacity: ${room.capacity} people',
                                                     style: TextStyle(
                                                       fontSize: 12,
                                                       color: Colors.grey[600],
@@ -1591,7 +1591,7 @@ class _OfficerDashboardBookingRoomState
                                       });
                                     },
                                     validator: (value) => value == null
-                                        ? 'Ruangan harus dipilih'
+                                        ? 'A room must be selected'
                                         : null,
                                   );
                                 },
@@ -1602,7 +1602,7 @@ class _OfficerDashboardBookingRoomState
                               if (isOutdated) ...[
                                 const SizedBox(height: 12),
                                 _buildWarningBox(
-                                    'Jadwal sudah terlewat, silakan input ulang.'),
+                                    'The schedule has passed, please re-enter.'),
                                 const SizedBox(height: 12),
                               ],
                               const SizedBox(height: 16),
@@ -1612,11 +1612,11 @@ class _OfficerDashboardBookingRoomState
                                 segments: const <ButtonSegment<BookingType>>[
                                   ButtonSegment(
                                       value: BookingType.harian,
-                                      label: Text('Harian'),
+                                      label: Text('One-Day'),
                                       icon: Icon(Icons.access_time)),
                                   ButtonSegment(
                                       value: BookingType.beberapaHari,
-                                      label: Text('Beberapa Hari'),
+                                      label: Text('Multi-Day'),
                                       icon: Icon(Icons.date_range)),
                                 ],
                                 selected: <BookingType>{bookingType},
@@ -1634,6 +1634,7 @@ class _OfficerDashboardBookingRoomState
                                         newType == BookingType.harian &&
                                         startDateMulti != null) {
                                       selectedDate = startDateMulti;
+
                                       // Cek apakah tanggal sudah kadaluarsa
                                       final now = DateTime.now();
                                       final today = DateTime(
@@ -1645,32 +1646,19 @@ class _OfficerDashboardBookingRoomState
                                         startTime = null;
                                         endTime = null;
                                       } else {
-                                        // Jika belum kadaluarsa, pertahankan waktu jika ada
-                                        if (startTime == null &&
-                                            endTime == null) {
-                                          // Jika belum ada waktu, ambil dari booking asli jika masih valid
-                                          final originalStart =
-                                              TimeOfDay.fromDateTime(
-                                                  booking.usageStartDate);
-                                          final originalEnd =
-                                              TimeOfDay.fromDateTime(
-                                                  booking.usageEndDate);
-
-                                          // Cek apakah waktu asli masih valid untuk hari ini
-                                          final isToday =
-                                              selectedDate!.year == now.year &&
-                                                  selectedDate!.month ==
-                                                      now.month &&
-                                                  selectedDate!.day == now.day;
-
-                                          if (!isToday ||
-                                              (originalStart.hour * 60 +
-                                                      originalStart.minute) >=
-                                                  (now.hour * 60 +
-                                                      now.minute)) {
-                                            startTime = originalStart;
-                                            endTime = originalEnd;
-                                          }
+                                        // Cek apakah booking asli adalah harian atau multi-day
+                                        if (DateUtils.isSameDay(
+                                            booking.usageStartDate,
+                                            booking.usageEndDate)) {
+                                          // Jika booking asli adalah harian, kembalikan jam dari booking asli
+                                          startTime = TimeOfDay.fromDateTime(
+                                              booking.usageStartDate);
+                                          endTime = TimeOfDay.fromDateTime(
+                                              booking.usageEndDate);
+                                        } else {
+                                          // Jika booking asli adalah multi-day, kosongkan jam
+                                          startTime = null;
+                                          endTime = null;
                                         }
                                       }
                                     }
@@ -1679,7 +1667,18 @@ class _OfficerDashboardBookingRoomState
                                         newType == BookingType.beberapaHari &&
                                         selectedDate != null) {
                                       startDateMulti = selectedDate;
-                                      endDateMulti = null;
+
+                                      // Kembalikan endDateMulti jika sebelumnya ada data _buildMultiDayInputs
+                                      if (DateUtils.isSameDay(
+                                          booking.usageStartDate,
+                                          booking.usageEndDate)) {
+                                        // Jika booking asli adalah harian, kosongkan endDateMulti
+                                        endDateMulti = null;
+                                      } else {
+                                        // Jika booking asli adalah multi-day, kembalikan data endDateMulti
+                                        endDateMulti = booking.usageEndDate;
+                                      }
+
                                       // Cek apakah tanggal sudah kadaluarsa
                                       final now = DateTime.now();
                                       final today = DateTime(
@@ -1715,7 +1714,9 @@ class _OfficerDashboardBookingRoomState
                                   onStartDateChanged: (d) {
                                     startDateMulti = d;
                                     if (endDateMulti != null &&
-                                        d.isAfter(endDateMulti!)) {
+                                        (d.isAfter(endDateMulti!) ||
+                                            DateUtils.isSameDay(
+                                                d, endDateMulti!))) {
                                       endDateMulti = null;
                                     }
                                   },
@@ -1723,10 +1724,10 @@ class _OfficerDashboardBookingRoomState
                                 ),
 
                               const SizedBox(height: 24),
-                              _buildSectionTitle('Catatan Tambahan (Opsional)'),
+                              _buildSectionTitle('Additional Notes (Optional)'),
                               CustomTextField(
-                                labelText: 'Catatan Tambahan',
-                                hintText: 'Tambahkan catatan untuk pemesan...',
+                                labelText: 'Additional Notes',
+                                hintText: 'Add a note for the room orderer...',
                                 controller: notesController,
                                 maxLines: 3,
                                 prefixIcon: Icons.note_alt_outlined,
@@ -1745,7 +1746,7 @@ class _OfficerDashboardBookingRoomState
                             child: ElevatedButton.icon(
                               onPressed: () => Navigator.pop(context),
                               icon: const Icon(Icons.cancel_outlined),
-                              label: const Text('Batal'),
+                              label: const Text('Cancel'),
                               style: ElevatedButton.styleFrom(
                                 backgroundColor: Colors.blueGrey,
                                 foregroundColor: Colors.white,
@@ -1757,7 +1758,7 @@ class _OfficerDashboardBookingRoomState
                             child: ElevatedButton.icon(
                               onPressed: handleFinalApproval,
                               icon: const Icon(Icons.check_circle_outline),
-                              label: const Text('Setujui'),
+                              label: const Text('Approve'),
                               style: ElevatedButton.styleFrom(
                                   backgroundColor: Colors.green,
                                   foregroundColor: Colors.white),
@@ -1820,20 +1821,20 @@ class _OfficerDashboardBookingRoomState
     showDialog(
       context: context,
       builder: (context) => AlertDialog(
-        title: const Text('Tolak Booking'),
+        title: const Text('Reject Booking'),
         content: Form(
           key: _formKey,
           child: TextFormField(
             controller: _rejectionReasonController,
             decoration: const InputDecoration(
-              labelText: 'Alasan Penolakan',
-              hintText: 'Berikan alasan penolakan booking',
+              labelText: 'Reason for Rejection',
+              hintText: 'Please provide a reason for rejecting the booking',
               border: OutlineInputBorder(),
             ),
             maxLines: 3,
             validator: (value) {
               if (value == null || value.trim().isEmpty) {
-                return 'Alasan tidak boleh kosong';
+                return 'Reason cannot be empty';
               }
               return null;
             },
@@ -1842,7 +1843,7 @@ class _OfficerDashboardBookingRoomState
         actions: [
           TextButton(
             onPressed: () => Navigator.pop(context),
-            child: const Text('Batal'),
+            child: const Text('Cancel'),
           ),
           TextButton(
             onPressed: () async {
@@ -1850,16 +1851,16 @@ class _OfficerDashboardBookingRoomState
                 await _firestoreService.updateBookingStatus(
                   booking.id,
                   'cancelled',
-                  reason: 'Ditolak: ${_rejectionReasonController.text.trim()}',
+                  reason: 'Rejected: ${_rejectionReasonController.text.trim()}',
                 );
                 Navigator.pop(context);
                 ScaffoldMessenger.of(context).showSnackBar(const SnackBar(
-                  content: Text('Booking berhasil ditolak.'),
+                  content: Text('Booking successfully rejected.'),
                   backgroundColor: Colors.orange,
                 ));
               }
             },
-            child: const Text('Tolak', style: TextStyle(color: Colors.red)),
+            child: const Text('Reject', style: TextStyle(color: Colors.red)),
           ),
         ],
       ),
@@ -1908,23 +1909,23 @@ class _OfficerDashboardBookingRoomState
 
     switch (status) {
       case 'open':
-        message = 'Tidak Ada Pemesanan Ruangan';
-        description = 'Anda tidak memiliki pemesanan ruangan yang terbuka';
+        message = 'No Room Bookings Open';
+        description = 'You have no open room bookings';
         icon = Icons.pending_actions;
         break;
       case 'approved':
-        message = 'Tidak Ada Pemesanan Yang Disetujui';
-        description = 'Tidak ada pemesanan Anda yang disetujui';
+        message = 'No Approved Bookings';
+        description = 'No room bookings approved';
         icon = Icons.check_circle;
         break;
       case 'cancelled':
-        message = 'Tidak Ada Pemesanan Yang Dibatalkan';
-        description = 'Tidak ada pemesanan Anda yang dibatalkan';
+        message = 'No Cancelled Bookings';
+        description = 'No room bookings canceled';
         icon = Icons.cancel;
         break;
       default:
-        message = 'Belum Ada Pemesanan';
-        description = 'Buat Pemesanan Ruangan pertama Anda';
+        message = 'No Room Booking Yet';
+        description = 'The employee has not yet submitted their room booking';
         icon = Icons.assignment_outlined;
     }
 
@@ -1971,13 +1972,12 @@ class _OfficerDashboardBookingRoomState
     showDialog(
       context: context,
       builder: (context) => AlertDialog(
-        title: const Text('Filter Berdasarkan Waktu',
-            style: TextStyle(fontSize: 16)),
+        title: const Text('Filter By Time', style: TextStyle(fontSize: 16)),
         content: Column(
           mainAxisSize: MainAxisSize.min,
           children: [
             RadioListTile<String>(
-              title: const Text('Semua'),
+              title: const Text('All'),
               value: 'all',
               groupValue: _selectedFilter,
               onChanged: (value) {
@@ -1986,7 +1986,7 @@ class _OfficerDashboardBookingRoomState
               },
             ),
             RadioListTile<String>(
-              title: const Text('Hari Ini'),
+              title: const Text('Today'),
               value: 'today',
               groupValue: _selectedFilter,
               onChanged: (value) {
@@ -1995,7 +1995,7 @@ class _OfficerDashboardBookingRoomState
               },
             ),
             RadioListTile<String>(
-              title: const Text('Minggu Ini'),
+              title: const Text('This Week'),
               value: 'week',
               groupValue: _selectedFilter,
               onChanged: (value) {
@@ -2004,7 +2004,7 @@ class _OfficerDashboardBookingRoomState
               },
             ),
             RadioListTile<String>(
-              title: const Text('Bulan Ini'),
+              title: const Text('This Month'),
               value: 'month',
               groupValue: _selectedFilter,
               onChanged: (value) {
@@ -2097,18 +2097,18 @@ class _OfficerDashboardBookingRoomState
     showDialog(
       context: context,
       builder: (context) => AlertDialog(
-        title: const Text('Keluar'),
-        content: const Text('Apakah Anda yakin ingin keluar?'),
+        title: const Text('Logout'),
+        content: const Text('Are you sure you want to logout?'),
         actions: [
           TextButton(
               onPressed: () => Navigator.pop(context),
-              child: const Text('Batal')),
+              child: const Text('Cancel')),
           TextButton(
             onPressed: () {
               Provider.of<AuthService>(context, listen: false).signOut();
               Navigator.of(context).popUntil((route) => route.isFirst);
             },
-            child: const Text('Keluar', style: TextStyle(color: Colors.red)),
+            child: const Text('Logout', style: TextStyle(color: Colors.red)),
           ),
         ],
       ),

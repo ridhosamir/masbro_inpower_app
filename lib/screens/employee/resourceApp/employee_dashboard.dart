@@ -188,7 +188,7 @@ class _EmployeeDashboardResourceState extends State<EmployeeDashboardResource>
                                 padding:
                                     const EdgeInsets.only(top: 16, left: 4),
                                 child: Text(
-                                  'Kelola permintaan resource Anda',
+                                  'Manage your resource requests',
                                   style: TextStyle(
                                     color: Colors.white.withOpacity(0.85),
                                     fontSize: 14,
@@ -212,7 +212,7 @@ class _EmployeeDashboardResourceState extends State<EmployeeDashboardResource>
 
                                   if (requests.isEmpty) {
                                     return Text(
-                                      'Belum ada permintaan. Buat permintaan pertama Anda!',
+                                      'No requests yet. Make your first wish!',
                                       style: TextStyle(
                                         color: Colors.white.withOpacity(0.7),
                                         fontSize: 12,
@@ -282,7 +282,7 @@ class _EmployeeDashboardResourceState extends State<EmployeeDashboardResource>
                       child: ListTile(
                         leading: Icon(Icons.logout, color: Colors.red),
                         title:
-                            Text('Keluar', style: TextStyle(color: Colors.red)),
+                            Text('Logout', style: TextStyle(color: Colors.red)),
                         contentPadding: EdgeInsets.zero,
                       ),
                     ),
@@ -343,7 +343,7 @@ class _EmployeeDashboardResourceState extends State<EmployeeDashboardResource>
                       child: TextField(
                         controller: _searchController,
                         decoration: InputDecoration(
-                          hintText: 'Cari permintaan...',
+                          hintText: 'Search for requests...',
                           prefixIcon:
                               Icon(Icons.search, color: Colors.grey[600]),
                           suffixIcon: _searchQuery.isNotEmpty
@@ -380,7 +380,7 @@ class _EmployeeDashboardResourceState extends State<EmployeeDashboardResource>
                         Icons.filter_list,
                         color: Theme.of(context).primaryColor,
                       ),
-                      tooltip: 'Filter Permintaan',
+                      tooltip: 'Request Filter',
                     ),
                   ),
                 ],
@@ -413,8 +413,7 @@ class _EmployeeDashboardResourceState extends State<EmployeeDashboardResource>
           Icons.add_box,
           color: Colors.white,
         ),
-        label: const Text('Permintaan Baru',
-            style: TextStyle(color: Colors.white)),
+        label: const Text('New Request', style: TextStyle(color: Colors.white)),
         backgroundColor: Theme.of(context).primaryColor,
         elevation: 4,
       ),
@@ -534,7 +533,7 @@ class _EmployeeDashboardResourceState extends State<EmployeeDashboardResource>
               children: const [
                 CircularProgressIndicator(),
                 SizedBox(height: 16),
-                Text('Memuat permintaan...'),
+                Text('Loading request...'),
               ],
             ),
           );
@@ -557,7 +556,7 @@ class _EmployeeDashboardResourceState extends State<EmployeeDashboardResource>
                 const SizedBox(height: 16),
                 ElevatedButton(
                   onPressed: () => setState(() {}),
-                  child: const Text('Coba Lagi'),
+                  child: const Text('Try Again'),
                 ),
               ],
             ),
@@ -640,7 +639,7 @@ class _EmployeeDashboardResourceState extends State<EmployeeDashboardResource>
           ),
           SizedBox(height: 16),
           Text(
-            'Tidak ada permintaan yang cocok',
+            'No matching requests',
             style: TextStyle(
               fontSize: 18,
               color: Colors.grey[600],
@@ -649,7 +648,7 @@ class _EmployeeDashboardResourceState extends State<EmployeeDashboardResource>
           ),
           SizedBox(height: 8),
           Text(
-            'Coba dengan kata kunci lain atau hapus filter pencarian',
+            'Try with another keyword or clear the search filter',
             style: TextStyle(
               color: Colors.grey[500],
               fontSize: 14,
@@ -659,9 +658,8 @@ class _EmployeeDashboardResourceState extends State<EmployeeDashboardResource>
           SizedBox(height: 16),
           TextButton.icon(
             onPressed: _clearSearch,
-            icon: Icon(Icons.clear, color: Colors.blue),
-            label:
-                Text('Hapus Pencarian', style: TextStyle(color: Colors.blue)),
+            icon: Icon(Icons.clear, color: Colors.red),
+            label: Text('Clear Search', style: TextStyle(color: Colors.red)),
           ),
         ],
       ),
@@ -700,7 +698,7 @@ class _EmployeeDashboardResourceState extends State<EmployeeDashboardResource>
                         ),
                         const SizedBox(width: 6),
                         Text(
-                          'Kebutuhan: ${request.request[0].toUpperCase()}${request.request.substring(1)}',
+                          'Need: ${request.request[0].toUpperCase()}${request.request.substring(1)}',
                           style: TextStyle(
                             fontSize: 13,
                             color: Colors.grey[800],
@@ -744,7 +742,7 @@ class _EmployeeDashboardResourceState extends State<EmployeeDashboardResource>
               ],
               const SizedBox(height: 12),
               Text(
-                'Permintaan:',
+                'Request:',
                 style: TextStyle(
                   fontSize: 13,
                   fontWeight: FontWeight.w600,
@@ -780,7 +778,7 @@ class _EmployeeDashboardResourceState extends State<EmployeeDashboardResource>
                     const SizedBox(width: 6),
                     Expanded(
                       child: Text(
-                        'Waktu: ${request.timeRequired!}',
+                        'Time: ${request.timeRequired!}',
                         style: TextStyle(
                           fontSize: 12,
                           color: Colors.grey[700],
@@ -808,9 +806,9 @@ class _EmployeeDashboardResourceState extends State<EmployeeDashboardResource>
                     request.status == 'completed' &&
                             request.completionDate != null
                         // Jika selesai: tampilkan tanggal selesai
-                        ? 'Selesai: ${DateFormat('d MMM yyyy, HH:mm', 'id_ID').format(request.completionDate!)}'
+                        ? 'Completed: ${DateFormat('d MMM yyyy, HH:mm', 'id_ID').format(request.completionDate!)}'
                         // Jika belum: tampilkan waktu yang lalu
-                        : 'Dibuat: ${_getTimeAgo(request.createdAt)}',
+                        : 'Created at: ${_getTimeAgo(request.createdAt)}',
                     style: TextStyle(
                       fontSize: 12,
                       color: request.status == 'completed'
@@ -842,7 +840,7 @@ class _EmployeeDashboardResourceState extends State<EmployeeDashboardResource>
                       const SizedBox(width: 8),
                       Expanded(
                         child: Text(
-                          'Ditugaskan ke: ${request.technicianName}',
+                          'Assigned to: ${request.technicianName}',
                           style: TextStyle(
                             fontSize: 12,
                             color: Colors.blue[700],
@@ -881,9 +879,9 @@ class _EmployeeDashboardResourceState extends State<EmployeeDashboardResource>
     final difference = now.difference(date);
 
     if (difference.inDays == 0) {
-      return 'Hari ini, ${DateFormat('HH:mm').format(date)}';
+      return 'Today, ${DateFormat('HH:mm').format(date)}';
     } else if (difference.inDays == 1) {
-      return 'Kemarin, ${DateFormat('HH:mm').format(date)}';
+      return 'Yesterdy, ${DateFormat('HH:mm').format(date)}';
     } else if (difference.inDays < 7) {
       return '${difference.inDays} hari yang lalu';
     } else {
@@ -950,23 +948,23 @@ class _EmployeeDashboardResourceState extends State<EmployeeDashboardResource>
 
     switch (status) {
       case 'open':
-        message = 'Tidak Ada Permintaan Terbuka';
-        description = 'Anda tidak memiliki permintaan resource yang terbuka';
+        message = 'No Open Requests';
+        description = 'You have no open resource requests';
         icon = Icons.pending_actions;
         break;
       case 'inProgress':
-        message = 'Tidak Ada Permintaan Sedang Diproses';
-        description = 'Tidak ada permintaan Anda yang sedang ditangani';
+        message = 'No Requests Being Processed';
+        description = 'None of your requests are being processed';
         icon = Icons.engineering;
         break;
       case 'completed':
-        message = 'Tidak Ada Permintaan Selesai';
-        description = 'Belum ada permintaan Anda yang telah diselesaikan';
+        message = 'No Completed Requests';
+        description = 'None of your requests have been completed yet';
         icon = Icons.check_circle_outline;
         break;
       default:
-        message = 'Belum Ada Permintaan';
-        description = 'Buat permintaan resource pertama Anda';
+        message = 'No Requests Yet';
+        description = 'Create your first resource request';
         icon = Icons.assignment_outlined;
     }
 
@@ -1015,7 +1013,7 @@ class _EmployeeDashboardResourceState extends State<EmployeeDashboardResource>
               );
             },
             icon: const Icon(Icons.add),
-            label: const Text('Buat Permintaan'),
+            label: const Text('Create Request'),
           ),
         ],
       ),
@@ -1036,7 +1034,7 @@ class _EmployeeDashboardResourceState extends State<EmployeeDashboardResource>
       context: context,
       builder: (context) => AlertDialog(
         title: const Text(
-          'Filter Berdasarkan Waktu',
+          'Filter By Time',
           style: TextStyle(
             fontSize: 16,
           ),
@@ -1045,7 +1043,7 @@ class _EmployeeDashboardResourceState extends State<EmployeeDashboardResource>
           mainAxisSize: MainAxisSize.min,
           children: [
             RadioListTile<String>(
-              title: const Text('Semua'),
+              title: const Text('All'),
               value: 'all',
               groupValue: _selectedFilter,
               onChanged: (value) {
@@ -1054,7 +1052,7 @@ class _EmployeeDashboardResourceState extends State<EmployeeDashboardResource>
               },
             ),
             RadioListTile<String>(
-              title: const Text('Hari Ini'),
+              title: const Text('Today'),
               value: 'today',
               groupValue: _selectedFilter,
               onChanged: (value) {
@@ -1063,7 +1061,7 @@ class _EmployeeDashboardResourceState extends State<EmployeeDashboardResource>
               },
             ),
             RadioListTile<String>(
-              title: const Text('Minggu Ini'),
+              title: const Text('This Week'),
               value: 'week',
               groupValue: _selectedFilter,
               onChanged: (value) {
@@ -1072,7 +1070,7 @@ class _EmployeeDashboardResourceState extends State<EmployeeDashboardResource>
               },
             ),
             RadioListTile<String>(
-              title: const Text('Bulan Ini'),
+              title: const Text('This Month'),
               value: 'month',
               groupValue: _selectedFilter,
               onChanged: (value) {
@@ -1092,16 +1090,16 @@ class _EmployeeDashboardResourceState extends State<EmployeeDashboardResource>
     showDialog(
       context: context,
       builder: (context) => AlertDialog(
-        title: const Text('Informasi Profil'),
+        title: const Text('Profil Information'),
         content: Column(
           mainAxisSize: MainAxisSize.min,
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            _buildProfileItem('Nama', currentUser!.name),
+            _buildProfileItem('Name', currentUser!.name),
             _buildProfileItem('Email', currentUser!.email),
-            _buildProfileItem('Peran', currentUser!.role.toUpperCase()),
+            _buildProfileItem('Role', currentUser!.role.toUpperCase()),
             _buildProfileItem(
-              'Anggota Sejak',
+              'Member since',
               DateFormat('dd MMM yyyy').format(currentUser!.createdAt),
             ),
           ],
@@ -1109,7 +1107,7 @@ class _EmployeeDashboardResourceState extends State<EmployeeDashboardResource>
         actions: [
           TextButton(
             onPressed: () => Navigator.pop(context),
-            child: const Text('Tutup'),
+            child: const Text('Close'),
           ),
         ],
       ),
@@ -1139,19 +1137,19 @@ class _EmployeeDashboardResourceState extends State<EmployeeDashboardResource>
     showDialog(
       context: context,
       builder: (context) => AlertDialog(
-        title: const Text('Keluar'),
-        content: const Text('Apakah Anda yakin ingin keluar?'),
+        title: const Text('Logout'),
+        content: const Text('Are you sure you want to logout?'),
         actions: [
           TextButton(
             onPressed: () => Navigator.pop(context),
-            child: const Text('Batal'),
+            child: const Text('Cancel'),
           ),
           TextButton(
             onPressed: () {
               Provider.of<AuthService>(context, listen: false).signOut();
               Navigator.of(context).popUntil((route) => route.isFirst);
             },
-            child: const Text('Keluar', style: TextStyle(color: Colors.red)),
+            child: const Text('Logout', style: TextStyle(color: Colors.red)),
           ),
         ],
       ),

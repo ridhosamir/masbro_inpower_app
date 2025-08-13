@@ -106,16 +106,16 @@ class _CreateRequestScreenState extends State<CreateRequestScreen>
       } else if (!kIsWeb && image is File) {
         bytes = await image.readAsBytes();
       } else {
-        throw Exception('Format gambar tidak valid');
+        throw Exception('Invalid image format');
       }
       final decodedImage = img.decodeImage(bytes);
       if (decodedImage == null) {
-        throw Exception('File bukan gambar yang valid');
+        throw Exception('The file is not a valid image.');
       }
-      print('[CREATE_REQUEST] Gambar valid: ${decodedImage.format}');
+      print('[CREATE_REQUEST] Valid image: ${decodedImage.format}');
       return true;
     } catch (e) {
-      print('[CREATE_REQUEST] Gagal validasi gambar: $e');
+      print('[CREATE_REQUEST] Image validation failed: $e');
       return false;
     }
   }
@@ -138,7 +138,7 @@ class _CreateRequestScreenState extends State<CreateRequestScreen>
               _imageError = null;
             });
           } else {
-            throw Exception('File bukan gambar yang valid');
+            throw Exception('The file is not a valid image.');
           }
         } else {
           final file = File(image.path);
@@ -149,7 +149,7 @@ class _CreateRequestScreenState extends State<CreateRequestScreen>
               _imageError = null;
             });
           } else {
-            throw Exception('File bukan gambar yang valid');
+            throw Exception('The file is not a valid image.');
           }
         }
       }
@@ -185,7 +185,7 @@ class _CreateRequestScreenState extends State<CreateRequestScreen>
               _imageError = null;
             });
           } else {
-            throw Exception('File bukan gambar yang valid');
+            throw Exception('The file is not a valid image.');
           }
         } else {
           final file = File(image.path);
@@ -196,7 +196,7 @@ class _CreateRequestScreenState extends State<CreateRequestScreen>
               _imageError = null;
             });
           } else {
-            throw Exception('File bukan gambar yang valid');
+            throw Exception('The file is not a valid image.');
           }
         }
       }
@@ -239,7 +239,7 @@ class _CreateRequestScreenState extends State<CreateRequestScreen>
         (_selectedDate == null || _selectedTime == null)) {
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(
-          content: Text('Harap tentukan tanggal dan jam yang dibutuhkan'),
+          content: Text('Please specify the required date and time.'),
           backgroundColor: Colors.red,
           behavior: SnackBarBehavior.floating,
         ),
@@ -299,7 +299,7 @@ class _CreateRequestScreenState extends State<CreateRequestScreen>
         setState(() => _isLoading = false);
         ScaffoldMessenger.of(context).showSnackBar(
           const SnackBar(
-            content: Text('Permintaan berhasil dikirim!'),
+            content: Text('Request sent successfully!'),
             backgroundColor: Colors.green,
             behavior: SnackBarBehavior.floating,
           ),
@@ -324,7 +324,7 @@ class _CreateRequestScreenState extends State<CreateRequestScreen>
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        _buildLabel('Foto Item (Opsional)'),
+        _buildLabel('Item Photo (Optional)'),
         Container(
           height: 200,
           width: double.infinity,
@@ -342,7 +342,7 @@ class _CreateRequestScreenState extends State<CreateRequestScreen>
               child: ElevatedButton.icon(
                 onPressed: _takePicture,
                 icon: const Icon(Icons.camera_alt),
-                label: const Text('Kamera'),
+                label: const Text('Camera'),
                 style: ElevatedButton.styleFrom(
                   padding: const EdgeInsets.symmetric(vertical: 12),
                 ),
@@ -353,7 +353,7 @@ class _CreateRequestScreenState extends State<CreateRequestScreen>
               child: ElevatedButton.icon(
                 onPressed: _pickImageFromGallery,
                 icon: const Icon(Icons.photo_library),
-                label: const Text('Galeri'),
+                label: const Text('Gallery'),
                 style: ElevatedButton.styleFrom(
                   padding: const EdgeInsets.symmetric(vertical: 12),
                 ),
@@ -373,7 +373,7 @@ class _CreateRequestScreenState extends State<CreateRequestScreen>
                 });
               },
               icon: const Icon(Icons.delete, color: Colors.red),
-              label: const Text('Hapus Gambar',
+              label: const Text('Delete Image',
                   style: TextStyle(color: Colors.red)),
             ),
           ),
@@ -400,7 +400,7 @@ class _CreateRequestScreenState extends State<CreateRequestScreen>
           children: [
             Icon(Icons.add_a_photo, size: 48, color: Colors.grey[400]),
             const SizedBox(height: 8),
-            Text('Tambah Foto', style: TextStyle(color: Colors.grey[500])),
+            Text('Add Photo', style: TextStyle(color: Colors.grey[500])),
             if (_imageError != null) ...[
               const SizedBox(height: 8),
               Text(
@@ -431,7 +431,7 @@ class _CreateRequestScreenState extends State<CreateRequestScreen>
               icon: const Icon(Icons.arrow_back, color: Colors.white),
               onPressed: () => Navigator.pop(context),
             ),
-            title: const Text('Buat Permintaan Baru'),
+            title: const Text('Create a New Request'),
             bottom: TabBar(
               controller: _tabController,
               indicatorColor: Colors.white,
@@ -473,24 +473,24 @@ class _CreateRequestScreenState extends State<CreateRequestScreen>
 
                     // --- Form Field Dinamis ---
                     if (isResourceRequest) ...[
-                      _buildLabel('Tanggal Dibutuhkan'),
+                      _buildLabel('Required Date'),
                       CustomTextField(
-                        labelText: 'Pilih Tanggal',
+                        labelText: 'Select Date',
                         controller: _timeRequiredController,
                         readOnly: true,
                         onTap: _selectDateTime,
                         prefixIcon: Icons.calendar_today,
                         validator: (value) {
                           if (isResourceRequest && (_selectedDate == null)) {
-                            return 'Harap tentukan tanggal yang dibutuhkan';
+                            return 'Please find the required date';
                           }
                           return null;
                         },
                       ),
                       const SizedBox(height: 24),
-                      _buildLabel('Jam Dibutuhkan'),
+                      _buildLabel('Required Hours'),
                       _buildTimePicker(
-                        'Pilih Jam',
+                        'Select Hour',
                         _selectedTime,
                         (time) {
                           setState(() {
@@ -514,12 +514,12 @@ class _CreateRequestScreenState extends State<CreateRequestScreen>
                       const SizedBox(height: 24),
                     ],
                     _buildLabel(isResourceRequest
-                        ? 'Deskripsi Kebutuhan'
-                        : 'Deskripsi Item'),
+                        ? 'Description of Needs'
+                        : 'Item Description'),
                     CustomTextField(
                       focusNode: _descriptionFocusNode,
                       labelText: _isDescriptionFocused
-                          ? 'Deskripsi Kebutuhan Anda'
+                          ? 'Description of Your Needs'
                           : (isResourceRequest
                               ? 'Jelaskan kebutuhan resource anda...'
                               : 'Jelaskan barang yang anda perlukan...'),
@@ -530,10 +530,10 @@ class _CreateRequestScreenState extends State<CreateRequestScreen>
                           : Icons.inventory_2_outlined,
                       validator: (value) {
                         if (value == null || value.isEmpty) {
-                          return 'Harap jelaskan kebutuhan Anda';
+                          return 'Please describe your requirements';
                         }
                         if (value.length < 10) {
-                          return 'Harap berikan deskripsi yang lebih detail';
+                          return 'Please provide a more detailed description';
                         }
                         return null;
                       },
@@ -544,7 +544,7 @@ class _CreateRequestScreenState extends State<CreateRequestScreen>
                     ],
                     const SizedBox(height: 32),
                     CustomButton(
-                      text: 'Kirim Permintaan',
+                      text: 'Send Request',
                       onPressed: _submitRequest,
                       isLoading: _isLoading,
                       icon: Icons.send,
@@ -693,7 +693,7 @@ class _CreateRequestScreenState extends State<CreateRequestScreen>
       },
       validator: (val) {
         if (val == null) {
-          return 'Harap tentukan jam yang dibutuhkan';
+          return 'Please specify the required hours';
         }
 
         if (selectedDate != null) {
@@ -707,7 +707,7 @@ class _CreateRequestScreenState extends State<CreateRequestScreen>
                 selectedDate.month, selectedDate.day, val.hour, val.minute);
             if (selectedDateTime
                 .isBefore(now.subtract(const Duration(minutes: 1)))) {
-              return 'Waktu yang dipilih sudah lewat';
+              return 'The selected time has passed';
             }
           }
         }

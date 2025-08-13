@@ -44,20 +44,20 @@ class _BookingDetailScreenState extends State<BookingDetailScreen> {
     showDialog(
       context: context,
       builder: (context) => AlertDialog(
-        title: const Text('Tolak Booking'),
+        title: const Text('Reject Booking'),
         content: Form(
           key: _formKey,
           child: TextFormField(
             controller: _rejectionReasonController,
             decoration: const InputDecoration(
-              labelText: 'Alasan Penolakan',
-              hintText: 'Berikan alasan penolakan booking',
+              labelText: 'Reason for Rejection',
+              hintText: 'Please provide a reason for rejecting the booking',
               border: OutlineInputBorder(),
             ),
             maxLines: 3,
             validator: (value) {
               if (value == null || value.trim().isEmpty) {
-                return 'Alasan penolakan tidak boleh kosong';
+                return 'Reason cannot be empty';
               }
               return null;
             },
@@ -66,7 +66,7 @@ class _BookingDetailScreenState extends State<BookingDetailScreen> {
         actions: [
           TextButton(
             onPressed: () => Navigator.pop(context),
-            child: const Text('Batal'),
+            child: const Text('Cancel'),
           ),
           TextButton(
             onPressed: () async {
@@ -74,7 +74,7 @@ class _BookingDetailScreenState extends State<BookingDetailScreen> {
                 await _firestoreService.updateBookingStatus(
                   _currentBooking.id,
                   'cancelled',
-                  reason: 'Ditolak: ${_rejectionReasonController.text.trim()}',
+                  reason: 'Rejected: ${_rejectionReasonController.text.trim()}',
                 );
 
                 if (!mounted) return;
@@ -82,12 +82,12 @@ class _BookingDetailScreenState extends State<BookingDetailScreen> {
                 Navigator.pop(context);
 
                 ScaffoldMessenger.of(context).showSnackBar(const SnackBar(
-                  content: Text('Booking telah ditolak.'),
+                  content: Text('Booking successfully rejected.'),
                   backgroundColor: Colors.orange,
                 ));
               }
             },
-            child: const Text('Tolak', style: TextStyle(color: Colors.red)),
+            child: const Text('Reject', style: TextStyle(color: Colors.red)),
           ),
         ],
       ),
@@ -126,7 +126,7 @@ class _BookingDetailScreenState extends State<BookingDetailScreen> {
     } catch (e) {
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('Gagal memuat data terbaru: $e')),
+          SnackBar(content: Text('Failed to load latest data: $e')),
         );
       }
     } finally {
@@ -186,7 +186,7 @@ class _BookingDetailScreenState extends State<BookingDetailScreen> {
       backgroundColor: Colors.transparent,
       builder: (context) {
         String? selectedRoomId =
-            booking.roomName == 'Belum Ditentukan' ? null : booking.roomId;
+            booking.roomName == 'Not specified' ? null : booking.roomId;
 
         return StatefulBuilder(
           builder: (BuildContext context, StateSetter setModalState) {
@@ -250,7 +250,7 @@ class _BookingDetailScreenState extends State<BookingDetailScreen> {
                           children: [
                             Icon(Icons.warning, color: Colors.red, size: 24),
                             SizedBox(width: 8),
-                            Text('Jadwal Bentrok!'),
+                            Text('Schedule Conflict!'),
                           ],
                         ),
                         content: Column(
@@ -258,7 +258,7 @@ class _BookingDetailScreenState extends State<BookingDetailScreen> {
                           crossAxisAlignment: CrossAxisAlignment.start,
                           children: [
                             Text(
-                              'Tidak bisa menyetujui booking karena jadwal bentrok dengan agenda lain yang sudah disetujui:',
+                              'Unable to approve booking due to schedule conflict with other approved agenda:',
                               style: TextStyle(fontSize: 14),
                             ),
                             const SizedBox(height: 12),
@@ -321,7 +321,7 @@ class _BookingDetailScreenState extends State<BookingDetailScreen> {
                                                     side: BorderSide.none,
                                                   ),
                                                   child: const Text(
-                                                      'Lihat Jadwal',
+                                                      'View Details',
                                                       style: TextStyle(
                                                           fontSize: 12)),
                                                 ),
@@ -336,7 +336,7 @@ class _BookingDetailScreenState extends State<BookingDetailScreen> {
                                             ),
                                           ),
                                           Text(
-                                            '  Pemesan: ${conflictBooking.employeeName}',
+                                            '  Orderer: ${conflictBooking.employeeName}',
                                             style: TextStyle(
                                               fontSize: 12,
                                               color: Colors.grey[600],
@@ -351,7 +351,7 @@ class _BookingDetailScreenState extends State<BookingDetailScreen> {
                             ),
                             SizedBox(height: 8),
                             Text(
-                              'Silakan pilih jadwal atau ruangan lain.',
+                              'Please select another schedule or room.',
                               style: TextStyle(
                                 fontSize: 12,
                                 fontStyle: FontStyle.italic,
@@ -384,16 +384,16 @@ class _BookingDetailScreenState extends State<BookingDetailScreen> {
                 final bool? confirmed = await showDialog<bool>(
                   context: context,
                   builder: (ctx) => AlertDialog(
-                    title: const Text('Konfirmasi Persetujuan'),
+                    title: const Text('Confirmation of Approval'),
                     content: const Text(
-                        'Apakah Anda yakin ingin menyetujui pemesanan ini?'),
+                        'Are you sure you want to accept this booking?'),
                     actions: [
                       TextButton(
                           onPressed: () => Navigator.of(ctx).pop(false),
-                          child: const Text('Batal')),
+                          child: const Text('Cancel')),
                       TextButton(
                           onPressed: () => Navigator.of(ctx).pop(true),
-                          child: const Text('Ya, Setujui',
+                          child: const Text('Yes, agree',
                               style: TextStyle(color: Colors.green))),
                     ],
                   ),
@@ -424,7 +424,7 @@ class _BookingDetailScreenState extends State<BookingDetailScreen> {
                 Navigator.pop(context);
                 Navigator.pop(context, true);
                 ScaffoldMessenger.of(context).showSnackBar(const SnackBar(
-                  content: Text('Booking berhasil disetujui.'),
+                  content: Text('Booking successfully approved.'),
                   backgroundColor: Colors.green,
                 ));
               } catch (e) {
@@ -437,7 +437,7 @@ class _BookingDetailScreenState extends State<BookingDetailScreen> {
                     context: context,
                     builder: (ctx) => AlertDialog(
                       title: Text('Error'),
-                      content: Text('Terjadi kesalahan: ${e.toString()}'),
+                      content: Text('There is an error: ${e.toString()}'),
                       actions: [
                         TextButton(
                           onPressed: () => Navigator.of(ctx).pop(),
@@ -466,13 +466,13 @@ class _BookingDetailScreenState extends State<BookingDetailScreen> {
                     initialValue: currentDate,
                     validator: (value) {
                       if (value == null) {
-                        return 'Tanggal acara wajib diisi';
+                        return 'Event date is required';
                       }
                       return null;
                     },
                     builder: (FormFieldState<DateTime> state) {
                       return _buildDatePicker(
-                          context, 'Pilih Tanggal Acara', state.value, (date) {
+                          context, 'Select Event Date', state.value, (date) {
                         setState(() {
                           onDateChanged(date);
                           state.didChange(date);
@@ -510,7 +510,7 @@ class _BookingDetailScreenState extends State<BookingDetailScreen> {
                     children: [
                       Expanded(
                           child: _buildTimePicker(
-                              context, 'Jam Mulai', currentTime,
+                              context, 'Start Time', currentTime,
                               (newStartTime) {
                         setState(() {
                           onStartTimeChanged(newStartTime);
@@ -531,8 +531,8 @@ class _BookingDetailScreenState extends State<BookingDetailScreen> {
                       }, selectedDate: currentDate)),
                       const SizedBox(width: 16),
                       Expanded(
-                          child: _buildTimePicker(
-                              context, 'Jam Selesai', endTime, (newEndTime) {
+                          child: _buildTimePicker(context, 'End Time', endTime,
+                              (newEndTime) {
                         setState(() => onEndTimeChanged(newEndTime));
                       }, startTimeFilter: currentTime)),
                     ],
@@ -555,17 +555,18 @@ class _BookingDetailScreenState extends State<BookingDetailScreen> {
                     initialValue: currentStartDate,
                     validator: (value) {
                       if (value == null) {
-                        return 'Tanggal mulai wajib diisi';
+                        return 'Start date is required';
                       }
                       if (currentEndDate != null &&
-                          value.isAfter(currentEndDate)) {
-                        return 'Tanggal mulai tidak boleh melebihi tanggal selesai!';
+                          (value.isAfter(currentEndDate) ||
+                              DateUtils.isSameDay(value, currentEndDate))) {
+                        return 'Start date must be before event end date!';
                       }
                       return null;
                     },
                     builder: (FormFieldState<DateTime> state) {
                       return _buildDatePicker(
-                          context, 'Tanggal Mulai', state.value, (date) {
+                          context, 'Start Date', state.value, (date) {
                         setState(() {
                           onStartDateChanged(date);
                           state.didChange(date);
@@ -583,13 +584,13 @@ class _BookingDetailScreenState extends State<BookingDetailScreen> {
                     initialValue: currentEndDate,
                     validator: (value) {
                       if (value == null) {
-                        return 'Tanggal selesai wajib diisi';
+                        return 'The end date is required';
                       }
                       return null;
                     },
                     builder: (FormFieldState<DateTime> state) {
-                      return _buildDatePicker(
-                          context, 'Tanggal Selesai', state.value, (date) {
+                      return _buildDatePicker(context, 'End Date', state.value,
+                          (date) {
                         setState(() {
                           onEndDateChanged(date);
                           state.didChange(date);
@@ -630,7 +631,7 @@ class _BookingDetailScreenState extends State<BookingDetailScreen> {
                       child: Row(
                         mainAxisAlignment: MainAxisAlignment.spaceBetween,
                         children: [
-                          const Text('Kelola Booking',
+                          const Text('Manage Booking',
                               style: TextStyle(
                                   fontSize: 20, fontWeight: FontWeight.bold)),
                           _buildStatusChip('open'),
@@ -662,25 +663,25 @@ class _BookingDetailScreenState extends State<BookingDetailScreen> {
                                 child: Column(
                                   children: [
                                     _buildDetailItem(Icons.event_note,
-                                        'Agenda Acara', booking.eventAgenda),
+                                        'Event Agenda', booking.eventAgenda),
                                     _buildDetailItem(
                                         Icons.local_activity_outlined,
-                                        'Jenis Kegiatan',
+                                        'Activity Type',
                                         booking.activityType),
                                     _buildDetailItem(Icons.person_outline,
-                                        'Pemesan', booking.employeeName),
+                                        'Booker', booking.employeeName),
                                     _buildDetailItem(Icons.add_box_outlined,
-                                        'Kebutuhan', booking.needs),
+                                        'Needs', booking.needs),
                                     _buildDetailItem(
                                         Icons.groups_3_outlined,
-                                        'Jumlah Peserta',
+                                        'Number of Participants',
                                         booking.numberOfParticipants
                                             .toString()),
                                   ],
                                 ),
                               ),
                               const SizedBox(height: 24),
-                              _buildSectionTitle('Konfigurasi Ruangan & Waktu'),
+                              _buildSectionTitle('Room Configuration & Time'),
                               const SizedBox(height: 12),
                               StreamBuilder<List<RoomModel>>(
                                 stream: _firestoreService.getRooms(),
@@ -693,7 +694,7 @@ class _BookingDetailScreenState extends State<BookingDetailScreen> {
                                   if (!snapshot.hasData ||
                                       snapshot.data!.isEmpty) {
                                     return const Text(
-                                        'Error: Tidak ada ruangan tersedia.');
+                                        'Error: No rooms available.');
                                   }
                                   final rooms = snapshot.data!;
                                   if (selectedRoomId != null &&
@@ -711,7 +712,7 @@ class _BookingDetailScreenState extends State<BookingDetailScreen> {
                                     value: selectedRoomId,
                                     menuMaxHeight: 300,
                                     decoration: const InputDecoration(
-                                      labelText: 'Pilih Ruangan',
+                                      labelText: 'Select Room',
                                       prefixIcon:
                                           Icon(Icons.meeting_room_outlined),
                                       border: OutlineInputBorder(),
@@ -756,7 +757,7 @@ class _BookingDetailScreenState extends State<BookingDetailScreen> {
                                                   ),
                                                   const SizedBox(height: 4),
                                                   Text(
-                                                    'Kapasitas: ${room.capacity} orang',
+                                                    'Capacity: ${room.capacity} people',
                                                     style: TextStyle(
                                                       fontSize: 12,
                                                       color: Colors.grey[600],
@@ -782,7 +783,7 @@ class _BookingDetailScreenState extends State<BookingDetailScreen> {
                                       });
                                     },
                                     validator: (value) => value == null
-                                        ? 'Ruangan harus dipilih'
+                                        ? 'A room must be selected'
                                         : null,
                                   );
                                 },
@@ -793,24 +794,22 @@ class _BookingDetailScreenState extends State<BookingDetailScreen> {
                               if (isOutdated) ...[
                                 const SizedBox(height: 12),
                                 _buildWarningBox(
-                                    'Jadwal sudah terlewat, silakan input ulang.'),
+                                    'The schedule has passed, please re-enter.'),
                                 const SizedBox(height: 12),
                               ],
                               const SizedBox(height: 16),
                               SegmentedButton<BookingType>(
-                                segments: const [
+                                segments: const <ButtonSegment<BookingType>>[
                                   ButtonSegment(
-                                    value: BookingType.harian,
-                                    label: Text('Harian'),
-                                    icon: Icon(Icons.access_time),
-                                  ),
+                                      value: BookingType.harian,
+                                      label: Text('One-Day'),
+                                      icon: Icon(Icons.access_time)),
                                   ButtonSegment(
-                                    value: BookingType.beberapaHari,
-                                    label: Text('Beberapa Hari'),
-                                    icon: Icon(Icons.date_range),
-                                  ),
+                                      value: BookingType.beberapaHari,
+                                      label: Text('Multi-Day'),
+                                      icon: Icon(Icons.date_range)),
                                 ],
-                                selected: {bookingType},
+                                selected: <BookingType>{bookingType},
                                 onSelectionChanged:
                                     (Set<BookingType> newSelection) {
                                   setModalState(() {
@@ -825,6 +824,7 @@ class _BookingDetailScreenState extends State<BookingDetailScreen> {
                                         newType == BookingType.harian &&
                                         startDateMulti != null) {
                                       selectedDate = startDateMulti;
+
                                       // Cek apakah tanggal sudah kadaluarsa
                                       final now = DateTime.now();
                                       final today = DateTime(
@@ -836,32 +836,19 @@ class _BookingDetailScreenState extends State<BookingDetailScreen> {
                                         startTime = null;
                                         endTime = null;
                                       } else {
-                                        // Jika belum kadaluarsa, pertahankan waktu jika ada
-                                        if (startTime == null &&
-                                            endTime == null) {
-                                          // Jika belum ada waktu, ambil dari booking asli jika masih valid
-                                          final originalStart =
-                                              TimeOfDay.fromDateTime(
-                                                  booking.usageStartDate);
-                                          final originalEnd =
-                                              TimeOfDay.fromDateTime(
-                                                  booking.usageEndDate);
-
-                                          // Cek apakah waktu asli masih valid untuk hari ini
-                                          final isToday =
-                                              selectedDate!.year == now.year &&
-                                                  selectedDate!.month ==
-                                                      now.month &&
-                                                  selectedDate!.day == now.day;
-
-                                          if (!isToday ||
-                                              (originalStart.hour * 60 +
-                                                      originalStart.minute) >=
-                                                  (now.hour * 60 +
-                                                      now.minute)) {
-                                            startTime = originalStart;
-                                            endTime = originalEnd;
-                                          }
+                                        // Cek apakah booking asli adalah harian atau multi-day
+                                        if (DateUtils.isSameDay(
+                                            booking.usageStartDate,
+                                            booking.usageEndDate)) {
+                                          // Jika booking asli adalah harian, kembalikan jam dari booking asli
+                                          startTime = TimeOfDay.fromDateTime(
+                                              booking.usageStartDate);
+                                          endTime = TimeOfDay.fromDateTime(
+                                              booking.usageEndDate);
+                                        } else {
+                                          // Jika booking asli adalah multi-day, kosongkan jam
+                                          startTime = null;
+                                          endTime = null;
                                         }
                                       }
                                     }
@@ -870,7 +857,18 @@ class _BookingDetailScreenState extends State<BookingDetailScreen> {
                                         newType == BookingType.beberapaHari &&
                                         selectedDate != null) {
                                       startDateMulti = selectedDate;
-                                      endDateMulti = null;
+
+                                      // Kembalikan endDateMulti jika sebelumnya ada data _buildMultiDayInputs
+                                      if (DateUtils.isSameDay(
+                                          booking.usageStartDate,
+                                          booking.usageEndDate)) {
+                                        // Jika booking asli adalah harian, kosongkan endDateMulti
+                                        endDateMulti = null;
+                                      } else {
+                                        // Jika booking asli adalah multi-day, kembalikan data endDateMulti
+                                        endDateMulti = booking.usageEndDate;
+                                      }
+
                                       // Cek apakah tanggal sudah kadaluarsa
                                       final now = DateTime.now();
                                       final today = DateTime(
@@ -906,21 +904,23 @@ class _BookingDetailScreenState extends State<BookingDetailScreen> {
                                   onStartDateChanged: (d) {
                                     startDateMulti = d;
                                     if (endDateMulti != null &&
-                                        d.isAfter(endDateMulti!)) {
+                                        (d.isAfter(endDateMulti!) ||
+                                            DateUtils.isSameDay(
+                                                d, endDateMulti!))) {
                                       endDateMulti = null;
                                     }
                                   },
                                   onEndDateChanged: (d) => endDateMulti = d,
                                 ),
                               const SizedBox(height: 24),
-                              _buildSectionTitle('Catatan Tambahan (Opsional)'),
+                              _buildSectionTitle('Additional Notes (Optional)'),
                               const SizedBox(height: 12),
                               TextFormField(
                                 controller: notesController,
                                 decoration: const InputDecoration(
-                                  labelText: 'Catatan Tambahan',
+                                  labelText: 'Additional Notes',
                                   hintText:
-                                      'Tambahkan catatan untuk pemesan...',
+                                      'Add a note for the room orderer...',
                                   prefixIcon: Icon(Icons.note_alt_outlined),
                                   border: OutlineInputBorder(),
                                 ),
@@ -939,7 +939,7 @@ class _BookingDetailScreenState extends State<BookingDetailScreen> {
                             child: ElevatedButton.icon(
                               onPressed: () => Navigator.pop(context),
                               icon: const Icon(Icons.cancel_outlined),
-                              label: const Text('Batal'),
+                              label: const Text('Cancel'),
                               style: ElevatedButton.styleFrom(
                                 backgroundColor: Colors.blueGrey,
                                 foregroundColor: Colors.white,
@@ -951,7 +951,7 @@ class _BookingDetailScreenState extends State<BookingDetailScreen> {
                             child: ElevatedButton.icon(
                               onPressed: handleFinalApproval,
                               icon: const Icon(Icons.check_circle_outline),
-                              label: const Text('Setujui'),
+                              label: const Text('Approve'),
                               style: ElevatedButton.styleFrom(
                                 backgroundColor: Colors.green,
                                 foregroundColor: Colors.white,
@@ -991,7 +991,7 @@ class _BookingDetailScreenState extends State<BookingDetailScreen> {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        _buildSectionTitle('Penilaian dari Pemesan'),
+        _buildSectionTitle('Rating from Room Booker'),
         const SizedBox(height: 12),
         Container(
           width: double.infinity,
@@ -1036,7 +1036,7 @@ class _BookingDetailScreenState extends State<BookingDetailScreen> {
                   _currentBooking.ratingComment!.isNotEmpty) ...[
                 const Divider(height: 24),
                 Text(
-                  'Ulasan:',
+                  'Review:',
                   style: TextStyle(
                     fontWeight: FontWeight.w600,
                     color: Colors.grey[700],
@@ -1085,29 +1085,29 @@ class _BookingDetailScreenState extends State<BookingDetailScreen> {
           children: [
             _buildStatusBox(),
             const SizedBox(height: 24),
-            _buildSectionTitle('Informasi Booking'),
+            _buildSectionTitle('booking information'),
             const SizedBox(height: 12),
             _buildInfoCard([
-              _buildInfoRow(Icons.meeting_room_outlined, 'Ruangan',
+              _buildInfoRow(Icons.meeting_room_outlined, 'Room',
                   _currentBooking.roomName),
-              _buildInfoRow(Icons.local_activity_outlined, 'Jenis Kegiatan',
+              _buildInfoRow(Icons.local_activity_outlined, 'Activity Type',
                   _currentBooking.activityType),
-              _buildInfoRow(Icons.person_outline, 'Dipesan oleh',
+              _buildInfoRow(Icons.person_outline, 'Ordered By',
                   _currentBooking.employeeName),
               _buildInfoRow(
                   Icons.calendar_today,
-                  'Jadwal Acara',
+                  'Event schedule',
                   _formatBookingDuration(_currentBooking.usageStartDate,
                       _currentBooking.usageEndDate)),
-              _buildInfoRow(Icons.group_outlined, 'Jumlah Peserta',
-                  '${_currentBooking.numberOfParticipants} orang'),
+              _buildInfoRow(Icons.group_outlined, 'Number of participants',
+                  '${_currentBooking.numberOfParticipants} people'),
             ]),
             const SizedBox(height: 24),
-            _buildSectionTitle('Agenda Acara'),
+            _buildSectionTitle('Event Agenda'),
             const SizedBox(height: 12),
             _buildDescriptionBox(_currentBooking.eventAgenda),
             const SizedBox(height: 24),
-            _buildSectionTitle('Kebutuhan Tambahan'),
+            _buildSectionTitle('Additional Needs'),
             const SizedBox(height: 12),
             _buildDescriptionBox(_currentBooking.needs),
             if ((_currentBooking.status == 'approved' ||
@@ -1117,8 +1117,8 @@ class _BookingDetailScreenState extends State<BookingDetailScreen> {
               const SizedBox(height: 24),
               _buildSectionTitle(
                 _currentBooking.status == 'approved'
-                    ? 'Catatan Persetujuan'
-                    : 'Alasan Pembatalan',
+                    ? 'Approval Note'
+                    : 'Rejection Note',
               ),
               const SizedBox(height: 12),
               _buildReasonBox(),
@@ -1134,7 +1134,7 @@ class _BookingDetailScreenState extends State<BookingDetailScreen> {
                 children: [
                   Expanded(
                     child: CustomButton(
-                      text: 'Tolak Booking',
+                      text: 'Reject Booking',
                       onPressed: _showRejectDialog,
                       isLoading: _isLoading,
                       backgroundColor: Colors.red[700],
@@ -1144,7 +1144,7 @@ class _BookingDetailScreenState extends State<BookingDetailScreen> {
                   const SizedBox(width: 12),
                   Expanded(
                     child: CustomButton(
-                      text: 'Kelola & Setujui',
+                      text: 'Manage & Approve',
                       onPressed: () async {
                         // Tunggu hasil dari bottom sheet
                         final result =
@@ -1170,7 +1170,7 @@ class _BookingDetailScreenState extends State<BookingDetailScreen> {
                 children: [
                   Expanded(
                     child: CustomButton(
-                      text: 'Edit Jadwal',
+                      text: 'Update Schedule',
                       onPressed: () async {
                         final result =
                             await _showManageBookingSheet(_currentBooking);
@@ -1187,7 +1187,7 @@ class _BookingDetailScreenState extends State<BookingDetailScreen> {
                   const SizedBox(width: 12),
                   Expanded(
                     child: CustomButton(
-                      text: 'Tolak Booking',
+                      text: 'Reject Booking',
                       onPressed: _showRejectDialog,
                       isLoading: _isLoading,
                       backgroundColor: Colors.red[700],
@@ -1283,7 +1283,7 @@ class _BookingDetailScreenState extends State<BookingDetailScreen> {
           mainAxisAlignment: MainAxisAlignment.spaceBetween,
           children: [
             Text(value == null
-                ? 'Pilih tanggal'
+                ? 'Select Date'
                 : DateFormat('EEEE, d MMM yyyy', 'id_ID').format(value)),
             const Icon(Icons.calendar_month),
           ],
@@ -1301,7 +1301,7 @@ class _BookingDetailScreenState extends State<BookingDetailScreen> {
       return TimeOfDay(hour: hour, minute: minute);
     });
 
-    if (label == 'Jam Mulai' && selectedDate != null) {
+    if (label == 'Start Time' && selectedDate != null) {
       final now = DateTime.now();
       final isToday = selectedDate.year == now.year &&
           selectedDate.month == now.month &&
@@ -1343,7 +1343,7 @@ class _BookingDetailScreenState extends State<BookingDetailScreen> {
         helperText: ' ',
       ),
       menuMaxHeight: 200,
-      hint: times.isEmpty ? const Text('Pilih Jam Mulai') : null,
+      hint: times.isEmpty ? const Text('Start Time') : null,
       items: times.map((time) {
         return DropdownMenuItem<TimeOfDay>(
           value: time,
@@ -1355,7 +1355,7 @@ class _BookingDetailScreenState extends State<BookingDetailScreen> {
       },
       validator: (val) {
         if (val == null) {
-          return 'Wajib diisi';
+          return 'Required fields';
         }
 
         if (selectedDate != null) {
@@ -1369,7 +1369,7 @@ class _BookingDetailScreenState extends State<BookingDetailScreen> {
             final nowInMinutes = now.hour * 60 + now.minute;
 
             if (selectedTimeInMinutes < nowInMinutes) {
-              return 'Waktu yang dipilih sudah lewat';
+              return 'The selected time has passed';
             }
           }
         }
@@ -1405,14 +1405,14 @@ class _BookingDetailScreenState extends State<BookingDetailScreen> {
           ),
           const SizedBox(height: 8),
           Text(
-            'Dibuat pada ${DateFormat('d MMMM yyyy, HH:mm', 'id_ID').format(_currentBooking.createdAt)}',
+            'Created at ${DateFormat('d MMMM yyyy, HH:mm', 'id_ID').format(_currentBooking.createdAt)}',
             style: TextStyle(color: Colors.grey[600], fontSize: 14),
           ),
           if (_currentBooking.status == 'approved' &&
               _currentBooking.completionDate != null) ...[
             const SizedBox(height: 8),
             Text(
-              'Disetujui pada ${DateFormat('dd MMM yyyy, HH:mm', 'id_ID').format(_currentBooking.completionDate!)}',
+              'Approved on ${DateFormat('dd MMM yyyy, HH:mm', 'id_ID').format(_currentBooking.completionDate!)}',
               style: TextStyle(
                 color: _currentBooking.getStatusColor().withOpacity(0.8),
                 fontSize: 14,
@@ -1424,7 +1424,7 @@ class _BookingDetailScreenState extends State<BookingDetailScreen> {
               _currentBooking.completionDate != null) ...[
             const SizedBox(height: 8),
             Text(
-              'Dibatalkan pada ${DateFormat('dd MMM yyyy, HH:mm', 'id_ID').format(_currentBooking.completionDate!)}',
+              'Rejected on ${DateFormat('dd MMM yyyy, HH:mm', 'id_ID').format(_currentBooking.completionDate!)}',
               style: TextStyle(
                 color: _currentBooking.getStatusColor().withOpacity(0.8),
                 fontSize: 14,

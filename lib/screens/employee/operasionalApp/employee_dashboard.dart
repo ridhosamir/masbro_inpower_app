@@ -732,8 +732,8 @@ class _EmployeeDashboardState extends State<EmployeeDashboardOprational>
           SizedBox(height: 16),
           TextButton.icon(
             onPressed: _clearSearch,
-            icon: Icon(Icons.clear, color: Colors.blue),
-            label: Text('Clear Search', style: TextStyle(color: Colors.blue)),
+            icon: Icon(Icons.clear, color: Colors.red),
+            label: Text('Clear Search', style: TextStyle(color: Colors.red)),
           ),
         ],
       ),

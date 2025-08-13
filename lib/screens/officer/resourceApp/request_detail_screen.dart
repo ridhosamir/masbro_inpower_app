@@ -194,7 +194,7 @@ class _RequestDetailScreenResourceState
 
         ScaffoldMessenger.of(context).showSnackBar(
           const SnackBar(
-            content: Text('Permintaan berhasil diselesaikan'),
+            content: Text('Request completed successfully'),
             backgroundColor: Colors.green,
             behavior: SnackBarBehavior.floating,
           ),
@@ -254,7 +254,7 @@ class _RequestDetailScreenResourceState
     final bool isResourceRequest = _currentRequest.request == 'resource';
     return Scaffold(
       appBar: AppBar(
-        title: const Text('Detail Permintaan'),
+        title: const Text('Request Details'),
         backgroundColor: Theme.of(context).primaryColor,
         foregroundColor: Colors.white,
       ),
@@ -289,7 +289,7 @@ class _RequestDetailScreenResourceState
                   ),
                   const SizedBox(height: 8),
                   Text(
-                    'Dibuat pada ${DateFormat('d MMMM yyyy, HH:mm').format(_currentRequest.createdAt)}',
+                    'Created at ${DateFormat('d MMMM yyyy, HH:mm').format(_currentRequest.createdAt)}',
                     style: TextStyle(
                       color: Colors.grey[600],
                       fontSize: 14,
@@ -299,7 +299,7 @@ class _RequestDetailScreenResourceState
                       _currentRequest.completionDate != null) ...[
                     const SizedBox(height: 8),
                     Text(
-                      'Diselesaikan pada ${DateFormat('dd MMM yyyy, HH:mm').format(_currentRequest.completionDate!)}',
+                      'Completed on ${DateFormat('dd MMM yyyy, HH:mm').format(_currentRequest.completionDate!)}',
                       style: TextStyle(
                         color: Colors.green[700],
                         fontSize: 14,
@@ -311,23 +311,23 @@ class _RequestDetailScreenResourceState
               ),
             ),
             const SizedBox(height: 24),
-            _buildSectionTitle('Informasi Permintaan'),
+            _buildSectionTitle('Request Information'),
             const SizedBox(height: 12),
             _buildInfoCard([
               _buildInfoRow(
-                  Icons.person, 'Pemohon', _currentRequest.employeeName),
+                  Icons.person, 'Requester', _currentRequest.employeeName),
               _buildInfoRow(
                 isResourceRequest ? Icons.supervisor_account : Icons.inventory,
-                'Kebutuhan',
+                'Need',
                 '${_currentRequest.request[0].toUpperCase()}${_currentRequest.request.substring(1)}',
               ),
               if (_currentRequest.timeRequired != null &&
                   _currentRequest.timeRequired!.isNotEmpty)
-                _buildInfoRow(Icons.calendar_today, 'Waktu\nDibutuhkan',
+                _buildInfoRow(Icons.calendar_today, 'Time\nRequired',
                     _currentRequest.timeRequired!),
               _buildInfoRow(
                 Icons.access_time,
-                'Tanggal Dibuat',
+                'Date Created',
                 DateFormat('EEEE, d MMM yyyy, HH:mm', 'id_ID')
                     .format(_currentRequest.createdAt),
               ),
@@ -335,7 +335,7 @@ class _RequestDetailScreenResourceState
             // Tampilkan foto jika ini adalah permintaan item
             if (!isResourceRequest && _currentRequest.hasValidImage()) ...[
               const SizedBox(height: 24),
-              _buildSectionTitle('Foto Item'),
+              _buildSectionTitle('Item Photo'),
               const SizedBox(height: 12),
               GestureDetector(
                 onTap: () {
@@ -373,14 +373,14 @@ class _RequestDetailScreenResourceState
                                   const Icon(Icons.error_outline,
                                       color: Colors.red, size: 40),
                                   const SizedBox(height: 8),
-                                  const Text('Gagal memuat gambar'),
+                                  const Text('Failed to load image'),
                                   const SizedBox(height: 8),
                                   ElevatedButton.icon(
                                     onPressed: () {
                                       setState(() {});
                                     },
                                     icon: const Icon(Icons.refresh),
-                                    label: const Text('Coba Lagi'),
+                                    label: const Text('Try Again'),
                                   ),
                                 ],
                               ),
@@ -407,7 +407,7 @@ class _RequestDetailScreenResourceState
               ),
             ],
             const SizedBox(height: 24),
-            _buildSectionTitle('Deskripsi Kebutuhan'),
+            _buildSectionTitle('Description of Needs'),
             const SizedBox(height: 12),
             Container(
               width: double.infinity,
@@ -426,7 +426,7 @@ class _RequestDetailScreenResourceState
             if (_currentRequest.technicianName != null &&
                 _currentRequest.technicianName!.isNotEmpty) ...[
               const SizedBox(height: 24),
-              _buildSectionTitle('Teknisi yang Ditugaskan'),
+              _buildSectionTitle('Assigned Technician'),
               const SizedBox(height: 12),
               Container(
                 width: double.infinity,
@@ -462,8 +462,8 @@ class _RequestDetailScreenResourceState
                               const SizedBox(height: 4),
                               Text(
                                 _currentRequest.status == 'completed'
-                                    ? 'Menyelesaikan permintaan ini'
-                                    : 'Sedang menangani permintaan ini',
+                                    ? 'Complete this request'
+                                    : 'Currently working on this request',
                                 style: TextStyle(
                                   fontSize: 14,
                                   color: Colors.blue[600],
@@ -489,7 +489,7 @@ class _RequestDetailScreenResourceState
                               crossAxisAlignment: CrossAxisAlignment.start,
                               children: [
                                 Text(
-                                  'Peringkat dari Pemohon',
+                                  'Assessment from Requester',
                                   style: TextStyle(
                                     fontSize: 14,
                                     fontWeight: FontWeight.w600,
@@ -565,7 +565,7 @@ class _RequestDetailScreenResourceState
                       Divider(height: 1, color: Colors.blue[200]),
                       const SizedBox(height: 16),
                       Text(
-                        'Item dari Teknisi:',
+                        'Items from Technician:',
                         style: TextStyle(
                           fontSize: 14,
                           fontWeight: FontWeight.w600,
@@ -600,7 +600,7 @@ class _RequestDetailScreenResourceState
             if (_currentRequest.status == 'completed' &&
                 _currentRequest.completionReason != null) ...[
               const SizedBox(height: 24),
-              _buildSectionTitle('Catatan Penyelesaian'),
+              _buildSectionTitle('Completion Notes'),
               const SizedBox(height: 12),
               Container(
                 width: double.infinity,
@@ -617,7 +617,7 @@ class _RequestDetailScreenResourceState
                       Padding(
                         padding: const EdgeInsets.only(bottom: 8.0),
                         child: Text(
-                          'Diselesaikan pada: ${DateFormat('d MMMM yyyy, HH:mm').format(_currentRequest.completionDate!)}',
+                          'Completed on: ${DateFormat('d MMMM yyyy, HH:mm').format(_currentRequest.completionDate!)}',
                           style: TextStyle(
                             fontSize: 14,
                             color: Colors.green[700],
@@ -643,15 +643,15 @@ class _RequestDetailScreenResourceState
               const SizedBox(height: 12),
               CustomButton(
                 text: _currentRequest.assignedTechnicianId == null
-                    ? 'Tugaskan Teknisi'
-                    : 'Ubah Teknisi',
+                    ? 'Assign Technician'
+                    : 'Change Technician',
                 onPressed: _navigateToAssignTechnician,
                 isLoading: _isLoading,
                 icon: Icons.engineering,
               ),
               const SizedBox(height: 12),
               CustomButton(
-                text: 'Tandai Selesai',
+                text: 'Mark Complete',
                 onPressed: () => _showCompleteDialog(_currentRequest),
                 backgroundColor: Colors.green,
                 icon: Icons.check_circle,

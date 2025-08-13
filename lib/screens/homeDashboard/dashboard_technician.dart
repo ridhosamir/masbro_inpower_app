@@ -121,7 +121,7 @@ class _HomeDashboardTechnicianState extends State<HomeDashboardTechnician>
                                     ),
                                   ),
                                   child: const Text(
-                                    'Dashboard Teknisi',
+                                    'Technician Dashboard',
                                     style: TextStyle(
                                       color: Colors.white,
                                       fontSize: 18,
@@ -232,131 +232,145 @@ class _HomeDashboardTechnicianState extends State<HomeDashboardTechnician>
           SafeArea(
             child: Padding(
               padding: const EdgeInsets.fromLTRB(20, 20, 20, 0),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Row(
-                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                    children: [
-                      Container(
-                        padding: const EdgeInsets.symmetric(
-                            horizontal: 16, vertical: 8),
-                        decoration: BoxDecoration(
-                          color: Colors.white.withOpacity(0.15),
-                          borderRadius: BorderRadius.circular(20),
-                          border: Border.all(
-                            color: Colors.white.withOpacity(0.2),
-                            width: 1,
-                          ),
-                        ),
-                        child: const Text(
-                          'Dashboard Teknisi',
-                          style: TextStyle(
-                            color: Colors.white,
-                            fontSize: 18,
-                            fontWeight: FontWeight.w600,
-                            letterSpacing: 0.5,
-                          ),
-                        ),
-                      ),
-                      Container(
-                        decoration: BoxDecoration(
-                          shape: BoxShape.circle,
-                          gradient: LinearGradient(
-                            colors: [
-                              Colors.white.withOpacity(0.2),
-                              Colors.white.withOpacity(0.1),
-                            ],
-                            begin: Alignment.topLeft,
-                            end: Alignment.bottomRight,
-                          ),
-                        ),
-                        child: _buildProfileMenu(),
-                      ),
-                    ],
-                  ),
-                  const SizedBox(height: 24),
-                  Container(
-                    padding: const EdgeInsets.all(20),
-                    decoration: BoxDecoration(
-                      gradient: LinearGradient(
-                        colors: [
-                          Colors.white.withOpacity(0.1),
-                          Colors.white.withOpacity(0.05),
-                        ],
-                        begin: Alignment.topLeft,
-                        end: Alignment.bottomRight,
-                      ),
-                      borderRadius: BorderRadius.circular(20),
-                      border: Border.all(
-                        color: Colors.white.withOpacity(0.15),
-                        width: 1,
-                      ),
-                    ),
+              child: LayoutBuilder(
+                builder: (context, constraints) {
+                  final settings = context.dependOnInheritedWidgetOfExactType<
+                      FlexibleSpaceBarSettings>()!;
+                  final delta = settings.maxExtent - settings.minExtent;
+                  final opacity =
+                      ((settings.currentExtent - settings.minExtent) / delta)
+                          .clamp(0.0, 1.0);
+
+                  return Opacity(
+                    opacity: opacity,
                     child: Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
-                      mainAxisSize: MainAxisSize.min,
                       children: [
                         Row(
+                          mainAxisAlignment: MainAxisAlignment.spaceBetween,
                           children: [
                             Container(
-                              padding: const EdgeInsets.all(8),
+                              padding: const EdgeInsets.symmetric(
+                                  horizontal: 16, vertical: 8),
                               decoration: BoxDecoration(
-                                color: Colors.white.withOpacity(0.2),
-                                borderRadius: BorderRadius.circular(12),
+                                color: Colors.white.withOpacity(0.15),
+                                borderRadius: BorderRadius.circular(20),
+                                border: Border.all(
+                                  color: Colors.white.withOpacity(0.2),
+                                  width: 1,
+                                ),
                               ),
-                              child: const Icon(
-                                Icons.waving_hand,
-                                color: Colors.white,
-                                size: 20,
+                              child: const Text(
+                                'Technician Dashboard',
+                                style: TextStyle(
+                                  color: Colors.white,
+                                  fontSize: 18,
+                                  fontWeight: FontWeight.w600,
+                                  letterSpacing: 0.5,
+                                ),
                               ),
                             ),
-                            const SizedBox(width: 12),
-                            Text(
-                              'Selamat Datang,',
-                              style: TextStyle(
-                                color: Colors.white.withOpacity(0.9),
-                                fontSize: 16,
-                                fontWeight: FontWeight.w500,
+                            Container(
+                              decoration: BoxDecoration(
+                                shape: BoxShape.circle,
+                                gradient: LinearGradient(
+                                  colors: [
+                                    Colors.white.withOpacity(0.2),
+                                    Colors.white.withOpacity(0.1),
+                                  ],
+                                  begin: Alignment.topLeft,
+                                  end: Alignment.bottomRight,
+                                ),
                               ),
+                              child: _buildProfileMenu(),
                             ),
                           ],
                         ),
-                        const SizedBox(height: 12),
-                        Text(
-                          currentUser!.name,
-                          style: const TextStyle(
-                            color: Colors.white,
-                            fontSize: 26,
-                            fontWeight: FontWeight.bold,
-                            letterSpacing: 0.5,
+                        const SizedBox(height: 24),
+                        Container(
+                          padding: const EdgeInsets.all(20),
+                          decoration: BoxDecoration(
+                            gradient: LinearGradient(
+                              colors: [
+                                Colors.white.withOpacity(0.1),
+                                Colors.white.withOpacity(0.05),
+                              ],
+                              begin: Alignment.topLeft,
+                              end: Alignment.bottomRight,
+                            ),
+                            borderRadius: BorderRadius.circular(20),
+                            border: Border.all(
+                              color: Colors.white.withOpacity(0.15),
+                              width: 1,
+                            ),
                           ),
-                          maxLines: 1,
-                          overflow: TextOverflow.ellipsis,
-                        ),
-                        const SizedBox(height: 8),
-                        Row(
-                          children: [
-                            Icon(
-                              Icons.calendar_today,
-                              size: 14,
-                              color: Colors.white.withOpacity(0.8),
-                            ),
-                            const SizedBox(width: 6),
-                            Text(
-                              'Teknisi Sejak ${DateFormat('dd MMM yyyy').format(currentUser!.createdAt)}',
-                              style: TextStyle(
-                                color: Colors.white.withOpacity(0.8),
-                                fontSize: 13,
-                                fontWeight: FontWeight.w500,
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            mainAxisSize: MainAxisSize.min,
+                            children: [
+                              Row(
+                                children: [
+                                  Container(
+                                    padding: const EdgeInsets.all(8),
+                                    decoration: BoxDecoration(
+                                      color: Colors.white.withOpacity(0.2),
+                                      borderRadius: BorderRadius.circular(12),
+                                    ),
+                                    child: const Icon(
+                                      Icons.waving_hand,
+                                      color: Colors.white,
+                                      size: 20,
+                                    ),
+                                  ),
+                                  const SizedBox(width: 12),
+                                  Text(
+                                    'Welcome back,',
+                                    style: TextStyle(
+                                      color: Colors.white.withOpacity(0.9),
+                                      fontSize: 16,
+                                      fontWeight: FontWeight.w500,
+                                    ),
+                                  ),
+                                ],
                               ),
-                            ),
-                          ],
+                              const SizedBox(height: 12),
+                              Text(
+                                currentUser!.name,
+                                style: const TextStyle(
+                                  color: Colors.white,
+                                  fontSize: 26,
+                                  fontWeight: FontWeight.bold,
+                                  letterSpacing: 0.5,
+                                ),
+                                maxLines: 1,
+                                overflow: TextOverflow.ellipsis,
+                              ),
+                              const SizedBox(height: 8),
+                              Row(
+                                children: [
+                                  Icon(
+                                    Icons.calendar_today,
+                                    size: 14,
+                                    color: Colors.white.withOpacity(0.8),
+                                  ),
+                                  const SizedBox(width: 6),
+                                  Text(
+                                    'Technician since ${DateFormat('dd MMM yyyy').format(currentUser!.createdAt)}',
+                                    style: TextStyle(
+                                      color: Colors.white.withOpacity(0.8),
+                                      fontSize: 13,
+                                      fontWeight: FontWeight.w500,
+                                    ),
+                                  ),
+                                ],
+                              ),
+                            ],
+                          ),
                         ),
                       ],
                     ),
-                  ),
-                ],
+                  );
+                },
               ),
             ),
           ),
@@ -384,14 +398,14 @@ class _HomeDashboardTechnicianState extends State<HomeDashboardTechnician>
           value: 'profile',
           child: ListTile(
             leading: Icon(Icons.person_outline),
-            title: Text('Profil Saya'),
+            title: Text('My Profile'),
           ),
         ),
         const PopupMenuItem(
           value: 'logout',
           child: ListTile(
             leading: Icon(Icons.logout, color: Colors.red),
-            title: Text('Keluar', style: TextStyle(color: Colors.red)),
+            title: Text('Logout', style: TextStyle(color: Colors.red)),
           ),
         ),
       ],
@@ -454,7 +468,8 @@ class _HomeDashboardTechnicianState extends State<HomeDashboardTechnician>
             onTap: () {
               ScaffoldMessenger.of(context).showSnackBar(
                 const SnackBar(
-                  content: Text('Aplikasi ini tidak tersedia untuk Teknisi'),
+                  content: Text(
+                      'This application is not available for Technicians.'),
                   backgroundColor: Colors.blueGrey,
                 ),
               );
@@ -526,16 +541,16 @@ class _HomeDashboardTechnicianState extends State<HomeDashboardTechnician>
       context: context,
       builder: (context) => AlertDialog(
         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
-        title: const Text('Informasi Profil'),
+        title: const Text('Profil Information'),
         content: Column(
           mainAxisSize: MainAxisSize.min,
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            _buildProfileItem('Nama', currentUser!.name),
+            _buildProfileItem('Name', currentUser!.name),
             _buildProfileItem('Email', currentUser!.email),
-            _buildProfileItem('Peran', currentUser!.role.toUpperCase()),
+            _buildProfileItem('Role', currentUser!.role.toUpperCase()),
             _buildProfileItem(
-              'Teknisi Sejak',
+              'Technician since',
               DateFormat('dd MMMM yyyy').format(currentUser!.createdAt),
             ),
           ],
@@ -543,7 +558,7 @@ class _HomeDashboardTechnicianState extends State<HomeDashboardTechnician>
         actions: [
           TextButton(
             onPressed: () => Navigator.pop(context),
-            child: const Text('Tutup'),
+            child: const Text('Close'),
           ),
         ],
       ),
@@ -576,19 +591,20 @@ class _HomeDashboardTechnicianState extends State<HomeDashboardTechnician>
       context: context,
       builder: (context) => AlertDialog(
         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
-        title: const Text('Keluar'),
-        content: const Text('Apakah Anda yakin ingin keluar dari akun ini?'),
+        title: const Text('Logout Confirmation'),
+        content:
+            const Text('Are you sure you want to log out of this account?'),
         actions: [
           TextButton(
             onPressed: () => Navigator.pop(context),
-            child: const Text('Batal'),
+            child: const Text('Cancel'),
           ),
           TextButton(
             onPressed: () {
               Navigator.pop(context);
               Provider.of<AuthService>(context, listen: false).signOut();
             },
-            child: const Text('Keluar', style: TextStyle(color: Colors.red)),
+            child: const Text('Logout', style: TextStyle(color: Colors.red)),
           ),
         ],
       ),
@@ -764,10 +780,10 @@ class _TechnicianStatusTabState extends State<TechnicianStatusTab>
         }
       }
     } catch (e) {
-      print('Gagal memilih gambar: $e');
+      print('Failed to select image: $e');
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('Gagal memilih gambar: $e')),
+          SnackBar(content: Text('Failed to select image: $e')),
         );
       }
     }
@@ -900,13 +916,13 @@ class _TechnicianStatusTabState extends State<TechnicianStatusTab>
       context: context,
       builder: (context) => AlertDialog(
         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
-        title: const Text('Filter Berdasarkan Waktu',
+        title: const Text('Filter By Time',
             style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold)),
         content: Column(
           mainAxisSize: MainAxisSize.min,
           children: [
             RadioListTile<String>(
-              title: const Text('Semua Waktu'),
+              title: const Text('All Time'),
               value: 'all',
               groupValue: _selectedFilter,
               onChanged: (value) {
@@ -916,7 +932,7 @@ class _TechnicianStatusTabState extends State<TechnicianStatusTab>
               },
             ),
             RadioListTile<String>(
-              title: const Text('Hari Ini'),
+              title: const Text('Today'),
               value: 'today',
               groupValue: _selectedFilter,
               onChanged: (value) {
@@ -926,7 +942,7 @@ class _TechnicianStatusTabState extends State<TechnicianStatusTab>
               },
             ),
             RadioListTile<String>(
-              title: const Text('Minggu Ini'),
+              title: const Text('This Week'),
               value: 'week',
               groupValue: _selectedFilter,
               onChanged: (value) {
@@ -936,7 +952,7 @@ class _TechnicianStatusTabState extends State<TechnicianStatusTab>
               },
             ),
             RadioListTile<String>(
-              title: const Text('Bulan Ini'),
+              title: const Text('This Month'),
               value: 'month',
               groupValue: _selectedFilter,
               onChanged: (value) {
@@ -1009,7 +1025,7 @@ class _TechnicianStatusTabState extends State<TechnicianStatusTab>
               padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
               color: Colors.blue.withOpacity(0.1),
               child: Text(
-                '${_filteredList.length} hasil untuk "${_searchController.text}"',
+                '${_filteredList.length} results for "${_searchController.text}"',
                 style: TextStyle(
                   color: Colors.blue[800],
                   fontWeight: FontWeight.w600,
@@ -1044,7 +1060,7 @@ class _TechnicianStatusTabState extends State<TechnicianStatusTab>
                         child: ElevatedButton.icon(
                           onPressed: _loadMore,
                           icon: const Icon(Icons.expand_more),
-                          label: const Text('Lihat lebih banyak'),
+                          label: const Text('See More'),
                         ),
                       ),
                     ),
@@ -1144,7 +1160,7 @@ class _TechnicianStatusTabState extends State<TechnicianStatusTab>
           child: TextField(
             controller: _searchController,
             decoration: InputDecoration(
-              hintText: 'Cari tugas...',
+              hintText: 'Search Task...',
               prefixIcon: Icon(Icons.search, color: Colors.grey[600]),
               suffixIcon: _searchQuery.isNotEmpty
                   ? IconButton(
@@ -1175,7 +1191,7 @@ class _TechnicianStatusTabState extends State<TechnicianStatusTab>
               Icons.filter_list,
               color: Theme.of(context).primaryColor,
             ),
-            tooltip: 'Filter Berdasarkan Waktu',
+            tooltip: 'Filter By Time',
           ),
         ),
       ],
@@ -1187,31 +1203,33 @@ class _TechnicianStatusTabState extends State<TechnicianStatusTab>
     final bool isTimeFilterActive = _selectedFilter != 'all';
 
     IconData icon = Icons.inbox_outlined;
-    String title = 'Tidak Ada Tugas';
-    String description = 'Tidak ada tugas dengan status ini saat ini.';
+    String title = 'Nothing Found';
+    String description = 'There are no tasks with this status at this time.';
     Widget? actionButton;
 
     // 1. Cek apakah ada pencarian aktif
     if (isSearchActive) {
       icon = Icons.search_off;
-      title = 'Pencarian Tidak Ditemukan';
-      description =
-          'Tidak ada tugas yang cocok dengan kata kunci "${_searchController.text}".';
+      title = 'Search Not Found';
+      description = 'No data matches the keyword "${_searchController.text}".';
       actionButton = TextButton.icon(
         onPressed: _clearSearch,
-        icon: const Icon(Icons.clear),
-        label: const Text('Hapus Pencarian'),
+        icon: const Icon(Icons.clear, color: Colors.red),
+        label: const Text('Clear Search', style: TextStyle(color: Colors.red)),
       );
     }
     // 2. Jika tidak, cek apakah ada filter waktu aktif
     else if (isTimeFilterActive) {
       icon = Icons.filter_alt_off_outlined;
-      title = 'Tugas Tidak Ditemukan';
-      description = 'Tidak ada tugas pada rentang waktu yang Anda pilih.';
+      title = 'Data Not Found';
+      description = 'There is no data in the selected time range.';
       actionButton = TextButton.icon(
         onPressed: _clearTimeFilter,
-        icon: const Icon(Icons.clear),
-        label: const Text('Hapus Filter Waktu'),
+        icon: const Icon(Icons.clear, color: Colors.red),
+        label: const Text(
+          'Clear Filter',
+          style: TextStyle(color: Colors.red),
+        ),
       );
     }
 
@@ -1301,11 +1319,11 @@ class _TechnicianStatusTabState extends State<TechnicianStatusTab>
     final difference = now.difference(date);
 
     if (difference.inDays > 0) {
-      return '${difference.inDays} hari lalu';
+      return '${difference.inDays} days ago';
     } else if (difference.inHours > 0) {
-      return '${difference.inHours} jam lalu';
+      return '${difference.inHours} hours ago';
     } else {
-      return '${difference.inMinutes} menit lalu';
+      return '${difference.inMinutes} minutes ago';
     }
   }
 
@@ -1644,7 +1662,7 @@ class _TechnicianStatusTabState extends State<TechnicianStatusTab>
                 mainAxisAlignment: MainAxisAlignment.spaceBetween,
                 children: [
                   const Text(
-                    'Detail Tugas',
+                    'Task Details',
                     style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold),
                   ),
                   _buildStatusChip(task.status),
@@ -1669,20 +1687,20 @@ class _TechnicianStatusTabState extends State<TechnicianStatusTab>
                         crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
                           _buildDetailItem(
-                            'Kebutuhan',
+                            'Need',
                             '${task.request[0].toUpperCase()}${task.request.substring(1)}',
                             task.request == 'resource'
                                 ? Icons.supervisor_account
                                 : Icons.inventory,
                           ),
                           _buildDetailItem(
-                              'Pemohon', task.requesterName, Icons.person),
+                              'Requester', task.requesterName, Icons.person),
                           if (task.timeRequired != null &&
                               task.timeRequired!.isNotEmpty)
-                            _buildDetailItem('Waktu Dibutuhkan',
+                            _buildDetailItem('Time Required',
                                 task.timeRequired!, Icons.calendar_today),
                           _buildDetailItem(
-                            'Ditugaskan',
+                            'Assigned',
                             DateFormat('dd MMM yyyy, HH:mm', 'id_ID')
                                 .format(task.assignedAt),
                             Icons.access_time,
@@ -1690,7 +1708,7 @@ class _TechnicianStatusTabState extends State<TechnicianStatusTab>
                           if (task.status == 'completed' &&
                               task.completedAt != null)
                             _buildDetailItem(
-                              'Selesai',
+                              'Finished',
                               DateFormat('EEEE, d MMM yyyy, HH:mm', 'id_ID')
                                   .format(task.completedAt!),
                               Icons.check_circle,
@@ -1701,7 +1719,7 @@ class _TechnicianStatusTabState extends State<TechnicianStatusTab>
                     // Tampilkan foto jika ini adalah permintaan item
                     if (!isResourceRequest && task.hasValidImage()) ...[
                       const SizedBox(height: 24),
-                      const Text('Foto Item',
+                      const Text('Item Photo',
                           style: TextStyle(
                               fontSize: 16, fontWeight: FontWeight.bold)),
                       const SizedBox(height: 12),
@@ -1756,7 +1774,7 @@ class _TechnicianStatusTabState extends State<TechnicianStatusTab>
                     ],
                     const SizedBox(height: 20),
                     const Text(
-                      'Deskripsi Tugas',
+                      'Task Description',
                       style: TextStyle(
                         fontWeight: FontWeight.bold,
                         fontSize: 16,
@@ -1783,7 +1801,7 @@ class _TechnicianStatusTabState extends State<TechnicianStatusTab>
                         task.completionNote != null) ...[
                       const SizedBox(height: 20),
                       Text(
-                        'Catatan Penyelesaian Anda',
+                        'Your Completion Notes',
                         style: TextStyle(
                           fontWeight: FontWeight.bold,
                           fontSize: 16,
@@ -1816,7 +1834,7 @@ class _TechnicianStatusTabState extends State<TechnicianStatusTab>
               Padding(
                 padding: const EdgeInsets.all(16),
                 child: CustomButton(
-                  text: 'Tandai Selesai',
+                  text: 'Mark Complete',
                   onPressed: () {
                     _showCompleteDialogResource(task);
                   },
@@ -2137,21 +2155,21 @@ class _TechnicianStatusTabState extends State<TechnicianStatusTab>
         return StatefulBuilder(
           builder: (context, setStateDialog) {
             return AlertDialog(
-              title: const Text('Selesaikan Tugas'),
+              title: const Text('Complete the Task'),
               content: SingleChildScrollView(
                 child: Column(
                   mainAxisSize: MainAxisSize.min,
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
                     CustomTextField(
-                      labelText: 'Catatan Penyelesaian',
-                      hintText: 'Masukkan catatan pekerjaan...',
+                      labelText: 'Completion Notes',
+                      hintText: 'Enter task notes...',
                       controller: _completionResourceNoteController,
                       maxLines: 3,
                     ),
                     if (task.request == 'item') ...[
                       const SizedBox(height: 16),
-                      Text('Foto Item (Opsional)',
+                      Text('Item Photo (Optional)',
                           style: TextStyle(
                               fontWeight: FontWeight.bold,
                               color: Colors.grey[700])),
@@ -2191,13 +2209,13 @@ class _TechnicianStatusTabState extends State<TechnicianStatusTab>
                         children: [
                           TextButton.icon(
                             icon: const Icon(Icons.photo_library),
-                            label: const Text('Galeri'),
+                            label: const Text('Gallery'),
                             onPressed: () =>
                                 _pickImage(ImageSource.gallery, setStateDialog),
                           ),
                           TextButton.icon(
                             icon: const Icon(Icons.camera_alt),
-                            label: const Text('Kamera'),
+                            label: const Text('Camera'),
                             onPressed: () =>
                                 _pickImage(ImageSource.camera, setStateDialog),
                           ),
@@ -2217,13 +2235,13 @@ class _TechnicianStatusTabState extends State<TechnicianStatusTab>
               actions: [
                 TextButton(
                   onPressed: () => Navigator.pop(context),
-                  child: const Text('Batal'),
+                  child: const Text('Cancel'),
                 ),
                 TextButton(
                   onPressed: () {
                     if (_completionResourceNoteController.text.trim().isEmpty) {
                       setStateDialog(() {
-                        dialogErrorText = 'Harap berikan catatan penyelesaian';
+                        dialogErrorText = 'Please provide completion notes';
                       });
                     } else {
                       _completeTaskResource(task);
@@ -2234,7 +2252,7 @@ class _TechnicianStatusTabState extends State<TechnicianStatusTab>
                           width: 20,
                           height: 20,
                           child: CircularProgressIndicator(strokeWidth: 2))
-                      : const Text('Selesaikan',
+                      : const Text('Complete',
                           style: TextStyle(color: Colors.green)),
                 ),
               ],
@@ -2256,7 +2274,7 @@ class _TechnicianStatusTabState extends State<TechnicianStatusTab>
         imageUrl = await _storageService.uploadImage(
             _selectedImage!, 'completed_items');
         if (imageUrl == null) {
-          throw Exception('Gagal mengunggah gambar.');
+          throw Exception('Failed to upload image.');
         }
       }
       await _resourceFirestoreService.updateTaskStatus(
@@ -2270,7 +2288,7 @@ class _TechnicianStatusTabState extends State<TechnicianStatusTab>
         Navigator.pop(context);
         ScaffoldMessenger.of(context).showSnackBar(
           const SnackBar(
-              content: Text('Tugas berhasil diselesaikan!'),
+              content: Text('Task successfully completed!'),
               backgroundColor: Colors.green),
         );
       }
@@ -2504,7 +2522,7 @@ class _TechnicianStatusTabState extends State<TechnicianStatusTab>
 
                     if (task.status == 'completed' && task.completedAt != null)
                       Text(
-                        'Selesai: ${_getTimeAgo(task.completedAt!)}',
+                        'Completed: ${_getTimeAgo(task.completedAt!)}',
                         style: TextStyle(
                             color: Colors.green[700],
                             fontSize: 12,
@@ -2512,7 +2530,7 @@ class _TechnicianStatusTabState extends State<TechnicianStatusTab>
                       )
                     else if (task.assignedAt != null)
                       Text(
-                        'Ditugaskan: ${_getTimeAgo(task.assignedAt!)}',
+                        'Assigned: ${_getTimeAgo(task.assignedAt!)}',
                         style: TextStyle(color: Colors.grey[600], fontSize: 12),
                       ),
 
@@ -2523,7 +2541,7 @@ class _TechnicianStatusTabState extends State<TechnicianStatusTab>
                     task.status == 'in_progress') ...[
                   const SizedBox(height: 16),
                   CustomButton(
-                    text: 'Tandai Selesai',
+                    text: 'Mark Complete',
                     onPressed: () => _showCompleteDialogMaintenance(task),
                     backgroundColor: Colors.green,
                   ),
@@ -2584,7 +2602,7 @@ class _TechnicianStatusTabState extends State<TechnicianStatusTab>
                               crossAxisAlignment: CrossAxisAlignment.start,
                               children: [
                                 Text(
-                                  'Dari: ${request.pickupLocation}',
+                                  'Pickup: ${request.pickupLocation}',
                                   style: TextStyle(
                                       fontSize: 16,
                                       fontWeight: FontWeight.bold,
@@ -2593,7 +2611,7 @@ class _TechnicianStatusTabState extends State<TechnicianStatusTab>
                                 ),
                                 const SizedBox(height: 4),
                                 Text(
-                                  'Ke: ${request.dropoffLocation}',
+                                  'Drop off: ${request.dropoffLocation}',
                                   style: TextStyle(
                                       fontSize: 14, color: Colors.grey[600]),
                                   overflow: TextOverflow.ellipsis,
@@ -2608,17 +2626,18 @@ class _TechnicianStatusTabState extends State<TechnicianStatusTab>
                   ],
                 ),
                 const SizedBox(height: 12),
-                _buildInfoRow(Icons.event, 'Jemput: ',
+                _buildInfoRow(Icons.event, 'Pickup: ',
                     DateFormat('MMM dd, HH:mm').format(request.pickupDateTime)),
-                _buildInfoRow(Icons.group, 'Penumpang: ',
+                _buildInfoRow(Icons.group, 'Passenger: ',
                     request.passengerCapacity.toString()),
-                _buildInfoRow(Icons.person, 'Pemohon: ', request.employeeName),
+                _buildInfoRow(
+                    Icons.person, 'Applicant: ', request.employeeName),
                 const SizedBox(height: 12),
                 if (request.status == 'inProgress' ||
                     request.status == 'in_progress') ...[
                   const SizedBox(height: 16),
                   CustomButton(
-                    text: 'Tandai Selesai',
+                    text: 'Mark Complete',
                     onPressed: () => _showCompleteDialogRide(request),
                     backgroundColor: Colors.green,
                   ),
@@ -2689,7 +2708,7 @@ class _TechnicianStatusTabState extends State<TechnicianStatusTab>
                             ),
                           ),
                           Text(
-                            'Oleh: ${task.requesterName ?? "N/A"}',
+                            'By: ${task.requesterName ?? "N/A"}',
                             style: TextStyle(
                               fontSize: 12,
                               color: Colors.grey[600],
@@ -2739,7 +2758,7 @@ class _TechnicianStatusTabState extends State<TechnicianStatusTab>
                     borderRadius: BorderRadius.circular(8),
                   ),
                   child: Text(
-                    task.description ?? 'Tidak ada deskripsi.',
+                    task.description ?? 'There is no description.',
                     style: TextStyle(fontSize: 14, color: Colors.grey[700]),
                     maxLines: 2,
                     overflow: TextOverflow.ellipsis,
@@ -2751,12 +2770,12 @@ class _TechnicianStatusTabState extends State<TechnicianStatusTab>
                     isResourceRequest
                         ? Icons.supervisor_account
                         : Icons.inventory,
-                    'Kebutuhan',
+                    'Need',
                     '${task.request![0].toUpperCase()}${task.request!.substring(1)}',
                   ),
                 if (task.timeRequired != null && task.timeRequired!.isNotEmpty)
                   _buildInfoRow(
-                      Icons.calendar_today, 'Waktu', task.timeRequired!),
+                      Icons.calendar_today, 'Time', task.timeRequired!),
                 const SizedBox(height: 12),
                 const Divider(height: 1),
                 const SizedBox(height: 12),
@@ -2775,7 +2794,7 @@ class _TechnicianStatusTabState extends State<TechnicianStatusTab>
 
                     if (task.status == 'completed' && task.completedAt != null)
                       Text(
-                        'Selesai: ${_getTimeAgo(task.completedAt!)}',
+                        'Completed at: ${_getTimeAgo(task.completedAt!)}',
                         style: TextStyle(
                             color: Colors.green[700],
                             fontSize: 12,
@@ -2783,7 +2802,7 @@ class _TechnicianStatusTabState extends State<TechnicianStatusTab>
                       )
                     else if (task.assignedAt != null)
                       Text(
-                        'Ditugaskan: ${_getTimeAgo(task.assignedAt!)}',
+                        'Assigned at: ${_getTimeAgo(task.assignedAt!)}',
                         style: TextStyle(color: Colors.grey[600], fontSize: 12),
                       ),
 
@@ -2794,7 +2813,7 @@ class _TechnicianStatusTabState extends State<TechnicianStatusTab>
                     task.status == 'in_progress') ...[
                   const SizedBox(height: 16),
                   CustomButton(
-                    text: 'Tandai Selesai',
+                    text: 'Mark Complete',
                     onPressed: () => _showCompleteDialogResource(task),
                     backgroundColor: Colors.green,
                     icon: Icons.check_circle,

@@ -48,7 +48,6 @@ class _CreateBookingScreenState extends State<CreateBookingScreen> {
   DateTime? _endDateMulti;
 
   final List<String> _predefinedNeeds = [
-    'Microphone',
     'Hybrid Setup',
     'Snack',
     'Minuman',
@@ -142,7 +141,7 @@ class _CreateBookingScreenState extends State<CreateBookingScreen> {
       } catch (e) {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
-              content: Text('Gagal mencari ruangan: $e'),
+              content: Text('Failed to find room: $e'),
               backgroundColor: Colors.red),
         );
       } finally {
@@ -183,14 +182,14 @@ class _CreateBookingScreenState extends State<CreateBookingScreen> {
       if (_selectedDate == null || _startTime == null || _endTime == null) {
         ScaffoldMessenger.of(context).showSnackBar(const SnackBar(
             content:
-                Text('Harap lengkapi tanggal, jam mulai, dan jam selesai.'),
+                Text('Please complete the date, start time, and end time.'),
             backgroundColor: Colors.red));
         return;
       }
       if ((_endTime!.hour * 60 + _endTime!.minute) <=
           (_startTime!.hour * 60 + _startTime!.minute)) {
         ScaffoldMessenger.of(context).showSnackBar(const SnackBar(
-            content: Text('Jam selesai harus setelah jam mulai.'),
+            content: Text('The end time must be after the start time.'),
             backgroundColor: Colors.red));
         return;
       }
@@ -201,14 +200,14 @@ class _CreateBookingScreenState extends State<CreateBookingScreen> {
     } else {
       if (_startDateMulti == null || _endDateMulti == null) {
         ScaffoldMessenger.of(context).showSnackBar(const SnackBar(
-            content: Text('Harap lengkapi tanggal mulai dan tanggal selesai.'),
+            content: Text('Please complete the start date and end date.'),
             backgroundColor: Colors.red));
         return;
       }
       if (_endDateMulti!
           .isBefore(_startDateMulti!.add(const Duration(days: 1)))) {
         ScaffoldMessenger.of(context).showSnackBar(const SnackBar(
-            content: Text('Booking beberapa hari minimal adalah 2 hari.'),
+            content: Text('Minimum booking for several days is 2 days.'),
             backgroundColor: Colors.red));
         return;
       }
@@ -234,7 +233,7 @@ class _CreateBookingScreenState extends State<CreateBookingScreen> {
 
       if (_selectedRoom == null) {
         ScaffoldMessenger.of(context).showSnackBar(const SnackBar(
-            content: Text('Terjadi kesalahan, ruangan belum dipilih.'),
+            content: Text('An error occurred, the room has not been selected.'),
             backgroundColor: Colors.red));
         return;
       }
@@ -259,14 +258,14 @@ class _CreateBookingScreenState extends State<CreateBookingScreen> {
 
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(const SnackBar(
-            content: Text('Booking berhasil dibuat.'),
+            content: Text('Booking successfully created.'),
             backgroundColor: Colors.green));
         Navigator.pop(context);
       }
     } catch (e) {
       ScaffoldMessenger.of(context).showSnackBar(SnackBar(
           content: Text(
-              'Gagal membuat booking: ${e.toString().replaceAll("Exception: ", "")}'),
+              'Failed to make a booking: ${e.toString().replaceAll("Exception: ", "")}'),
           backgroundColor: Colors.red));
     } finally {
       if (mounted) {
@@ -279,7 +278,7 @@ class _CreateBookingScreenState extends State<CreateBookingScreen> {
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
-        title: const Text('Buat Booking Baru',
+        title: const Text('Create a New Booking',
             style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold)),
         backgroundColor: Theme.of(context).primaryColor,
         iconTheme: const IconThemeData(color: Colors.white),
@@ -291,18 +290,18 @@ class _CreateBookingScreenState extends State<CreateBookingScreen> {
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              _buildSectionTitle('Detail Acara'),
+              _buildSectionTitle('Event Details'),
               CustomTextField(
                 controller: _agendaController,
-                labelText: 'Agenda Acara',
+                labelText: 'Event Agenda',
                 hintText: 'Contoh: Rapat bulanan departemen...',
                 maxLines: 3,
                 validator: (val) =>
-                    val!.isEmpty ? 'Agenda tidak boleh kosong' : null,
+                    val!.isEmpty ? 'The agenda cannot be empty' : null,
               ),
               const SizedBox(height: 24),
 
-              _buildSectionTitle('Durasi Penggunaan'),
+              _buildSectionTitle('Event duration'),
               _buildBookingTypeSelector(),
               const SizedBox(height: 16),
 
@@ -313,43 +312,43 @@ class _CreateBookingScreenState extends State<CreateBookingScreen> {
                 _buildMultiDayInputs(),
               const SizedBox(height: 24),
 
-              _buildSectionTitle('Jenis Kegiatan'),
+              _buildSectionTitle('Type of activity'),
               _buildActivityTypeSection(),
               const SizedBox(height: 24),
 
-              _buildSectionTitle('Kebutuhan'),
+              _buildSectionTitle('Event needs'),
               _buildNeedsSection(),
               if (_showOtherNeedsField) ...[
                 const SizedBox(height: 16),
                 CustomTextField(
                     controller: _otherNeedsController,
-                    labelText: 'Kebutuhan Lainnya',
+                    labelText: 'Other Needs',
                     hintText: 'Tuliskan kebutuhan spesifik Anda...'),
               ],
               const SizedBox(height: 24),
 
-              _buildSectionTitle('Peserta'),
+              _buildSectionTitle('Participant'),
               CustomTextField(
                 controller: _participantsController,
-                labelText: 'Jumlah Peserta',
+                labelText: 'Number of participants',
                 hintText: 'Contoh: 15',
                 keyboardType: TextInputType.number,
                 validator: (val) {
                   if (val == null || val.isEmpty)
-                    return 'Jumlah peserta tidak boleh kosong';
+                    return 'The number of participants cannot be empty';
                   if (int.tryParse(val) == null)
-                    return 'Mohon masukkan angka yang valid';
+                    return 'Please enter a valid number';
                   return null;
                 },
               ),
               const SizedBox(height: 24),
 
-              _buildSectionTitle('Pilih Ruangan'),
+              _buildSectionTitle('Selesct Room'),
               _buildRoomSelectionSection(),
               const SizedBox(height: 32),
 
               CustomButton(
-                text: 'Kirim Permintaan Booking',
+                text: 'Send Booking Request',
                 onPressed: _submitBooking,
                 isLoading: _isLoading,
               ),
@@ -378,11 +377,11 @@ class _CreateBookingScreenState extends State<CreateBookingScreen> {
       segments: const <ButtonSegment<BookingType>>[
         ButtonSegment(
             value: BookingType.harian,
-            label: Text('Harian'),
+            label: Text('One-Day'),
             icon: Icon(Icons.access_time)),
         ButtonSegment(
             value: BookingType.beberapaHari,
-            label: Text('Beberapa Hari'),
+            label: Text('Multi-Day'),
             icon: Icon(Icons.date_range)),
       ],
       selected: <BookingType>{_bookingType},
@@ -402,7 +401,7 @@ class _CreateBookingScreenState extends State<CreateBookingScreen> {
   Widget _buildSingleDayInputs() {
     return Column(
       children: [
-        _buildDatePicker('Pilih Tanggal Acara', _selectedDate, (date) {
+        _buildDatePicker('Select Event Date', _selectedDate, (date) {
           setState(() {
             _selectedDate = date;
             final now = DateTime.now();
@@ -414,8 +413,8 @@ class _CreateBookingScreenState extends State<CreateBookingScreen> {
               final startTimeInMinutes =
                   _startTime!.hour * 60 + _startTime!.minute;
               if (startTimeInMinutes < nowInMinutes) {
-                _startTime = null; // Reset jam mulai
-                _endTime = null; // Reset jam selesai juga
+                _startTime = null;
+                _endTime = null;
               }
             }
           });
@@ -425,7 +424,7 @@ class _CreateBookingScreenState extends State<CreateBookingScreen> {
           children: [
             Expanded(
               child: _buildTimePicker(
-                'Jam Mulai',
+                'Start Time',
                 _startTime,
                 (time) {
                   setState(() {
@@ -443,7 +442,7 @@ class _CreateBookingScreenState extends State<CreateBookingScreen> {
             const SizedBox(width: 16),
             Expanded(
               child: _buildTimePicker(
-                'Jam Selesai',
+                'End Time',
                 _endTime,
                 (time) {
                   setState(() => _endTime = time);
@@ -460,7 +459,7 @@ class _CreateBookingScreenState extends State<CreateBookingScreen> {
   Widget _buildMultiDayInputs() {
     return Column(
       children: [
-        _buildDatePicker('Tanggal Mulai', _startDateMulti, (date) {
+        _buildDatePicker('Start Date', _startDateMulti, (date) {
           setState(() {
             _startDateMulti = date;
             // Reset end date jika start date diubah menjadi setelah end date
@@ -471,7 +470,7 @@ class _CreateBookingScreenState extends State<CreateBookingScreen> {
           });
         }),
         const SizedBox(height: 16),
-        _buildDatePicker('Tanggal Selesai', _endDateMulti, (date) {
+        _buildDatePicker('End Date', _endDateMulti, (date) {
           setState(() => _endDateMulti = date);
         }, firstDate: _startDateMulti?.add(const Duration(days: 1))),
       ],
@@ -485,7 +484,7 @@ class _CreateBookingScreenState extends State<CreateBookingScreen> {
       initialValue: value,
       validator: (date) {
         if (value == null) {
-          return 'Harap pilih tanggal';
+          return 'Please select a date';
         }
         return null;
       },
@@ -517,7 +516,7 @@ class _CreateBookingScreenState extends State<CreateBookingScreen> {
               mainAxisAlignment: MainAxisAlignment.spaceBetween,
               children: [
                 Text(value == null
-                    ? 'Pilih tanggal'
+                    ? 'Select date'
                     : DateFormat('EEEE, d MMMM yyyy', 'id_ID').format(value)),
                 const Icon(Icons.calendar_month),
               ],
@@ -539,7 +538,7 @@ class _CreateBookingScreenState extends State<CreateBookingScreen> {
     });
 
     // Filter jam mulai berdasarkan waktu sekarang jika tanggal yang dipilih adalah hari ini
-    if (label == 'Jam Mulai' && selectedDate != null) {
+    if (label == 'Start Time' && selectedDate != null) {
       final now = DateTime.now();
       final isToday = selectedDate.year == now.year &&
           selectedDate.month == now.month &&
@@ -579,7 +578,7 @@ class _CreateBookingScreenState extends State<CreateBookingScreen> {
             const EdgeInsets.symmetric(horizontal: 12, vertical: 15),
       ),
       menuMaxHeight: 200,
-      hint: times.isEmpty ? const Text('Pilih Jam Mulai') : null,
+      hint: times.isEmpty ? const Text('Start Time') : null,
       items: times.map((time) {
         return DropdownMenuItem<TimeOfDay>(
           value: time,
@@ -592,7 +591,7 @@ class _CreateBookingScreenState extends State<CreateBookingScreen> {
           _findAvailableRooms();
         }
       },
-      validator: (val) => val == null ? 'Wajib diisi' : null,
+      validator: (val) => val == null ? 'Required fields' : null,
     );
   }
 
@@ -615,7 +614,7 @@ class _CreateBookingScreenState extends State<CreateBookingScreen> {
               },
             )),
         FilterChip(
-          label: const Text('Lainnya...'),
+          label: const Text('Other...'),
           selected: _showOtherNeedsField,
           onSelected: (selected) {
             setState(() => _showOtherNeedsField = selected);
@@ -635,7 +634,7 @@ class _CreateBookingScreenState extends State<CreateBookingScreen> {
             border: OutlineInputBorder(),
             contentPadding: EdgeInsets.symmetric(horizontal: 12, vertical: 15),
           ),
-          hint: const Text('Pilih jenis kegiatan'),
+          hint: const Text('Select the type of activity'),
           items: ['Internal', 'Eksternal'].map((String value) {
             return DropdownMenuItem<String>(
               value: value,
@@ -649,7 +648,7 @@ class _CreateBookingScreenState extends State<CreateBookingScreen> {
             });
           },
           validator: (value) =>
-              value == null ? 'Jenis kegiatan wajib diisi' : null,
+              value == null ? 'Type of activity must be filled in' : null,
         ),
 
         // Tampilkan dropdown kedua jika 'Eksternal' dipilih
@@ -658,12 +657,12 @@ class _CreateBookingScreenState extends State<CreateBookingScreen> {
           DropdownButtonFormField<String>(
             value: _selectedSubType,
             decoration: const InputDecoration(
-              labelText: 'Tipe Kegiatan Eksternal',
+              labelText: 'External Activity Type',
               border: OutlineInputBorder(),
               contentPadding:
                   EdgeInsets.symmetric(horizontal: 12, vertical: 15),
             ),
-            hint: const Text('Pilih tipe'),
+            hint: const Text('Select type'),
             items: ['Standard', 'VIP'].map((String value) {
               return DropdownMenuItem<String>(
                 value: value,
@@ -676,7 +675,7 @@ class _CreateBookingScreenState extends State<CreateBookingScreen> {
               });
             },
             validator: (value) =>
-                value == null ? 'Tipe eksternal wajib diisi' : null,
+                value == null ? 'External type is required' : null,
           ),
         ],
       ],
@@ -693,7 +692,7 @@ class _CreateBookingScreenState extends State<CreateBookingScreen> {
           borderRadius: BorderRadius.circular(8),
         ),
         child: const Text(
-          'Harap isi jumlah peserta dan durasi penggunaan untuk melihat ruangan yang tersedia.',
+          'Please fill in the number of participants and duration of the event to see available rooms.',
           textAlign: TextAlign.center,
           style: TextStyle(color: Colors.black54),
         ),
@@ -712,7 +711,7 @@ class _CreateBookingScreenState extends State<CreateBookingScreen> {
             borderRadius: BorderRadius.circular(8),
             border: Border.all(color: Colors.orange)),
         child: const Text(
-          'Tidak ada ruangan yang tersedia dengan kapasitas yang mencukupi.',
+          'There are no rooms available with sufficient capacity.',
           textAlign: TextAlign.center,
           style: TextStyle(color: Colors.orange),
         ),
@@ -724,7 +723,7 @@ class _CreateBookingScreenState extends State<CreateBookingScreen> {
       initialValue: _selectedRoomId,
       validator: (value) {
         if (_selectedRoomId == null) {
-          return 'Anda harus memilih satu ruangan';
+          return 'You have to choose one room';
         }
         return null;
       },
@@ -753,7 +752,7 @@ class _CreateBookingScreenState extends State<CreateBookingScreen> {
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
                       Text(
-                        'Kapasitas: ${room.capacity} orang',
+                        'Capacity: ${room.capacity} people',
                         style: TextStyle(
                             color: isAvailable
                                 ? Colors.black54
@@ -763,7 +762,7 @@ class _CreateBookingScreenState extends State<CreateBookingScreen> {
                         Padding(
                           padding: const EdgeInsets.only(top: 4.0),
                           child: Text(
-                            'Bentrok dengan jadwal lain!',
+                            'Conflict with other schedules!',
                             style: TextStyle(
                               color: Colors.orange[800],
                               fontSize: 12,
