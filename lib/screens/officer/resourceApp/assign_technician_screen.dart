@@ -76,7 +76,7 @@ class _AssignTechnicianScreenResourceState
         case 'name':
           _filteredTechnicians.sort((a, b) => a.name.compareTo(b.name));
           break;
-        case 'experience':
+        case 'since':
           // Member tertua (pengalaman terlama) di atas
           _filteredTechnicians
               .sort((a, b) => a.createdAt.compareTo(b.createdAt));
@@ -205,18 +205,18 @@ class _AssignTechnicianScreenResourceState
     return Colors.red;
   }
 
-  String _getExperienceText(DateTime createdAt) {
+  String _getSinceText(DateTime createdAt) {
     final now = DateTime.now();
     final difference = now.difference(createdAt);
 
     if (difference.inDays >= 365) {
       final years = (difference.inDays / 365).floor();
-      return '${years}y exp';
+      return '${years}years ';
     } else if (difference.inDays >= 30) {
       final months = (difference.inDays / 30).floor();
-      return '${months}m exp';
+      return '${months}months ';
     } else {
-      return '${difference.inDays}d exp';
+      return '${difference.inDays}days ';
     }
   }
 
@@ -473,13 +473,13 @@ class _AssignTechnicianScreenResourceState
                                 ),
                               ),
                               DropdownMenuItem(
-                                value: 'experience',
+                                value: 'since',
                                 child: Row(
                                   mainAxisSize: MainAxisSize.min,
                                   children: [
                                     Icon(Icons.access_time, size: 16),
                                     SizedBox(width: 4),
-                                    Text('Experience',
+                                    Text('Since',
                                         style: TextStyle(fontSize: 14)),
                                   ],
                                 ),
@@ -703,7 +703,7 @@ class _AssignTechnicianScreenResourceState
                                                 color: Colors.grey[500]),
                                             const SizedBox(width: 4),
                                             Text(
-                                              'Member since ${DateFormat('MMM yyyy').format(technician.createdAt)}',
+                                              'Member Since ${DateFormat('MMM yyyy').format(technician.createdAt)}',
                                               style: TextStyle(
                                                 fontSize: 11,
                                                 color: Colors.grey[500],
@@ -715,7 +715,7 @@ class _AssignTechnicianScreenResourceState
                                                 color: Colors.grey[500]),
                                             const SizedBox(width: 4),
                                             Text(
-                                              _getExperienceText(
+                                              _getSinceText(
                                                   technician.createdAt),
                                               style: TextStyle(
                                                 fontSize: 11,

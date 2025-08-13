@@ -25,7 +25,7 @@ class _AssignTechnicianScreenState extends State<AssignTechnicianScreen> {
   UserModel? _selectedTechnician;
   bool _isLoading = false;
   bool _isAssigning = false;
-  String _sortBy = 'rating'; // 'rating', 'name', 'experience'
+  String _sortBy = 'rating'; // 'rating', 'name', 'since'
 
   @override
   void initState() {
@@ -120,7 +120,7 @@ class _AssignTechnicianScreenState extends State<AssignTechnicianScreen> {
         case 'name':
           _technicians.sort((a, b) => a.name.compareTo(b.name));
           break;
-        case 'experience':
+        case 'since':
           _technicians.sort((a, b) => a.createdAt.compareTo(b.createdAt));
           break;
       }
@@ -293,13 +293,13 @@ class _AssignTechnicianScreenState extends State<AssignTechnicianScreen> {
                           ),
                         ),
                         DropdownMenuItem(
-                          value: 'experience',
+                          value: 'since',
                           child: Row(
                             mainAxisSize: MainAxisSize.min,
                             children: [
                               Icon(Icons.access_time, size: 16),
                               SizedBox(width: 4),
-                              Text('Experience',
+                              Text('Since',
                                   style: TextStyle(fontSize: 14)),
                             ],
                           ),
@@ -502,12 +502,12 @@ class _AssignTechnicianScreenState extends State<AssignTechnicianScreen> {
                                           ),
                                         ),
                                         SizedBox(width: 12),
-                                        // Experience indicator
+                                        // since indicator
                                         Icon(Icons.timeline,
                                             size: 12, color: Colors.grey[500]),
                                         SizedBox(width: 4),
                                         Text(
-                                          _getExperienceText(
+                                          _getsinceText(
                                               technician.createdAt),
                                           style: TextStyle(
                                             fontSize: 11,
@@ -552,18 +552,18 @@ class _AssignTechnicianScreenState extends State<AssignTechnicianScreen> {
     return Colors.red;
   }
 
-  String _getExperienceText(DateTime createdAt) {
+  String _getsinceText(DateTime createdAt) {
     final now = DateTime.now();
     final difference = now.difference(createdAt);
 
     if (difference.inDays >= 365) {
       final years = (difference.inDays / 365).floor();
-      return '${years}y exp';
+      return '${years}years ';
     } else if (difference.inDays >= 30) {
       final months = (difference.inDays / 30).floor();
-      return '${months}m exp';
+      return '${months}months ';
     } else {
-      return '${difference.inDays}d exp';
+      return '${difference.inDays}days ';
     }
   }
 

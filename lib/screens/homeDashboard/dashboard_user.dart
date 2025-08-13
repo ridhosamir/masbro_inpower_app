@@ -25,6 +25,7 @@ import 'package:masbro_inpower_app/services/bookingroomApp/firestore_service.dar
 import 'package:masbro_inpower_app/services/user_service.dart';
 import 'package:masbro_inpower_app/utils/firebase_storage_image.dart';
 import 'package:provider/provider.dart';
+import 'dart:ui';
 
 class HomeDashboardUser extends StatefulWidget {
   const HomeDashboardUser({super.key});
@@ -38,16 +39,32 @@ class _HomeDashboardUserState extends State<HomeDashboardUser>
   UserModel? currentUser;
   final _searchController = TextEditingController();
   late TabController _tabController;
+  late ScrollController _scrollController;
+  double _headerHeight = 300.0;
+  bool _showFloatingSearchBar = false;
 
   @override
   void initState() {
     super.initState();
     _tabController = TabController(length: 2, vsync: this);
+    _scrollController = ScrollController();
     _loadUserData();
 
     _tabController.addListener(() {
       if (!_tabController.indexIsChanging) {
         setState(() {});
+      }
+    });
+
+    _scrollController.addListener(() {
+      if (_scrollController.offset > 60 && !_showFloatingSearchBar) {
+        setState(() {
+          _showFloatingSearchBar = true;
+        });
+      } else if (_scrollController.offset <= 60 && _showFloatingSearchBar) {
+        setState(() {
+          _showFloatingSearchBar = false;
+        });
       }
     });
   }
@@ -56,6 +73,7 @@ class _HomeDashboardUserState extends State<HomeDashboardUser>
   void dispose() {
     _tabController.dispose();
     _searchController.dispose();
+    _scrollController.dispose();
     super.dispose();
   }
 
@@ -77,108 +95,188 @@ class _HomeDashboardUserState extends State<HomeDashboardUser>
   Widget build(BuildContext context) {
     return Scaffold(
       backgroundColor: const Color(0xFFF4F6F8),
+      extendBodyBehindAppBar: true,
+      
+           
       body: currentUser == null
-          ? const Center(child: CircularProgressIndicator())
-          : DefaultTabController(
-              length: 2,
-              child: NestedScrollView(
-                headerSliverBuilder:
-                    (BuildContext context, bool innerBoxIsScrolled) {
-                  return <Widget>[
-                    SliverAppBar(
-                      backgroundColor: const Color.fromARGB(255, 4, 117, 217),
-                      expandedHeight: 325.0,
-                      floating: false,
-                      pinned: true,
-                      automaticallyImplyLeading: false,
-                      title: LayoutBuilder(
-                        builder: (context, constraints) {
-                          final settings =
-                              context.dependOnInheritedWidgetOfExactType<
-                                  FlexibleSpaceBarSettings>()!;
-                          final delta = settings.maxExtent - settings.minExtent;
-                          final opacity = (1.0 -
-                                  (settings.currentExtent -
-                                          settings.minExtent) /
-                                      delta)
-                              .clamp(0.0, 1.0);
+          ? _buildLoading()
+          : Stack(
+              children: [
+                NestedScrollView(
+                  controller: _scrollController,
+                  headerSliverBuilder: (context, innerBoxIsScrolled) {
+                    return <Widget>[
+                      SliverAppBar(
+                        backgroundColor: const Color(0xFF0277BD),
+                        expandedHeight: 350.0, 
+                        floating: false,
+                        pinned: true,
+                        automaticallyImplyLeading: false,
+                        stretch: true,
+                        title: LayoutBuilder(
+                          builder: (context, constraints) {
+                            final settings =
+                                context.dependOnInheritedWidgetOfExactType<
+                                    FlexibleSpaceBarSettings>()!;
+                            final delta =
+                                settings.maxExtent - settings.minExtent;
+                            final opacity = (1.0 -
+                                    (settings.currentExtent -
+                                            settings.minExtent) /
+                                        delta)
+                                .clamp(0.0, 1.0);
 
-                          return Opacity(
-                            opacity: opacity,
-                            child: Row(
-                              mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                              children: [
-                                Container(
-                                  padding: const EdgeInsets.symmetric(
-                                      horizontal: 16, vertical: 8),
-                                  decoration: BoxDecoration(
-                                    color: Colors.white.withOpacity(0.15),
-                                    borderRadius: BorderRadius.circular(20),
-                                    border: Border.all(
-                                      color: Colors.white.withOpacity(0.2),
-                                      width: 1,
+                            return Opacity(
+                              opacity: opacity,
+                              child: Row(
+                                mainAxisAlignment:
+                                    MainAxisAlignment.spaceBetween,
+                                children: [
+                                  Container(
+                                    padding: const EdgeInsets.symmetric(
+                                        horizontal: 16, vertical: 8),
+                                    decoration: BoxDecoration(
+                                      color: Colors.white.withOpacity(0.15),
+                                      borderRadius: BorderRadius.circular(20),
+                                      border: Border.all(
+                                        color: Colors.white.withOpacity(0.2),
+                                        width: 1,
+                                      ),
+                                    ),
+                                    child: const Text(
+                                      'Home Dashboard',
+                                      style: TextStyle(
+                                        color: Colors.white,
+                                        fontSize: 18,
+                                        fontWeight: FontWeight.w600,
+                                        letterSpacing: 0.5,
+                                      ),
                                     ),
                                   ),
-                                  child: const Text(
-                                    'Home Dashboard',
-                                    style: TextStyle(
-                                      color: Colors.white,
-                                      fontSize: 18,
-                                      fontWeight: FontWeight.w600,
-                                      letterSpacing: 0.5,
-                                    ),
-                                  ),
-                                ),
-                                Container(
-                                  decoration: BoxDecoration(
-                                    shape: BoxShape.circle,
-                                    gradient: LinearGradient(
-                                      colors: [
-                                        Colors.white.withOpacity(0.2),
-                                        Colors.white.withOpacity(0.1),
-                                      ],
-                                      begin: Alignment.topLeft,
-                                      end: Alignment.bottomRight,
-                                    ),
-                                  ),
-                                  child: _buildProfileMenu(),
-                                ),
-                              ],
+                                  _buildProfileButton(),
+                                ],
+                              ),
+                            );
+                          },
+                        ),
+                        centerTitle: false,
+                        flexibleSpace: FlexibleSpaceBar(
+                          background: _buildHeader(context),
+                        ),
+                        bottom: PreferredSize(
+                          preferredSize: const Size.fromHeight(48.0),
+                          child: TabBar(
+                            controller: _tabController,
+                            indicatorColor: Colors.white,
+                            indicatorWeight: 3.0,
+                            labelColor: Colors.white,
+                            unselectedLabelColor: Colors.white.withOpacity(0.7),
+                            labelStyle: const TextStyle(
+                                fontWeight: FontWeight.bold, fontSize: 16),
+                            unselectedLabelStyle: const TextStyle(
+                                fontWeight: FontWeight.normal, fontSize: 16),
+                            tabs: const [
+                              Tab(text: 'Status'),
+                              Tab(text: 'Application'),
+                            ],
+                            indicator: const UnderlineTabIndicator(
+                              borderSide:
+                                  BorderSide(width: 4.0, color: Colors.white),
+                              insets: EdgeInsets.symmetric(horizontal: 16.0),
                             ),
-                          );
-                        },
-                      ),
-                      centerTitle: false,
-                      flexibleSpace: FlexibleSpaceBar(
-                        background: _buildHeader(context),
-                      ),
-                      bottom: TabBar(
-                        controller: _tabController,
-                        indicatorColor: Colors.white,
-                        indicatorWeight: 3.0,
-                        labelColor: Colors.white,
-                        unselectedLabelColor: Colors.white.withOpacity(0.7),
-                        labelStyle: const TextStyle(
-                            fontWeight: FontWeight.bold, fontSize: 16),
-                        unselectedLabelStyle: const TextStyle(
-                            fontWeight: FontWeight.normal, fontSize: 16),
-                        tabs: const [
-                          Tab(text: 'Status'),
-                          Tab(text: 'Application'),
-                        ],
-                      ),
-                    )
-                  ];
-                },
-                body: TabBarView(
-                  controller: _tabController,
-                  children: [
-                    StatusTab(currentUser: currentUser!),
-                    _buildAppGrid(context),
-                  ],
+                          ),
+                        ),
+                      )
+                    ];
+                  },
+                  body: TabBarView(
+                    controller: _tabController,
+                    children: [
+                      StatusTab(currentUser: currentUser!),
+                      _buildAppGrid(context),
+                    ],
+                  ),
+                ),
+
+ 
+               
+              ],
+            ),
+    );
+  }
+
+  Widget _buildLoading() {
+    return Container(
+      decoration: BoxDecoration(
+        gradient: LinearGradient(
+          begin: Alignment.topCenter,
+          end: Alignment.bottomCenter,
+          colors: [
+            const Color(0xFF0277BD),
+            const Color(0xFF0288D1),
+          ],
+        ),
+      ),
+      child: Center(
+        child: Column(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            Container(
+              padding: const EdgeInsets.all(20),
+              decoration: BoxDecoration(
+                color: Colors.white.withOpacity(0.1),
+                shape: BoxShape.circle,
+              ),
+              child: Container(
+                padding: const EdgeInsets.all(20),
+                decoration: BoxDecoration(
+                  color: Colors.white.withOpacity(0.15),
+                  shape: BoxShape.circle,
+                ),
+                child: const CircularProgressIndicator(
+                  color: Colors.white,
+                  strokeWidth: 3,
                 ),
               ),
             ),
+            const SizedBox(height: 30),
+            Text(
+              'Loading Dashboard',
+              style: TextStyle(
+                color: Colors.white,
+                fontSize: 20,
+                fontWeight: FontWeight.w600,
+                letterSpacing: 0.5,
+              ),
+            ),
+            const SizedBox(height: 8),
+            Text(
+              'Please wait a moment',
+              style: TextStyle(
+                color: Colors.white.withOpacity(0.8),
+                fontSize: 16,
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+  
+  Widget _buildProfileButton() {
+    return Container(
+      decoration: BoxDecoration(
+        shape: BoxShape.circle,
+        gradient: LinearGradient(
+          colors: [
+            Colors.white.withOpacity(0.2),
+            Colors.white.withOpacity(0.1),
+          ],
+          begin: Alignment.topLeft,
+          end: Alignment.bottomRight,
+        ),
+      ),
+      child: _buildProfileMenu(),
     );
   }
 
@@ -187,23 +285,24 @@ class _HomeDashboardUserState extends State<HomeDashboardUser>
       decoration: const BoxDecoration(
         gradient: LinearGradient(
           colors: [
-            Color(0xFF4A90E2),
-            Color.fromARGB(255, 4, 117, 217),
+            Color.fromARGB(255, 25, 115, 184), // Darker blue
+            Color(0xFF0288D1), // Material blue
           ],
           begin: Alignment.topCenter,
           end: Alignment.bottomCenter,
-          stops: [0.0, 0.9],
+          stops: [0.0, 1.0],
         ),
       ),
       child: Stack(
         clipBehavior: Clip.none,
         children: [
+          // Decorative circle elements
           Positioned(
-            right: -40,
-            top: -60,
+            right: -60,
+            top: -30,
             child: Container(
-              width: 180,
-              height: 180,
+              width: 220,
+              height: 220,
               decoration: BoxDecoration(
                 gradient: RadialGradient(colors: [
                   Colors.white.withOpacity(0.1),
@@ -215,22 +314,42 @@ class _HomeDashboardUserState extends State<HomeDashboardUser>
             ),
           ),
           Positioned(
-            left: -50,
-            bottom: -80,
+            left: -80,
+            bottom: -40,
             child: Container(
-              width: 150,
-              height: 150,
+              width: 180,
+              height: 180,
               decoration: BoxDecoration(
                 gradient: RadialGradient(colors: [
+                  Colors.white.withOpacity(0.07),
                   Colors.white.withOpacity(0.03),
+                  Colors.transparent,
                 ]),
                 shape: BoxShape.circle,
               ),
             ),
           ),
+          Positioned(
+            right: 40,
+            bottom: 100,
+            child: Container(
+              width: 40,
+              height: 40,
+              decoration: BoxDecoration(
+                gradient: RadialGradient(colors: [
+                  Colors.white.withOpacity(0.15),
+                  Colors.white.withOpacity(0.05),
+                  Colors.transparent,
+                ]),
+                shape: BoxShape.circle,
+              ),
+            ),
+          ),
+          
+          // Content
           SafeArea(
             child: Padding(
-              padding: const EdgeInsets.fromLTRB(20, 20, 20, 0),
+              padding: const EdgeInsets.fromLTRB(20, 10, 20, 0),
               child: LayoutBuilder(
                 builder: (context, constraints) {
                   final settings = context.dependOnInheritedWidgetOfExactType<
@@ -245,6 +364,7 @@ class _HomeDashboardUserState extends State<HomeDashboardUser>
                     child: Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
+                        // Header with title and profile
                         Row(
                           mainAxisAlignment: MainAxisAlignment.spaceBetween,
                           children: [
@@ -269,9 +389,19 @@ class _HomeDashboardUserState extends State<HomeDashboardUser>
                                 ),
                               ),
                             ),
-                            Container(
+                            _buildProfileButton(),
+                          ],
+                        ),
+                        const SizedBox(height: 30),
+                        
+                        // User welcome section with glass effect
+                        ClipRRect(
+                          borderRadius: BorderRadius.circular(20),
+                          child: BackdropFilter(
+                            filter: ImageFilter.blur(sigmaX: 10, sigmaY: 10),
+                            child: Container(
+                              padding: const EdgeInsets.all(20),
                               decoration: BoxDecoration(
-                                shape: BoxShape.circle,
                                 gradient: LinearGradient(
                                   colors: [
                                     Colors.white.withOpacity(0.2),
@@ -280,91 +410,108 @@ class _HomeDashboardUserState extends State<HomeDashboardUser>
                                   begin: Alignment.topLeft,
                                   end: Alignment.bottomRight,
                                 ),
+                                borderRadius: BorderRadius.circular(20),
+                                border: Border.all(
+                                  color: Colors.white.withOpacity(0.2),
+                                  width: 1.5,
+                                ),
                               ),
-                              child: _buildProfileMenu(),
-                            ),
-                          ],
-                        ),
-                        const SizedBox(height: 24),
-                        Container(
-                          padding: const EdgeInsets.all(20),
-                          decoration: BoxDecoration(
-                            gradient: LinearGradient(
-                              colors: [
-                                Colors.white.withOpacity(0.1),
-                                Colors.white.withOpacity(0.05),
-                              ],
-                              begin: Alignment.topLeft,
-                              end: Alignment.bottomRight,
-                            ),
-                            borderRadius: BorderRadius.circular(20),
-                            border: Border.all(
-                              color: Colors.white.withOpacity(0.15),
-                              width: 1,
+                              child: Column(
+                                crossAxisAlignment: CrossAxisAlignment.start,
+                                mainAxisSize: MainAxisSize.min,
+                                children: [
+                                  Row(
+                                    children: [
+                                      Container(
+                                        padding: const EdgeInsets.all(10),
+                                        decoration: BoxDecoration(
+                                          color: Colors.white.withOpacity(0.25),
+                                          borderRadius: BorderRadius.circular(14),
+                                        ),
+                                        child: const Icon(
+                                          Icons.waving_hand,
+                                          color: Colors.white,
+                                          size: 22,
+                                        ),
+                                      ),
+                                      const SizedBox(width: 12),
+                                      Text(
+                                        'Welcome back,',
+                                        style: TextStyle(
+                                          color: Colors.white.withOpacity(0.9),
+                                          fontSize: 16,
+                                          fontWeight: FontWeight.w500,
+                                        ),
+                                      ),
+                                    ],
+                                  ),
+                                  const SizedBox(height: 16),
+                                  Text(
+                                    currentUser!.name,
+                                    style: const TextStyle(
+                                      color: Colors.white,
+                                      fontSize: 28,
+                                      fontWeight: FontWeight.bold,
+                                      letterSpacing: 0.5,
+                                      shadows: [
+                                        Shadow(
+                                          blurRadius: 8.0,
+                                          color: Colors.black26,
+                                          offset: Offset(0, 3.0),
+                                        ),
+                                      ],
+                                    ),
+                                    maxLines: 1,
+                                    overflow: TextOverflow.ellipsis,
+                                  ),
+                                  const SizedBox(height: 10),
+                                  Container(
+                                    padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+                                    decoration: BoxDecoration(
+                                      color: Colors.white.withOpacity(0.15),
+                                      borderRadius: BorderRadius.circular(30),
+                                    ),
+                                    child: Row(
+                                      mainAxisSize: MainAxisSize.min,
+                                      children: [
+                                        Icon(
+                                          Icons.calendar_today,
+                                          size: 14,
+                                          color: Colors.white.withOpacity(0.9),
+                                        ),
+                                        const SizedBox(width: 6),
+                                        Text(
+                                          'Member since ${DateFormat('dd MMM yyyy').format(currentUser!.createdAt)}',
+                                          style: TextStyle(
+                                            color: Colors.white.withOpacity(0.9),
+                                            fontSize: 13,
+                                            fontWeight: FontWeight.w500,
+                                          ),
+                                        ),
+                                      ],
+                                    ),
+                                  ),
+                                ],
+                              ),
                             ),
                           ),
-                          child: Column(
-                            crossAxisAlignment: CrossAxisAlignment.start,
-                            mainAxisSize: MainAxisSize.min,
-                            children: [
-                              Row(
-                                children: [
-                                  Container(
-                                    padding: const EdgeInsets.all(8),
-                                    decoration: BoxDecoration(
-                                      color: Colors.white.withOpacity(0.2),
-                                      borderRadius: BorderRadius.circular(12),
-                                    ),
-                                    child: const Icon(
-                                      Icons.waving_hand,
-                                      color: Colors.white,
-                                      size: 20,
-                                    ),
-                                  ),
-                                  const SizedBox(width: 12),
-                                  Text(
-                                    'Welcome back,',
-                                    style: TextStyle(
-                                      color: Colors.white.withOpacity(0.9),
-                                      fontSize: 16,
-                                      fontWeight: FontWeight.w500,
-                                    ),
-                                  ),
-                                ],
-                              ),
-                              const SizedBox(height: 12),
-                              Text(
-                                currentUser!.name,
-                                style: const TextStyle(
-                                  color: Colors.white,
-                                  fontSize: 26,
-                                  fontWeight: FontWeight.bold,
-                                  letterSpacing: 0.5,
-                                ),
-                                maxLines: 1,
-                                overflow: TextOverflow.ellipsis,
-                              ),
-                              const SizedBox(height: 8),
-                              Row(
-                                children: [
-                                  Icon(
-                                    Icons.calendar_today,
-                                    size: 14,
-                                    color: Colors.white.withOpacity(0.8),
-                                  ),
-                                  const SizedBox(width: 6),
-                                  Text(
-                                    'Member since ${DateFormat('dd MMM yyyy').format(currentUser!.createdAt)}',
-                                    style: TextStyle(
-                                      color: Colors.white.withOpacity(0.8),
-                                      fontSize: 13,
-                                      fontWeight: FontWeight.w500,
-                                    ),
-                                  ),
-                                ],
+                        ),
+                        
+                        // Search bar
+                        const SizedBox(height: 16),
+                        Container(
+                          decoration: BoxDecoration(
+                            color: Colors.white,
+                            borderRadius: BorderRadius.circular(16),
+                            boxShadow: [
+                              BoxShadow(
+                                color: Colors.black.withOpacity(0.08),
+                                blurRadius: 10,
+                                offset: const Offset(0, 5),
                               ),
                             ],
                           ),
+                          
                         ),
                       ],
                     ),
@@ -384,6 +531,8 @@ class _HomeDashboardUserState extends State<HomeDashboardUser>
         backgroundColor: Colors.white.withOpacity(0.25),
         child: const Icon(Icons.person, color: Colors.white),
       ),
+      offset: const Offset(0, 50),
+      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
       onSelected: (value) {
         if (value == 'profile') {
           _showProfileDialog();
@@ -391,20 +540,39 @@ class _HomeDashboardUserState extends State<HomeDashboardUser>
           _showLogoutDialog();
         }
       },
-      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
       itemBuilder: (context) => [
-        const PopupMenuItem(
+        PopupMenuItem(
           value: 'profile',
-          child: ListTile(
-            leading: Icon(Icons.person_outline),
-            title: Text('My Profile'),
+          child: Row(
+            children: [
+              Container(
+                padding: const EdgeInsets.all(8),
+                decoration: BoxDecoration(
+                  color: Colors.blue.withOpacity(0.1),
+                  shape: BoxShape.circle,
+                ),
+                child: Icon(Icons.person_outline, color: Colors.blue[700], size: 20),
+              ),
+              const SizedBox(width: 12),
+              const Text('My Profile'),
+            ],
           ),
         ),
-        const PopupMenuItem(
+        PopupMenuItem(
           value: 'logout',
-          child: ListTile(
-            leading: Icon(Icons.logout, color: Colors.red),
-            title: Text('Logout', style: TextStyle(color: Colors.red)),
+          child: Row(
+            children: [
+              Container(
+                padding: const EdgeInsets.all(8),
+                decoration: BoxDecoration(
+                  color: Colors.red.withOpacity(0.1),
+                  shape: BoxShape.circle,
+                ),
+                child: Icon(Icons.logout, color: Colors.red[700], size: 20),
+              ),
+              const SizedBox(width: 12),
+              const Text('Logout', style: TextStyle(color: Colors.red)),
+            ],
           ),
         ),
       ],
@@ -414,8 +582,9 @@ class _HomeDashboardUserState extends State<HomeDashboardUser>
   Widget _buildAppGrid(BuildContext context) {
     return Container(
       color: const Color(0xFFF4F6F8),
-      padding: const EdgeInsets.all(16.0),
+      padding: const EdgeInsets.fromLTRB(10.0, 0.0, 10.0, 10.0),
       child: GridView.count(
+      padding: const EdgeInsets.fromLTRB(6, 30, 6, 30),
         crossAxisCount: 2,
         crossAxisSpacing: 16,
         mainAxisSpacing: 16,
@@ -424,7 +593,8 @@ class _HomeDashboardUserState extends State<HomeDashboardUser>
             context: context,
             title: 'Maintenance',
             icon: Icons.construction,
-            color: Colors.orange,
+            // Gunakan warna solid yang lebih terang untuk card Maintenance
+            color: Colors.orange[700]!,
             onTap: () {
               Navigator.push(
                 context,
@@ -436,7 +606,8 @@ class _HomeDashboardUserState extends State<HomeDashboardUser>
             context: context,
             title: 'Resource/Item',
             icon: Icons.people_alt_outlined,
-            color: Colors.cyan,
+            // Gunakan warna solid yang lebih terang untuk card Resource
+            color: Colors.cyan[700]!,
             onTap: () {
               Navigator.push(
                 context,
@@ -449,7 +620,8 @@ class _HomeDashboardUserState extends State<HomeDashboardUser>
             context: context,
             title: 'Operational',
             icon: Icons.directions_car,
-            color: Colors.red,
+            // Gunakan warna solid yang lebih terang untuk card Operational
+            color: Colors.red[700]!,
             onTap: () {
               Navigator.push(
                 context,
@@ -462,7 +634,8 @@ class _HomeDashboardUserState extends State<HomeDashboardUser>
             context: context,
             title: 'Booking Room',
             icon: Icons.meeting_room,
-            color: Colors.teal,
+            // Gunakan warna solid yang lebih terang untuk card Booking
+            color: Colors.teal[700]!,
             onTap: () {
               Navigator.push(
                 context,
@@ -475,31 +648,39 @@ class _HomeDashboardUserState extends State<HomeDashboardUser>
       ),
     );
   }
-
-  Widget _buildAppCard({
+ Widget _buildAppCard({
     required BuildContext context,
     required String title,
     required IconData icon,
     required Color color,
     required VoidCallback onTap,
   }) {
+    // Buat versi lebih terang dari warna utama untuk background card
+    Color bgColor =
+        Color.lerp(Colors.white, color, 0.30)!; 
+
     return Card(
-      elevation: 8,
-      shadowColor: color.withOpacity(0.3),
-      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
+      elevation: 0,
+      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(24)),
       child: InkWell(
         onTap: onTap,
-        borderRadius: BorderRadius.circular(20),
+        borderRadius: BorderRadius.circular(24),
         child: Container(
           decoration: BoxDecoration(
-            borderRadius: BorderRadius.circular(20),
-            gradient: LinearGradient(
-              colors: [
-                color.withOpacity(0.1),
-                color.withOpacity(0.05),
-              ],
-              begin: Alignment.topLeft,
-              end: Alignment.bottomRight,
+            borderRadius: BorderRadius.circular(24),
+            // Gunakan warna solid (bukan gradasi)
+            color: bgColor, // Warna solid yang sesuai dengan tema card
+            boxShadow: [
+              BoxShadow(
+                color: color.withOpacity(0.15),
+                blurRadius: 20,
+                spreadRadius: 0,
+                offset: const Offset(5, 10),
+              ),
+            ],
+            border: Border.all(
+              color: color.withOpacity(0.3),
+              width: 1.5,
             ),
           ),
           child: Column(
@@ -508,19 +689,47 @@ class _HomeDashboardUserState extends State<HomeDashboardUser>
               Container(
                 padding: const EdgeInsets.all(16),
                 decoration: BoxDecoration(
-                  color: color.withOpacity(0.2),
+                  color: Colors.white
+                      .withOpacity(0.7), // Background putih semi-transparan
                   shape: BoxShape.circle,
+                  boxShadow: [
+                    BoxShadow(
+                      color: color.withOpacity(0.1),
+                      blurRadius: 10,
+                      spreadRadius: 0,
+                      offset: const Offset(0, 5),
+                    ),
+                  ],
                 ),
                 child: Icon(icon, size: 32, color: color),
               ),
-              const SizedBox(height: 12),
+              const SizedBox(height: 16),
               Text(
                 title,
                 textAlign: TextAlign.center,
                 style: TextStyle(
                   fontSize: 16,
                   fontWeight: FontWeight.w600,
-                  color: color,
+                  color: color.withOpacity(0.9), // Warna teks yang sesuai
+                  letterSpacing: 0.5,
+                ),
+              ),
+              const SizedBox(height: 8),
+              Container(
+                padding:
+                    const EdgeInsets.symmetric(horizontal: 12, vertical: 4),
+                decoration: BoxDecoration(
+                  color:
+                      Colors.white.withOpacity(0.5), // Background lebih terang
+                  borderRadius: BorderRadius.circular(12),
+                ),
+                child: Text(
+                  'Open',
+                  style: TextStyle(
+                    fontSize: 11,
+                    fontWeight: FontWeight.w600,
+                    color: color, // Warna teks yang sama dengan ikon
+                  ),
                 ),
               ),
             ],
@@ -530,40 +739,76 @@ class _HomeDashboardUserState extends State<HomeDashboardUser>
     );
   }
 
+  
+
   void _showProfileDialog() {
     if (currentUser == null) return;
 
     showDialog(
       context: context,
-      builder: (context) => AlertDialog(
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
-        title: const Text('Profil Information'),
-        content: Column(
-          mainAxisSize: MainAxisSize.min,
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            _buildProfileItem('Name', currentUser!.name),
-            _buildProfileItem('Email', currentUser!.email),
-            _buildProfileItem('Role', currentUser!.role.toUpperCase()),
-            _buildProfileItem(
-              'Member since',
-              DateFormat('dd MMMM yyyy').format(currentUser!.createdAt),
-            ),
-          ],
-        ),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(context),
-            child: const Text('Close'),
+      builder: (context) => Dialog(
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
+        child: Padding(
+          padding: const EdgeInsets.all(24.0),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Container(
+                padding: const EdgeInsets.all(16),
+                decoration: BoxDecoration(
+                  color: Theme.of(context).primaryColor.withOpacity(0.1),
+                  shape: BoxShape.circle,
+                ),
+                child: Icon(
+                  Icons.person,
+                  size: 40,
+                  color: Theme.of(context).primaryColor,
+                ),
+              ),
+              const SizedBox(height: 24),
+              Text(
+                'Profile Information',
+                style: TextStyle(
+                  fontSize: 20,
+                  fontWeight: FontWeight.bold,
+                  color: Colors.grey[800],
+                ),
+              ),
+              const SizedBox(height: 20),
+              _buildProfileItem('Name', currentUser!.name),
+              _buildProfileItem('Email', currentUser!.email),
+              _buildProfileItem('Role', currentUser!.role.toUpperCase()),
+              _buildProfileItem(
+                'Member since',
+                DateFormat('dd MMMM yyyy').format(currentUser!.createdAt),
+              ),
+              const SizedBox(height: 24),
+              ElevatedButton(
+                onPressed: () => Navigator.pop(context),
+                style: ElevatedButton.styleFrom(
+                  backgroundColor: Theme.of(context).primaryColor,
+                  foregroundColor: Colors.white,
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 24,
+                    vertical: 12,
+                  ),
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(12),
+                  ),
+                ),
+                child: const Text('Close'),
+              ),
+            ],
           ),
-        ],
+        ),
       ),
     );
   }
 
   Widget _buildProfileItem(String label, String value) {
-    return Padding(
-      padding: const EdgeInsets.symmetric(vertical: 6),
+    return Container(
+      width: double.infinity,
+      margin: const EdgeInsets.only(bottom: 16),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
@@ -571,12 +816,29 @@ class _HomeDashboardUserState extends State<HomeDashboardUser>
             label,
             style: TextStyle(
               fontWeight: FontWeight.bold,
-              color: Colors.grey[700],
+              color: Colors.grey[600],
               fontSize: 12,
             ),
           ),
-          const SizedBox(height: 2),
-          Text(value, style: const TextStyle(fontSize: 16)),
+          const SizedBox(height: 4),
+          Container(
+            width: double.infinity,
+            padding: const EdgeInsets.symmetric(
+              horizontal: 16,
+              vertical: 12,
+            ),
+            decoration: BoxDecoration(
+              color: Colors.grey[100],
+              borderRadius: BorderRadius.circular(12),
+            ),
+            child: Text(
+              value,
+              style: TextStyle(
+                fontSize: 16,
+                color: Colors.grey[800],
+              ),
+            ),
+          ),
         ],
       ),
     );
@@ -585,24 +847,86 @@ class _HomeDashboardUserState extends State<HomeDashboardUser>
   void _showLogoutDialog() {
     showDialog(
       context: context,
-      builder: (context) => AlertDialog(
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
-        title: const Text('Logout Confirmation'),
-        content:
-            const Text('Are you sure you want to log out of this account?'),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(context),
-            child: const Text('Cancel'),
+      builder: (context) => Dialog(
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
+        child: Padding(
+          padding: const EdgeInsets.all(24.0),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Container(
+                padding: const EdgeInsets.all(16),
+                decoration: BoxDecoration(
+                  color: Colors.red.withOpacity(0.1),
+                  shape: BoxShape.circle,
+                ),
+                child: Icon(
+                  Icons.logout,
+                  size: 40,
+                  color: Colors.red[700],
+                ),
+              ),
+              const SizedBox(height: 24),
+              Text(
+                'Logout Confirmation',
+                style: TextStyle(
+                  fontSize: 20,
+                  fontWeight: FontWeight.bold,
+                  color: Colors.grey[800],
+                ),
+              ),
+              const SizedBox(height: 16),
+              Text(
+                'Are you sure you want to log out of this account?',
+                textAlign: TextAlign.center,
+                style: TextStyle(
+                  fontSize: 16,
+                  color: Colors.grey[700],
+                ),
+              ),
+              const SizedBox(height: 24),
+              Row(
+                mainAxisAlignment: MainAxisAlignment.center,
+                children: [
+                  OutlinedButton(
+                    onPressed: () => Navigator.pop(context),
+                    style: OutlinedButton.styleFrom(
+                      foregroundColor: Colors.grey[700],
+                      side: BorderSide(color: Colors.grey[300]!),
+                      padding: const EdgeInsets.symmetric(
+                        horizontal: 20,
+                        vertical: 12,
+                      ),
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(12),
+                      ),
+                    ),
+                    child: const Text('Cancel'),
+                  ),
+                  const SizedBox(width: 16),
+                  ElevatedButton(
+                    onPressed: () {
+                      Navigator.pop(context);
+                      Provider.of<AuthService>(context, listen: false).signOut();
+                    },
+                    style: ElevatedButton.styleFrom(
+                      backgroundColor: Colors.red,
+                      foregroundColor: Colors.white,
+                      padding: const EdgeInsets.symmetric(
+                        horizontal: 20,
+                        vertical: 12,
+                      ),
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(12),
+                      ),
+                    ),
+                    child: const Text('Logout'),
+                  ),
+                ],
+              ),
+            ],
           ),
-          TextButton(
-            onPressed: () {
-              Navigator.pop(context);
-              Provider.of<AuthService>(context, listen: false).signOut();
-            },
-            child: const Text('Logout', style: TextStyle(color: Colors.red)),
-          ),
-        ],
+        ),
       ),
     );
   }
@@ -658,7 +982,6 @@ class _StatusTabState extends State<StatusTab>
   void _clearSearch() {
     setState(() {
       _searchController.clear();
-      // Listener _onSearchChanged akan otomatis menangani sisanya
     });
   }
 
@@ -672,61 +995,92 @@ class _StatusTabState extends State<StatusTab>
   void _showFilterDialog() {
     showDialog(
       context: context,
-      builder: (context) => AlertDialog(
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
-        title: const Text('Filter By Time',
-            style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold)),
-        content: Column(
-          mainAxisSize: MainAxisSize.min,
+      builder: (context) => Dialog(
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
+        child: Padding(
+          padding: const EdgeInsets.all(20.0),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Row(
+                children: [
+                  Container(
+                    padding: const EdgeInsets.all(8),
+                    decoration: BoxDecoration(
+                      color: Colors.blue.withOpacity(0.1),
+                      shape: BoxShape.circle,
+                    ),
+                    child: Icon(Icons.filter_list, color: Colors.blue[700], size: 20),
+                  ),
+                  const SizedBox(width: 12),
+                  Text(
+                    'Filter By Time',
+                    style: TextStyle(
+                      fontSize: 18,
+                      fontWeight: FontWeight.bold,
+                      color: Colors.grey[800],
+                    ),
+                  ),
+                ],
+              ),
+              const SizedBox(height: 16),
+              _buildFilterOption('All Time', 'all'),
+              _buildFilterOption('Today', 'today'),
+              _buildFilterOption('This Week', 'week'),
+              _buildFilterOption('This Month', 'month'),
+              const SizedBox(height: 16),
+              ElevatedButton(
+                onPressed: () => Navigator.pop(context),
+                style: ElevatedButton.styleFrom(
+                  backgroundColor: Theme.of(context).primaryColor,
+                  foregroundColor: Colors.white,
+                  padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 12),
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(12),
+                  ),
+                ),
+                child: const Text('Apply Filter'),
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+  
+  Widget _buildFilterOption(String title, String value) {
+    return InkWell(
+      onTap: () {
+        setState(() => _selectedFilter = value);
+        _filterData();
+        Navigator.pop(context);
+      },
+      child: Padding(
+        padding: const EdgeInsets.symmetric(vertical: 12),
+        child: Row(
           children: [
-            RadioListTile<String>(
-              title: const Text('All Time'),
-              value: 'all',
-              groupValue: _selectedFilter,
-              onChanged: (value) {
-                setState(() => _selectedFilter = value!);
-                _filterData();
-                Navigator.pop(context);
-              },
+            Icon(
+              _selectedFilter == value 
+                  ? Icons.radio_button_checked
+                  : Icons.radio_button_unchecked,
+              color: _selectedFilter == value 
+                  ? Theme.of(context).primaryColor
+                  : Colors.grey[400],
+              size: 20,
             ),
-            RadioListTile<String>(
-              title: const Text('Today'),
-              value: 'today',
-              groupValue: _selectedFilter,
-              onChanged: (value) {
-                setState(() => _selectedFilter = value!);
-                _filterData();
-                Navigator.pop(context);
-              },
-            ),
-            RadioListTile<String>(
-              title: const Text('This Week'),
-              value: 'week',
-              groupValue: _selectedFilter,
-              onChanged: (value) {
-                setState(() => _selectedFilter = value!);
-                _filterData();
-                Navigator.pop(context);
-              },
-            ),
-            RadioListTile<String>(
-              title: const Text('This Month'),
-              value: 'month',
-              groupValue: _selectedFilter,
-              onChanged: (value) {
-                setState(() => _selectedFilter = value!);
-                _filterData();
-                Navigator.pop(context);
-              },
+            const SizedBox(width: 12),
+            Text(
+              title,
+              style: TextStyle(
+                fontSize: 16,
+                color: Colors.grey[800],
+                fontWeight: _selectedFilter == value 
+                    ? FontWeight.w600
+                    : FontWeight.normal,
+              ),
             ),
           ],
         ),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(context),
-            child: const Text('Cancel'),
-          )
-        ],
       ),
     );
   }
@@ -752,7 +1106,7 @@ class _StatusTabState extends State<StatusTab>
     final bookingFuture =
         bookingService.getBookingsByEmployee(widget.currentUser.uid).first;
 
-    // Tunggu semua data selesai diambil
+    // Wait for all data to be fetched
     final results = await Future.wait([
       reportsFuture,
       requestsFuture,
@@ -765,7 +1119,7 @@ class _StatusTabState extends State<StatusTab>
     final operationalRequests = results[2] as List<RideRequestModel>;
     final bookingRequests = results[3] as List<BookingModel>;
 
-    // Filter semua data berdasarkan status 'open' atau 'inProgress'
+    // Filter data based on 'open' or 'inProgress' status
     final openAndInProgressReports = reports
         .where((r) => r.status == 'open' || r.status == 'inProgress')
         .toList();
@@ -775,7 +1129,7 @@ class _StatusTabState extends State<StatusTab>
     final openAndInProgressOperational = operationalRequests
         .where((r) => r.status == 'open' || r.status == 'inProgress')
         .toList();
-    // Catatan: Booking statusnya 'open' dan 'approved'
+    // Note: Booking status is 'open' and 'approved'
     final openAndInProgressBooking = bookingRequests
         .where((r) => r.status == 'open' || r.status == 'approved')
         .toList();
@@ -894,11 +1248,34 @@ class _StatusTabState extends State<StatusTab>
         _filteredList.take(_currentPage * _itemsPerPage).toList();
 
     if (_isLoading) {
-      return const Center(child: CircularProgressIndicator());
+      return Center(
+        child: Column(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            SizedBox(
+              width: 50,
+              height: 50,
+              child: CircularProgressIndicator(
+                valueColor: AlwaysStoppedAnimation<Color>(Theme.of(context).primaryColor),
+                strokeWidth: 3,
+              ),
+            ),
+            const SizedBox(height: 16),
+            Text(
+              'Loading your requests...',
+              style: TextStyle(
+                color: Colors.grey[600],
+                fontSize: 16,
+              ),
+            ),
+          ],
+        ),
+      );
     }
 
     return RefreshIndicator(
       onRefresh: _fetchData,
+      color: Theme.of(context).primaryColor,
       child: ListView(
         padding: EdgeInsets.zero,
         children: [
@@ -960,11 +1337,50 @@ class _StatusTabState extends State<StatusTab>
                     ),
                   ),
                   const Spacer(),
+                  TextButton.icon(
+                    onPressed: _clearSearch,
+                    icon: Icon(Icons.clear, color: Colors.blue[700], size: 16),
+                    label: Text(
+                      'Clear',
+                      style: TextStyle(color: Colors.blue[700]),
+                    ),
+                    style: TextButton.styleFrom(
+                      padding: const EdgeInsets.symmetric(horizontal: 8),
+                      minimumSize: Size.zero,
+                      tapTargetSize: MaterialTapTargetSize.shrinkWrap,
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          if (_selectedFilter != 'all')
+            Container(
+              width: double.infinity,
+              padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+              color: Colors.purple.withOpacity(0.1),
+              child: Row(
+                children: [
+                  Icon(Icons.filter_list, color: Colors.purple[700], size: 20),
+                  const SizedBox(width: 8),
                   Text(
-                    '${_filteredList.length} results',
+                    'Filtered by: ${_getFilterName(_selectedFilter)}',
                     style: TextStyle(
-                      color: Colors.blue[700],
-                      fontSize: 12,
+                      color: Colors.purple[700],
+                      fontWeight: FontWeight.w600,
+                    ),
+                  ),
+                  const Spacer(),
+                  TextButton.icon(
+                    onPressed: _clearTimeFilter,
+                    icon: Icon(Icons.clear, color: Colors.purple[700], size: 16),
+                    label: Text(
+                      'Clear',
+                      style: TextStyle(color: Colors.purple[700]),
+                    ),
+                    style: TextButton.styleFrom(
+                      padding: const EdgeInsets.symmetric(horizontal: 8),
+                      minimumSize: Size.zero,
+                      tapTargetSize: MaterialTapTargetSize.shrinkWrap,
                     ),
                   ),
                 ],
@@ -999,10 +1415,10 @@ class _StatusTabState extends State<StatusTab>
                         child: ElevatedButton.icon(
                           onPressed: _loadMore,
                           icon: const Icon(Icons.expand_more),
-                          label: const Text('See More'),
+                          label: const Text('Load More'),
                           style: ElevatedButton.styleFrom(
-                            foregroundColor: Theme.of(context).primaryColor,
-                            backgroundColor: Colors.white,
+                            foregroundColor: Colors.white,
+                            backgroundColor: Theme.of(context).primaryColor,
                             elevation: 2,
                             shape: RoundedRectangleBorder(
                               borderRadius: BorderRadius.circular(25),
@@ -1023,6 +1439,19 @@ class _StatusTabState extends State<StatusTab>
     );
   }
 
+  String _getFilterName(String filterValue) {
+    switch (filterValue) {
+      case 'today':
+        return 'Today';
+      case 'week':
+        return 'This Week';
+      case 'month':
+        return 'This Month';
+      default:
+        return 'All Time';
+    }
+  }
+
   Widget _buildStatCard({
     required String title,
     required int count,
@@ -1034,10 +1463,10 @@ class _StatusTabState extends State<StatusTab>
       padding: const EdgeInsets.all(16),
       decoration: BoxDecoration(
         color: backgroundColor,
-        borderRadius: BorderRadius.circular(16),
+        borderRadius: BorderRadius.circular(20),
         boxShadow: [
           BoxShadow(
-            color: color.withOpacity(0.1),
+            color: color.withOpacity(0.15),
             blurRadius: 10,
             offset: const Offset(0, 4),
           ),
@@ -1045,7 +1474,14 @@ class _StatusTabState extends State<StatusTab>
       ),
       child: Row(
         children: [
-          Icon(icon, color: color, size: 28),
+          Container(
+            padding: const EdgeInsets.all(10),
+            decoration: BoxDecoration(
+              color: color.withOpacity(0.1),
+              shape: BoxShape.circle,
+            ),
+            child: Icon(icon, color: color, size: 24),
+          ),
           const SizedBox(width: 12),
           Column(
             crossAxisAlignment: CrossAxisAlignment.start,
@@ -1053,7 +1489,7 @@ class _StatusTabState extends State<StatusTab>
               Text(
                 count.toString(),
                 style: TextStyle(
-                  fontSize: 22,
+                  fontSize: 24,
                   fontWeight: FontWeight.bold,
                   color: color,
                 ),
@@ -1076,7 +1512,7 @@ class _StatusTabState extends State<StatusTab>
     final openCount =
         _combinedList.where((item) => item.status == 'open').length;
     final inProgressCount =
-        _combinedList.where((item) => item.status == 'inProgress').length;
+        _combinedList.where((item) => item.status == 'inProgress' || item.status == 'approved').length;
 
     return Padding(
       padding: const EdgeInsets.fromLTRB(16, 16, 16, 0),
@@ -1088,7 +1524,7 @@ class _StatusTabState extends State<StatusTab>
               count: openCount,
               icon: Icons.folder_open_outlined,
               color: Colors.orange.shade800,
-              backgroundColor: Colors.orange.shade50,
+              backgroundColor: Colors.white,
             ),
           ),
           const SizedBox(width: 16),
@@ -1098,7 +1534,7 @@ class _StatusTabState extends State<StatusTab>
               count: inProgressCount,
               icon: Icons.sync_outlined,
               color: Colors.purple.shade800,
-              backgroundColor: Colors.purple.shade50,
+              backgroundColor: Colors.white,
             ),
           ),
         ],
@@ -1112,20 +1548,14 @@ class _StatusTabState extends State<StatusTab>
         Expanded(
           child: Container(
             decoration: BoxDecoration(
-              color: Colors.white,
-              borderRadius: BorderRadius.circular(12),
-              boxShadow: [
-                BoxShadow(
-                  color: Colors.black.withOpacity(0.08),
-                  blurRadius: 8,
-                  offset: const Offset(0, 2),
-                ),
-              ],
+              color: Colors.grey[100],
+              borderRadius: BorderRadius.circular(16),
             ),
             child: TextField(
               controller: _searchController,
               decoration: InputDecoration(
                 hintText: 'Find the latest status here...',
+                hintStyle: TextStyle(color: Colors.grey[500], fontSize: 14),
                 prefixIcon: Icon(Icons.search, color: Colors.grey[600]),
                 suffixIcon: _searchQuery.isNotEmpty
                     ? IconButton(
@@ -1141,24 +1571,21 @@ class _StatusTabState extends State<StatusTab>
           ),
         ),
         const SizedBox(width: 8),
-        // Tombol Filter
+        // Filter Button
         Container(
           decoration: BoxDecoration(
-            color: Colors.white,
+            color: _selectedFilter != 'all' 
+                ? Colors.purple.withOpacity(0.1)
+                : Colors.grey[100],
             shape: BoxShape.circle,
-            boxShadow: [
-              BoxShadow(
-                color: Colors.black.withOpacity(0.08),
-                blurRadius: 8,
-                offset: const Offset(0, 4),
-              ),
-            ],
           ),
           child: IconButton(
             onPressed: _showFilterDialog,
             icon: Icon(
               Icons.filter_list,
-              color: Theme.of(context).primaryColor,
+              color: _selectedFilter != 'all'
+                  ? Colors.purple[700]
+                  : Theme.of(context).primaryColor,
             ),
             tooltip: 'Filter By Time',
           ),
@@ -1227,12 +1654,15 @@ class _StatusTabState extends State<StatusTab>
             ),
           ),
           const SizedBox(height: 8),
-          Text(
-            description,
-            textAlign: TextAlign.center,
-            style: TextStyle(
-              color: Colors.grey[500],
-              fontSize: 14,
+          Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 32),
+            child: Text(
+              description,
+              textAlign: TextAlign.center,
+              style: TextStyle(
+                color: Colors.grey[500],
+                fontSize: 14,
+              ),
             ),
           ),
           const SizedBox(height: 16),
@@ -1242,7 +1672,7 @@ class _StatusTabState extends State<StatusTab>
     );
   }
 
-  Widget _buildStatusChip(String status) {
+ Widget _buildStatusChip(String status) {
     String text;
     Color color;
     Color backgroundColor;
@@ -1266,623 +1696,700 @@ class _StatusTabState extends State<StatusTab>
     }
 
     return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+      padding: const EdgeInsets.symmetric(
+          horizontal: 8, vertical: 2), // Reduced padding
       decoration: BoxDecoration(
         color: backgroundColor,
-        borderRadius: BorderRadius.circular(12),
+        borderRadius: BorderRadius.circular(8), // Smaller border radius
       ),
       child: Text(
         text,
         style: TextStyle(
-          fontSize: 10,
+          fontSize: 9, // Smaller font
           fontWeight: FontWeight.bold,
           color: color,
         ),
       ),
     );
   }
-
-  Widget _buildUnifiedReportCard(ReportModel report) {
-    return Card(
-      margin: const EdgeInsets.only(bottom: 16),
-      elevation: 4,
-      shadowColor: Colors.orange.withOpacity(0.2),
-      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
-      child: InkWell(
-        onTap: () => _navigateToDetail(report),
-        borderRadius: BorderRadius.circular(16),
-        child: Container(
-          decoration: BoxDecoration(
-            borderRadius: BorderRadius.circular(16),
-            gradient: LinearGradient(
-              colors: [
-                Colors.orange.withOpacity(0.05),
-                Colors.white,
-              ],
-              begin: Alignment.topLeft,
-              end: Alignment.bottomRight,
+Widget _buildUnifiedReportCard(ReportModel report) {
+  return Card(
+    margin: const EdgeInsets.only(bottom: 16),
+    elevation: 0,
+    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
+    child: InkWell(
+      onTap: () => _navigateToDetail(report),
+      borderRadius: BorderRadius.circular(20),
+      child: Container(
+        decoration: BoxDecoration(
+          borderRadius: BorderRadius.circular(20),
+          color: Colors.white,
+          boxShadow: [
+            BoxShadow(
+              color: Colors.orange.withOpacity(0.15),
+              blurRadius: 10,
+              spreadRadius: 0,
+              offset: const Offset(0, 5),
             ),
-          ),
-          child: Padding(
-            padding: const EdgeInsets.all(16.0),
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Row(
-                  children: [
-                    Container(
-                      padding: const EdgeInsets.all(8),
-                      decoration: BoxDecoration(
-                        color: Colors.orange.withOpacity(0.1),
-                        borderRadius: BorderRadius.circular(8),
-                      ),
-                      child: Icon(Icons.construction,
-                          color: Colors.orange[700], size: 20),
-                    ),
-                    const SizedBox(width: 12),
-                    Expanded(
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          const Text(
-                            'Report Maintenance',
-                            style: TextStyle(
-                              fontWeight: FontWeight.bold,
-                              fontSize: 16,
-                              color: Color(0xFF2D3748),
-                            ),
-                          ),
-                          Container(
-                            padding: const EdgeInsets.symmetric(
-                                horizontal: 8, vertical: 2),
-                            decoration: BoxDecoration(
-                              color: report.status == 'open'
-                                  ? Colors.red.withOpacity(0.1)
-                                  : Colors.blue.withOpacity(0.1),
-                              borderRadius: BorderRadius.circular(12),
-                            ),
-                            child: Text(
-                              report.status == 'open' ? 'OPEN' : 'IN PROGRESS',
-                              style: TextStyle(
-                                fontSize: 10,
-                                fontWeight: FontWeight.bold,
-                                color: report.status == 'open'
-                                    ? Colors.red
-                                    : Colors.blue,
-                              ),
-                            ),
-                          ),
-                        ],
-                      ),
-                    ),
-                    Icon(Icons.arrow_forward_ios,
-                        size: 16, color: Colors.grey[400]),
-                  ],
-                ),
-                const SizedBox(height: 16),
-                if (report.imageUrl != null && report.hasValidImage())
-                  Container(
-                    margin: const EdgeInsets.only(bottom: 12),
-                    decoration: BoxDecoration(
-                      borderRadius: BorderRadius.circular(12),
-                      boxShadow: [
-                        BoxShadow(
-                          color: Colors.black.withOpacity(0.1),
-                          blurRadius: 8,
-                          offset: const Offset(0, 2),
-                        ),
-                      ],
-                    ),
-                    child: ClipRRect(
-                      borderRadius: BorderRadius.circular(12),
-                      child: FirebaseStorageImage(
-                        imageUrl: report.imageUrl!,
-                        height: 150,
-                        width: double.infinity,
-                        fit: BoxFit.cover,
-                      ),
-                    ),
-                  ),
-                Row(
-                  children: [
-                    Icon(Icons.location_on, size: 16, color: Colors.grey[600]),
-                    const SizedBox(width: 6),
-                    Expanded(
-                      child: Text(
-                        '${report.buildingName} - ${report.roomName}',
-                        style: TextStyle(
-                          fontWeight: FontWeight.w600,
-                          fontSize: 14,
-                          color: Colors.grey[800],
-                        ),
-                      ),
-                    ),
-                  ],
-                ),
-                const SizedBox(height: 8),
-                Text(
-                  'Report:',
-                  style: TextStyle(
-                    fontSize: 13,
-                    fontWeight: FontWeight.w600,
-                    color: Colors.grey[800],
-                  ),
-                ),
-                const SizedBox(height: 6),
-                Container(
-                  width: double.infinity,
-                  padding: EdgeInsets.all(12),
-                  decoration: BoxDecoration(
-                    color: Colors.grey[50],
-                    borderRadius: BorderRadius.circular(8),
-                  ),
-                  child: Text(
-                    report.description,
-                    style: TextStyle(
-                      fontSize: 14,
-                      color: Colors.grey[700],
-                      height: 1.4,
-                    ),
-                    maxLines: 2,
-                    overflow: TextOverflow.ellipsis,
-                  ),
-                ),
-                const SizedBox(height: 12),
-                Row(
-                  children: [
-                    Icon(Icons.access_time, size: 14, color: Colors.grey[500]),
-                    const SizedBox(width: 6),
-                    Text(
-                      'Created at: ${DateFormat('dd MMM yyyy, HH:mm').format(report.createdAt)}',
-                      style: TextStyle(fontSize: 12, color: Colors.grey[600]),
-                    ),
-                  ],
-                ),
-              ],
-            ),
+          ],
+          border: Border.all(
+            color: Colors.orange.withOpacity(0.1),
+            width: 1.5,
           ),
         ),
-      ),
-    );
-  }
-
-  Widget _buildUnifiedRequestCard(RequestModel request) {
-    final bool isResourceRequest = request.request == 'resource';
-
-    return Card(
-      margin: const EdgeInsets.only(bottom: 16),
-      elevation: 4,
-      shadowColor: Colors.cyan.withOpacity(0.2),
-      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
-      child: InkWell(
-        onTap: () => _navigateToDetail(request),
-        borderRadius: BorderRadius.circular(16),
-        child: Container(
-          decoration: BoxDecoration(
-            borderRadius: BorderRadius.circular(16),
-            gradient: LinearGradient(
-              colors: [
-                Colors.cyan.withOpacity(0.05),
-                Colors.white,
-              ],
-              begin: Alignment.topLeft,
-              end: Alignment.bottomRight,
-            ),
-          ),
-          child: Padding(
-            padding: const EdgeInsets.all(16.0),
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Row(
-                  children: [
-                    Container(
-                      padding: const EdgeInsets.all(8),
-                      decoration: BoxDecoration(
-                        color: Colors.cyan.withOpacity(0.1),
-                        borderRadius: BorderRadius.circular(8),
-                      ),
-                      child: Icon(
-                        isResourceRequest
-                            ? Icons.supervisor_account
-                            : Icons.inventory,
-                        size: 16,
-                        color: Colors.grey[600],
-                      ),
-                    ),
-                    const SizedBox(width: 12),
-                    Expanded(
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          const Text(
-                            'Request Resource/Item',
-                            style: TextStyle(
-                              fontWeight: FontWeight.bold,
-                              fontSize: 16,
-                              color: Color(0xFF2D3748),
-                            ),
-                          ),
-                          Container(
-                            padding: const EdgeInsets.symmetric(
-                                horizontal: 8, vertical: 2),
-                            decoration: BoxDecoration(
-                              color: request.status == 'open'
-                                  ? Colors.red.withOpacity(0.1)
-                                  : Colors.blue.withOpacity(0.1),
-                              borderRadius: BorderRadius.circular(12),
-                            ),
-                            child: Text(
-                              request.status == 'open' ? 'OPEN' : 'IN PROGRESS',
-                              style: TextStyle(
-                                fontSize: 10,
-                                fontWeight: FontWeight.bold,
-                                color: request.status == 'open'
-                                    ? Colors.red
-                                    : Colors.blue,
-                              ),
-                            ),
-                          ),
-                        ],
-                      ),
-                    ),
-                    Icon(Icons.arrow_forward_ios,
-                        size: 16, color: Colors.grey[400]),
-                  ],
-                ),
-                if (!isResourceRequest && request.hasValidImage()) ...[
-                  const SizedBox(height: 12),
-                  SizedBox(
-                    width: double.infinity,
-                    height: 150,
-                    child: ClipRRect(
+        child: Padding(
+          padding: const EdgeInsets.all(12.0), // Reduced padding
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            mainAxisSize: MainAxisSize.min, // Added to minimize height
+            children: [
+              // Header row
+              Row(
+                children: [
+                  Container(
+                    padding: const EdgeInsets.all(8), // Reduced padding
+                    decoration: BoxDecoration(
+                      color: Colors.orange.withOpacity(0.1),
                       borderRadius: BorderRadius.circular(12),
-                      child: FirebaseStorageImage(
-                        imageUrl: request.getNormalizedImageUrl(),
-                        fit: BoxFit.cover,
-                        placeholder: Container(
-                          color: Colors.grey[200],
-                          child:
-                              const Center(child: CircularProgressIndicator()),
-                        ),
-                        errorWidget: Container(
-                          color: Colors.grey[200],
-                          child: Center(
-                            child: Icon(
-                              Icons.image_not_supported_outlined,
-                              color: Colors.grey[400],
-                              size: 40,
-                            ),
+                    ),
+                    child: Icon(Icons.construction, color: Colors.orange[700], size: 18), // Smaller icon
+                  ),
+                  const SizedBox(width: 8), // Reduced spacing
+                  Expanded(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        const Text(
+                          'Report Maintenance',
+                          style: TextStyle(
+                            fontWeight: FontWeight.bold,
+                            fontSize: 14, // Smaller font
+                            color: Color(0xFF2D3748),
                           ),
                         ),
+                        const SizedBox(height: 2), // Reduced spacing
+                        _buildStatusChip(report.status),
+                      ],
+                    ),
+                  ),
+                  Icon(Icons.arrow_forward_ios, size: 14, color: Colors.grey[400]), // Smaller icon
+                ],
+              ),
+              
+              // Optional image with fixed height
+              if (report.imageUrl != null && report.hasValidImage()) ...[
+                const SizedBox(height: 8), // Reduced spacing
+                SizedBox(
+                  height: 100, // Reduced height
+                  child: ClipRRect(
+                    borderRadius: BorderRadius.circular(12),
+                    child: FirebaseStorageImage(
+                      imageUrl: report.imageUrl!,
+                      fit: BoxFit.cover,
+                      width: double.infinity,
+                    ),
+                  ),
+                ),
+              ],
+              
+              const SizedBox(height: 8), // Reduced spacing
+              
+              // Location info
+              Row(
+                children: [
+                  Icon(Icons.location_on, size: 14, color: Colors.grey[600]), // Smaller icon
+                  const SizedBox(width: 4), // Reduced spacing
+                  Expanded(
+                    child: Text(
+                      '${report.buildingName} - ${report.roomName}',
+                      style: TextStyle(
+                        fontWeight: FontWeight.w600,
+                        fontSize: 12, // Smaller font
+                        color: Colors.grey[800],
                       ),
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
                     ),
                   ),
                 ],
-                const SizedBox(height: 16),
-                Text(
-                  'Request:',
+              ),
+              
+              const SizedBox(height: 6), // Reduced spacing
+              
+              // Description
+              Container(
+                width: double.infinity,
+                padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 8), // Reduced padding
+                decoration: BoxDecoration(
+                  color: Colors.grey[50],
+                  borderRadius: BorderRadius.circular(10),
+                  border: Border.all(
+                    color: Colors.grey[200]!,
+                    width: 1,
+                  ),
+                ),
+                child: Text(
+                  report.description,
                   style: TextStyle(
-                    fontSize: 13,
-                    fontWeight: FontWeight.w600,
-                    color: Colors.grey[800],
+                    fontSize: 12, // Smaller font
+                    color: Colors.grey[700],
+                    height: 1.2, // Reduced line height
                   ),
+                  maxLines: 2,
+                  overflow: TextOverflow.ellipsis,
                 ),
-                const SizedBox(height: 6),
-                Container(
-                  width: double.infinity,
-                  padding: EdgeInsets.all(12),
-                  decoration: BoxDecoration(
-                    color: Colors.grey[50],
-                    borderRadius: BorderRadius.circular(8),
-                  ),
-                  child: Text(
-                    request.description,
-                    style: TextStyle(
-                      fontSize: 14,
-                      color: Colors.grey[700],
-                      height: 1.4,
-                    ),
-                    maxLines: 2,
-                    overflow: TextOverflow.ellipsis,
-                  ),
-                ),
-                const SizedBox(height: 12),
-                if (request.request == 'resource')
-                  Padding(
-                    padding: const EdgeInsets.only(bottom: 8),
-                    child: _buildInfoRow(Icons.supervisor_account, 'Resource'),
-                  )
-                else if (request.request == 'item')
-                  Padding(
-                    padding: const EdgeInsets.only(bottom: 8),
-                    child: _buildInfoRow(Icons.inventory, 'Item'),
-                  ),
-                if (request.timeRequired != null &&
-                    request.timeRequired!.isNotEmpty)
-                  Padding(
-                    padding: const EdgeInsets.only(bottom: 8),
-                    child: _buildInfoRow(
-                      Icons.calendar_today_outlined,
-                      '${request.timeRequired!}',
+              ),
+              
+              const SizedBox(height: 6), // Reduced spacing
+              
+              // Creation time
+              Row(
+                children: [
+                  Icon(Icons.access_time, size: 12, color: Colors.grey[500]), // Smaller icon
+                  const SizedBox(width: 4), // Reduced spacing
+                  Expanded(
+                    child: Text(
+                      'Created: ${DateFormat('dd MMM').format(report.createdAt)}', // Shorter date
+                      style: TextStyle(fontSize: 11, color: Colors.grey[600]), // Smaller font
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
                     ),
                   ),
-                _buildInfoRow(
-                  Icons.access_time,
-                  'Created at: ${DateFormat('dd MMM yyyy, HH:mm').format(request.createdAt)}',
-                ),
-              ],
-            ),
+                ],
+              ),
+            ],
           ),
         ),
       ),
-    );
-  }
+    ),
+  );
+}
 
-  Widget _buildUnifiedOperasionalCard(RideRequestModel request) {
-    return Card(
-      margin: const EdgeInsets.only(bottom: 16),
-      elevation: 4,
-      shadowColor: Colors.red.withOpacity(0.2),
-      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
-      child: InkWell(
-        onTap: () => _navigateToDetail(request),
-        borderRadius: BorderRadius.circular(16),
-        child: Container(
-          decoration: BoxDecoration(
-            borderRadius: BorderRadius.circular(16),
-            gradient: LinearGradient(
-              colors: [
-                Colors.red.withOpacity(0.05),
-                Colors.white,
-              ],
-              begin: Alignment.topLeft,
-              end: Alignment.bottomRight,
+// Replace the _buildUnifiedRequestCard method with this more compact version:
+Widget _buildUnifiedRequestCard(RequestModel request) {
+  final bool isResourceRequest = request.request == 'resource';
+
+  return Card(
+    margin: const EdgeInsets.only(bottom: 16),
+    elevation: 0,
+    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
+    child: InkWell(
+      onTap: () => _navigateToDetail(request),
+      borderRadius: BorderRadius.circular(20),
+      child: Container(
+        decoration: BoxDecoration(
+          borderRadius: BorderRadius.circular(20),
+          color: Colors.white,
+          boxShadow: [
+            BoxShadow(
+              color: Colors.cyan.withOpacity(0.15),
+              blurRadius: 10,
+              spreadRadius: 0,
+              offset: const Offset(0, 5),
             ),
+          ],
+          border: Border.all(
+            color: Colors.cyan.withOpacity(0.1),
+            width: 1.5,
           ),
-          child: Padding(
-            padding: const EdgeInsets.all(16.0),
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Row(
-                  children: [
-                    Container(
-                      padding: const EdgeInsets.all(8),
-                      decoration: BoxDecoration(
-                        color: Colors.red.withOpacity(0.1),
-                        borderRadius: BorderRadius.circular(8),
-                      ),
-                      child: Icon(Icons.directions_car,
-                          color: Colors.red[700], size: 20),
+        ),
+        child: Padding(
+          padding: const EdgeInsets.all(12.0), // Reduced padding
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            mainAxisSize: MainAxisSize.min, // Added to minimize height
+            children: [
+              // Header row
+              Row(
+                children: [
+                  Container(
+                    padding: const EdgeInsets.all(8), // Reduced padding
+                    decoration: BoxDecoration(
+                      color: Colors.cyan.withOpacity(0.1),
+                      borderRadius: BorderRadius.circular(12),
                     ),
-                    const SizedBox(width: 12),
-                    Expanded(
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          const Text(
-                            'Request Operasional',
-                            style: TextStyle(
-                              fontWeight: FontWeight.bold,
-                              fontSize: 16,
-                              color: Color(0xFF2D3748),
+                    child: Icon(
+                      isResourceRequest
+                          ? Icons.supervisor_account
+                          : Icons.inventory,
+                      size: 18, // Smaller icon
+                      color: Colors.cyan[700],
+                    ),
+                  ),
+                  const SizedBox(width: 8), // Reduced spacing
+                  Expanded(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        const Text(
+                          'Request Resource/Item',
+                          style: TextStyle(
+                            fontWeight: FontWeight.bold,
+                            fontSize: 14, // Smaller font
+                            color: Color(0xFF2D3748),
+                          ),
+                        ),
+                        const SizedBox(height: 2), // Reduced spacing
+                        _buildStatusChip(request.status),
+                      ],
+                    ),
+                  ),
+                  Icon(Icons.arrow_forward_ios, size: 14, color: Colors.grey[400]), // Smaller icon
+                ],
+              ),
+              
+              const SizedBox(height: 8), // Reduced spacing
+              
+              // Optional image with fixed height
+              if (!isResourceRequest && request.hasValidImage()) ...[
+                SizedBox(
+                  height: 100, // Reduced height
+                  child: ClipRRect(
+                    borderRadius: BorderRadius.circular(12),
+                    child: FirebaseStorageImage(
+                      imageUrl: request.getNormalizedImageUrl(),
+                      fit: BoxFit.cover,
+                      placeholder: Container(
+                        color: Colors.grey[200],
+                        child: const Center(
+                          child: SizedBox(
+                            width: 20, // Smaller spinner
+                            height: 20,
+                            child: CircularProgressIndicator(
+                              strokeWidth: 2,
                             ),
                           ),
-                          _buildStatusChip(request.status),
-                        ],
+                        ),
                       ),
-                    ),
-                    Icon(Icons.arrow_forward_ios,
-                        size: 16, color: Colors.grey[400]),
-                  ],
-                ),
-                const SizedBox(height: 16),
-                _buildInfoRow(
-                  Icons.my_location,
-                  'Pickup: ${request.pickupLocation}',
-                ),
-                const SizedBox(height: 8),
-                _buildInfoRow(
-                  Icons.location_on_outlined,
-                  'Drop off: ${request.dropoffLocation}',
-                ),
-                const SizedBox(height: 12),
-                Text(
-                  'Request:',
-                  style: TextStyle(
-                    fontSize: 13,
-                    fontWeight: FontWeight.w600,
-                    color: Colors.grey[800],
-                  ),
-                ),
-                const SizedBox(height: 6),
-                Container(
-                  width: double.infinity,
-                  padding: EdgeInsets.all(12),
-                  decoration: BoxDecoration(
-                    color: Colors.grey[50],
-                    borderRadius: BorderRadius.circular(8),
-                  ),
-                  child: Text(
-                    request.description,
-                    style: TextStyle(
-                      fontSize: 14,
-                      color: Colors.grey[700],
-                      height: 1.4,
-                    ),
-                    maxLines: 2,
-                    overflow: TextOverflow.ellipsis,
-                  ),
-                ),
-                const SizedBox(height: 12),
-                _buildInfoRow(
-                  Icons.event,
-                  'Pickup Date: ${DateFormat('dd MMM yyyy, HH:mm').format(request.pickupDateTime)}',
-                ),
-                const SizedBox(height: 8),
-                _buildInfoRow(
-                  Icons.event_available,
-                  'Return: ${DateFormat('dd MMM yyyy, HH:mm').format(request.pickupDateTime)}',
-                ),
-                const SizedBox(height: 8),
-                _buildInfoRow(
-                  Icons.access_time,
-                  'Created at: ${DateFormat('dd MMM yyyy, HH:mm').format(request.createdAt)}',
-                ),
-              ],
-            ),
-          ),
-        ),
-      ),
-    );
-  }
-
-  Widget _buildUnifiedBookingCard(BookingModel booking) {
-    return Card(
-      margin: const EdgeInsets.only(bottom: 16),
-      elevation: 4,
-      shadowColor: Colors.teal.withOpacity(0.2),
-      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
-      child: InkWell(
-        onTap: () => _navigateToDetail(booking),
-        borderRadius: BorderRadius.circular(16),
-        child: Container(
-          decoration: BoxDecoration(
-            borderRadius: BorderRadius.circular(16),
-            gradient: LinearGradient(
-              colors: [
-                Colors.teal.withOpacity(0.05),
-                Colors.white,
-              ],
-              begin: Alignment.topLeft,
-              end: Alignment.bottomRight,
-            ),
-          ),
-          child: Padding(
-            padding: const EdgeInsets.all(16.0),
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Row(
-                  children: [
-                    Container(
-                      padding: const EdgeInsets.all(8),
-                      decoration: BoxDecoration(
-                        color: Colors.teal.withOpacity(0.1),
-                        borderRadius: BorderRadius.circular(8),
-                      ),
-                      child: Icon(Icons.meeting_room,
-                          color: Colors.teal[700], size: 20),
-                    ),
-                    const SizedBox(width: 12),
-                    Expanded(
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          const Text(
-                            'Booking Room',
-                            style: TextStyle(
-                                fontWeight: FontWeight.bold,
-                                fontSize: 16,
-                                color: Color(0xFF2D3748)),
+                      errorWidget: Container(
+                        color: Colors.grey[200],
+                        child: Center(
+                          child: Icon(
+                            Icons.image_not_supported_outlined,
+                            color: Colors.grey[400],
+                            size: 30, // Smaller icon
                           ),
-                          _buildStatusChip(booking.status),
-                        ],
+                        ),
                       ),
                     ),
-                    Icon(Icons.arrow_forward_ios,
-                        size: 16, color: Colors.grey[400]),
-                  ],
-                ),
-                const SizedBox(height: 16),
-                Text(
-                  'Event Agenda:',
-                  style: TextStyle(
-                    fontSize: 13,
-                    fontWeight: FontWeight.w600,
-                    color: Colors.grey[800],
                   ),
                 ),
-                const SizedBox(height: 6),
-                Container(
-                  width: double.infinity,
-                  padding: EdgeInsets.all(12),
-                  decoration: BoxDecoration(
-                    color: Colors.grey[50],
-                    borderRadius: BorderRadius.circular(8),
-                  ),
-                  child: Text(
-                    booking.eventAgenda,
-                    style: TextStyle(
-                      fontSize: 14,
-                      color: Colors.grey[700],
-                      height: 1.4,
-                    ),
-                    maxLines: 2,
-                    overflow: TextOverflow.ellipsis,
-                  ),
-                ),
-                const SizedBox(height: 12),
-                _buildInfoRow(
-                  Icons.meeting_room_outlined,
-                  booking.roomName.isEmpty ? 'Not Specified' : booking.roomName,
-                ),
-                const SizedBox(height: 8),
-                _buildInfoRow(
-                  Icons.calendar_today_outlined,
-                  _formatBookingDuration(
-                      booking.usageStartDate, booking.usageEndDate),
-                ),
-                const SizedBox(height: 8),
-                _buildInfoRow(
-                  Icons.access_time,
-                  'Created at: ${DateFormat('dd MMM yyyy, HH:mm').format(booking.createdAt)}',
-                ),
+                const SizedBox(height: 8), // Reduced spacing
               ],
-            ),
+              
+              // Description
+              Container(
+                width: double.infinity,
+                padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 8), // Reduced padding
+                decoration: BoxDecoration(
+                  color: Colors.grey[50],
+                  borderRadius: BorderRadius.circular(10),
+                  border: Border.all(
+                    color: Colors.grey[200]!,
+                    width: 1,
+                  ),
+                ),
+                child: Text(
+                  request.description,
+                  style: TextStyle(
+                    fontSize: 12, // Smaller font
+                    color: Colors.grey[700],
+                    height: 1.2, // Reduced line height
+                  ),
+                  maxLines: 2,
+                  overflow: TextOverflow.ellipsis,
+                ),
+              ),
+              
+              const SizedBox(height: 6), // Reduced spacing
+              
+              // Info row in two columns
+              Row(
+                children: [
+                  // First column
+                  Expanded(
+                    child: request.request == 'resource'
+                        ? _buildCompactInfoRow(Icons.supervisor_account, 'Resource')
+                        : _buildCompactInfoRow(Icons.inventory, 'Item'),
+                  ),
+                  // Second column
+                  Expanded(
+                    child: _buildCompactInfoRow(
+                      Icons.access_time,
+                      'Created: ${DateFormat('dd MMM').format(request.createdAt)}', // Shorter date
+                    ),
+                  ),
+                ],
+              ),
+              
+              // Optional time required
+              if (request.timeRequired != null && request.timeRequired!.isNotEmpty)
+                _buildCompactInfoRow(
+                  Icons.calendar_today_outlined,
+                  request.timeRequired!,
+                ),
+            ],
           ),
         ),
       ),
-    );
-  }
+    ),
+  );
+}
 
-  Widget _buildInfoRow(IconData icon, String text, {bool isBold = false}) {
-    return Row(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        Icon(icon, size: 14, color: Colors.grey[500]),
-        const SizedBox(width: 8),
-        Expanded(
-          child: Text(
-            text,
-            style: TextStyle(
-              fontSize: isBold ? 14 : 12,
-              color: isBold ? Colors.grey[800] : Colors.grey[600],
-              fontWeight: isBold ? FontWeight.bold : FontWeight.normal,
+// Replace the _buildUnifiedOperasionalCard method with this more compact version:
+Widget _buildUnifiedOperasionalCard(RideRequestModel request) {
+  return Card(
+    margin: const EdgeInsets.only(bottom: 16),
+    elevation: 0,
+    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
+    child: InkWell(
+      onTap: () => _navigateToDetail(request),
+      borderRadius: BorderRadius.circular(20),
+      child: Container(
+        decoration: BoxDecoration(
+          borderRadius: BorderRadius.circular(20),
+          color: Colors.white,
+          boxShadow: [
+            BoxShadow(
+              color: Colors.red.withOpacity(0.15),
+              blurRadius: 10,
+              spreadRadius: 0,
+              offset: const Offset(0, 5),
             ),
+          ],
+          border: Border.all(
+            color: Colors.red.withOpacity(0.1),
+            width: 1.5,
           ),
         ),
-      ],
-    );
-  }
+        child: Padding(
+          padding: const EdgeInsets.all(12.0), // Reduced padding
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            mainAxisSize: MainAxisSize.min, // Added to minimize height
+            children: [
+              // Header row
+              Row(
+                children: [
+                  Container(
+                    padding: const EdgeInsets.all(8), // Reduced padding
+                    decoration: BoxDecoration(
+                      color: Colors.red.withOpacity(0.1),
+                      borderRadius: BorderRadius.circular(12),
+                    ),
+                    child: Icon(Icons.directions_car, color: Colors.red[700], size: 18), // Smaller icon
+                  ),
+                  const SizedBox(width: 8), // Reduced spacing
+                  Expanded(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        const Text(
+                          'Request Operasional',
+                          style: TextStyle(
+                            fontWeight: FontWeight.bold,
+                            fontSize: 14, // Smaller font
+                            color: Color(0xFF2D3748),
+                          ),
+                        ),
+                        const SizedBox(height: 2), // Reduced spacing
+                        _buildStatusChip(request.status),
+                      ],
+                    ),
+                  ),
+                  Icon(Icons.arrow_forward_ios, size: 14, color: Colors.grey[400]), // Smaller icon
+                ],
+              ),
+              
+              const SizedBox(height: 8), // Reduced spacing
+              
+              // Locations in compact layout
+              Row(
+                children: [
+                  // Pickup location
+                  Expanded(
+                    child: Row(
+                      children: [
+                        Icon(Icons.my_location, size: 12, color: Colors.grey[600]), // Smaller icon
+                        const SizedBox(width: 4), // Reduced spacing
+                        Expanded(
+                          child: Text(
+                            'From: ${request.pickupLocation}',
+                            style: TextStyle(
+                              fontSize: 11, // Smaller font
+                              fontWeight: FontWeight.w600,
+                              color: Colors.grey[800],
+                            ),
+                            maxLines: 1,
+                            overflow: TextOverflow.ellipsis,
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                  const SizedBox(width: 8), // Reduced spacing
+                  // Dropoff location
+                  Expanded(
+                    child: Row(
+                      children: [
+                        Icon(Icons.location_on_outlined, size: 12, color: Colors.grey[600]), // Smaller icon
+                        const SizedBox(width: 4), // Reduced spacing
+                        Expanded(
+                          child: Text(
+                            'To: ${request.dropoffLocation}',
+                            style: TextStyle(
+                              fontSize: 11, // Smaller font
+                              fontWeight: FontWeight.w600,
+                              color: Colors.grey[800],
+                            ),
+                            maxLines: 1,
+                            overflow: TextOverflow.ellipsis,
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                ],
+              ),
+              
+              const SizedBox(height: 8), // Reduced spacing
+              
+              // Description
+              Container(
+                width: double.infinity,
+                padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 8), // Reduced padding
+                decoration: BoxDecoration(
+                  color: Colors.grey[50],
+                  borderRadius: BorderRadius.circular(10),
+                  border: Border.all(
+                    color: Colors.grey[200]!,
+                    width: 1,
+                  ),
+                ),
+                child: Text(
+                  request.description,
+                  style: TextStyle(
+                    fontSize: 12, // Smaller font
+                    color: Colors.grey[700],
+                    height: 1.2, // Reduced line height
+                  ),
+                  maxLines: 2,
+                  overflow: TextOverflow.ellipsis,
+                ),
+              ),
+              
+              const SizedBox(height: 6), // Reduced spacing
+              
+              // Dates in two columns
+              Row(
+                children: [
+                  // Pickup date
+                  Expanded(
+                    child: _buildCompactInfoRow(
+                      Icons.event,
+                      'Pickup: ${DateFormat('dd MMM').format(request.pickupDateTime)}', // Shorter date
+                    ),
+                  ),
+                  // Return date
+                  Expanded(
+                    child: _buildCompactInfoRow(
+                      Icons.event_available,
+                      'Return: ${DateFormat('dd MMM').format(request.pickupDateTime)}', // Shorter date
+                    ),
+                  ),
+                ],
+              ),
+            ],
+          ),
+        ),
+      ),
+    ),
+  );
+}
 
-  String _formatBookingDuration(DateTime start, DateTime end) {
-    final isSingleDay = start.year == end.year &&
-        start.month == end.month &&
-        start.day == end.day;
+// Replace the _buildUnifiedBookingCard method with this more compact version:
+Widget _buildUnifiedBookingCard(BookingModel booking) {
+  return Card(
+    margin: const EdgeInsets.only(bottom: 16),
+    elevation: 0,
+    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
+    child: InkWell(
+      onTap: () => _navigateToDetail(booking),
+      borderRadius: BorderRadius.circular(20),
+      child: Container(
+        decoration: BoxDecoration(
+          borderRadius: BorderRadius.circular(20),
+          color: Colors.white,
+          boxShadow: [
+            BoxShadow(
+              color: Colors.teal.withOpacity(0.15),
+              blurRadius: 10,
+              spreadRadius: 0,
+              offset: const Offset(0, 5),
+            ),
+          ],
+          border: Border.all(
+            color: Colors.teal.withOpacity(0.1),
+            width: 1.5,
+          ),
+        ),
+        child: Padding(
+          padding: const EdgeInsets.all(12.0), // Reduced padding
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            mainAxisSize: MainAxisSize.min, // Added to minimize height
+            children: [
+              // Header row
+              Row(
+                children: [
+                  Container(
+                    padding: const EdgeInsets.all(8), // Reduced padding
+                    decoration: BoxDecoration(
+                      color: Colors.teal.withOpacity(0.1),
+                      borderRadius: BorderRadius.circular(12),
+                    ),
+                    child: Icon(Icons.meeting_room, color: Colors.teal[700], size: 18), // Smaller icon
+                  ),
+                  const SizedBox(width: 8), // Reduced spacing
+                  Expanded(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        const Text(
+                          'Booking Room',
+                          style: TextStyle(
+                            fontWeight: FontWeight.bold,
+                            fontSize: 14, // Smaller font
+                            color: Color(0xFF2D3748),
+                          ),
+                        ),
+                        const SizedBox(height: 2), // Reduced spacing
+                        _buildStatusChip(booking.status),
+                      ],
+                    ),
+                  ),
+                  Icon(Icons.arrow_forward_ios, size: 14, color: Colors.grey[400]), // Smaller icon
+                ],
+              ),
+              
+              const SizedBox(height: 8), // Reduced spacing
+              
+              // Room info in compact layout
+              Row(
+                children: [
+                  Icon(Icons.meeting_room_outlined, size: 14, color: Colors.teal[700]), // Smaller icon
+                  const SizedBox(width: 6), // Reduced spacing
+                  Expanded(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text(
+                          booking.roomName.isEmpty ? 'Room not specified' : booking.roomName,
+                          style: TextStyle(
+                            fontWeight: FontWeight.w600,
+                            fontSize: 12, // Smaller font
+                            color: Colors.grey[800],
+                          ),
+                          maxLines: 1,
+                          overflow: TextOverflow.ellipsis,
+                        ),
+                        Text(
+                          _formatCompactBookingDuration(
+                            booking.usageStartDate,
+                            booking.usageEndDate,
+                          ),
+                          style: TextStyle(
+                            fontSize: 11, // Smaller font
+                            color: Colors.grey[600],
+                          ),
+                          maxLines: 1,
+                          overflow: TextOverflow.ellipsis,
+                        ),
+                      ],
+                    ),
+                  ),
+                ],
+              ),
+              
+              const SizedBox(height: 8), // Reduced spacing
+              
+              // Description
+              Container(
+                width: double.infinity,
+                padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 8), // Reduced padding
+                decoration: BoxDecoration(
+                  color: Colors.grey[50],
+                  borderRadius: BorderRadius.circular(10),
+                  border: Border.all(
+                    color: Colors.grey[200]!,
+                    width: 1,
+                  ),
+                ),
+                child: Text(
+                  booking.eventAgenda,
+                  style: TextStyle(
+                    fontSize: 12, // Smaller font
+                    color: Colors.grey[700],
+                    height: 1.2, // Reduced line height
+                  ),
+                  maxLines: 2,
+                  overflow: TextOverflow.ellipsis,
+                ),
+              ),
+              
+              const SizedBox(height: 6), // Reduced spacing
+              
+              // Creation date
+              _buildCompactInfoRow(
+                Icons.access_time,
+                'Created: ${DateFormat('dd MMM').format(booking.createdAt)}', // Shorter date
+              ),
+            ],
+          ),
+        ),
+      ),
+    ),
+  );
+}
 
-    if (isSingleDay) {
-      // Format untuk booking harian: Sen, 4 Agu 2025, 09:00 - 11:30
-      final date = DateFormat('E, d MMM yyyy', 'id_ID').format(start);
-      final startTime = DateFormat('HH:mm').format(start);
-      final endTime = DateFormat('HH:mm').format(end);
-      return '$date, $startTime - $endTime';
-    } else {
-      // Format untuk booking beberapa hari: Sen, 4 Agu 2025 s/d Rab, 6 Agu 2025
-      final startDate = DateFormat('E, d MMM yyyy', 'id_ID').format(start);
-      final endDate = DateFormat('E, d MMM yyyy', 'id_ID').format(end);
-      return '$startDate s/d $endDate';
-    }
+// Add these new helper methods:
+
+// Helper for compact info rows
+Widget _buildCompactInfoRow(IconData icon, String text) {
+  return Row(
+    crossAxisAlignment: CrossAxisAlignment.center,
+    children: [
+      Icon(icon, size: 12, color: Colors.grey[500]), // Smaller icon
+      const SizedBox(width: 4), // Reduced spacing
+      Expanded(
+        child: Text(
+          text,
+          style: TextStyle(fontSize: 11, color: Colors.grey[600]), // Smaller font
+          maxLines: 1,
+          overflow: TextOverflow.ellipsis,
+        ),
+      ),
+    ],
+  );
+}
+
+// Helper for more compact booking duration format
+String _formatCompactBookingDuration(DateTime start, DateTime end) {
+  final isSingleDay = start.year == end.year &&
+      start.month == end.month &&
+      start.day == end.day;
+
+  if (isSingleDay) {
+    // Format for single day: "4 Aug, 09:00-11:30"
+    final date = DateFormat('d MMM', 'id_ID').format(start);
+    final startTime = DateFormat('HH:mm').format(start);
+    final endTime = DateFormat('HH:mm').format(end);
+    return '$date, $startTime-$endTime';
+  } else {
+    // Format for multi-day: "4 Aug-6 Aug"
+    final startDate = DateFormat('d MMM', 'id_ID').format(start);
+    final endDate = DateFormat('d MMM', 'id_ID').format(end);
+    return '$startDate to $endDate';
   }
+}   
 }

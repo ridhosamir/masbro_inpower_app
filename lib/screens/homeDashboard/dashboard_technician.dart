@@ -25,6 +25,7 @@ import 'package:provider/provider.dart';
 import '../../../services/storage_service.dart';
 import 'package:flutter/foundation.dart' show kIsWeb;
 import 'dart:typed_data';
+import 'dart:ui'; // Needed for ImageFilter
 
 class HomeDashboardTechnician extends StatefulWidget {
   const HomeDashboardTechnician({super.key});
@@ -78,108 +79,172 @@ class _HomeDashboardTechnicianState extends State<HomeDashboardTechnician>
   Widget build(BuildContext context) {
     return Scaffold(
       backgroundColor: const Color(0xFFF4F6F8),
+      extendBodyBehindAppBar: true,
       body: currentUser == null
-          ? const Center(child: CircularProgressIndicator())
-          : DefaultTabController(
-              length: 2,
-              child: NestedScrollView(
-                headerSliverBuilder:
-                    (BuildContext context, bool innerBoxIsScrolled) {
-                  return <Widget>[
-                    SliverAppBar(
-                      backgroundColor: const Color.fromARGB(255, 4, 117, 217),
-                      expandedHeight: 325.0,
-                      floating: false,
-                      pinned: true,
-                      automaticallyImplyLeading: false,
-                      title: LayoutBuilder(
-                        builder: (context, constraints) {
-                          final settings =
-                              context.dependOnInheritedWidgetOfExactType<
-                                  FlexibleSpaceBarSettings>()!;
-                          final delta = settings.maxExtent - settings.minExtent;
-                          final opacity = (1.0 -
-                                  (settings.currentExtent -
-                                          settings.minExtent) /
-                                      delta)
-                              .clamp(0.0, 1.0);
+          ? _buildLoading()
+          : NestedScrollView(
+              headerSliverBuilder:
+                  (BuildContext context, bool innerBoxIsScrolled) {
+                return <Widget>[
+                  SliverAppBar(
+                    backgroundColor: const Color(0xFF0277BD),
+                    expandedHeight: 350.0,
+                    floating: false,
+                    pinned: true,
+                    automaticallyImplyLeading: false,
+                    stretch: true,
+                    title: LayoutBuilder(
+                      builder: (context, constraints) {
+                        final settings =
+                            context.dependOnInheritedWidgetOfExactType<
+                                FlexibleSpaceBarSettings>()!;
+                        final delta = settings.maxExtent - settings.minExtent;
+                        final opacity = (1.0 -
+                                (settings.currentExtent - settings.minExtent) /
+                                    delta)
+                            .clamp(0.0, 1.0);
 
-                          return Opacity(
-                            opacity: opacity,
-                            child: Row(
-                              mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                              children: [
-                                Container(
-                                  padding: const EdgeInsets.symmetric(
-                                      horizontal: 16, vertical: 8),
-                                  decoration: BoxDecoration(
-                                    color: Colors.white.withOpacity(0.15),
-                                    borderRadius: BorderRadius.circular(20),
-                                    border: Border.all(
-                                      color: Colors.white.withOpacity(0.2),
-                                      width: 1,
-                                    ),
-                                  ),
-                                  child: const Text(
-                                    'Technician Dashboard',
-                                    style: TextStyle(
-                                      color: Colors.white,
-                                      fontSize: 18,
-                                      fontWeight: FontWeight.w600,
-                                      letterSpacing: 0.5,
-                                    ),
+                        return Opacity(
+                          opacity: opacity,
+                          child: Row(
+                            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                            children: [
+                              Container(
+                                padding: const EdgeInsets.symmetric(
+                                    horizontal: 16, vertical: 8),
+                                decoration: BoxDecoration(
+                                  color: Colors.white.withOpacity(0.15),
+                                  borderRadius: BorderRadius.circular(20),
+                                  border: Border.all(
+                                    color: Colors.white.withOpacity(0.2),
+                                    width: 1,
                                   ),
                                 ),
-                                Container(
-                                  decoration: BoxDecoration(
-                                    shape: BoxShape.circle,
-                                    gradient: LinearGradient(
-                                      colors: [
-                                        Colors.white.withOpacity(0.2),
-                                        Colors.white.withOpacity(0.1),
-                                      ],
-                                      begin: Alignment.topLeft,
-                                      end: Alignment.bottomRight,
-                                    ),
+                                child: const Text(
+                                  'Technician Dashboard',
+                                  style: TextStyle(
+                                    color: Colors.white,
+                                    fontSize: 18,
+                                    fontWeight: FontWeight.w600,
+                                    letterSpacing: 0.5,
                                   ),
-                                  child: _buildProfileMenu(),
                                 ),
-                              ],
-                            ),
-                          );
-                        },
+                              ),
+                              _buildProfileButton(),
+                            ],
+                          ),
+                        );
+                      },
+                    ),
+                    centerTitle: false,
+                    flexibleSpace: FlexibleSpaceBar(
+                      background: _buildHeader(context),
+                    ),
+                    bottom: TabBar(
+                      controller: _tabController,
+                      indicatorColor: Colors.white,
+                      indicatorWeight: 3.0,
+                      labelColor: Colors.white,
+                      unselectedLabelColor: Colors.white.withOpacity(0.7),
+                      labelStyle: const TextStyle(
+                          fontWeight: FontWeight.bold, fontSize: 16),
+                      unselectedLabelStyle: const TextStyle(
+                          fontWeight: FontWeight.normal, fontSize: 16),
+                      tabs: const [
+                        Tab(text: 'My Task'),
+                        Tab(text: 'Application'),
+                      ],
+                      indicator: const UnderlineTabIndicator(
+                        borderSide: BorderSide(width: 4.0, color: Colors.white),
+                        insets: EdgeInsets.symmetric(horizontal: 16.0),
                       ),
-                      centerTitle: false,
-                      flexibleSpace: FlexibleSpaceBar(
-                        background: _buildHeader(context),
-                      ),
-                      bottom: TabBar(
-                        controller: _tabController,
-                        indicatorColor: Colors.white,
-                        indicatorWeight: 3.0,
-                        labelColor: Colors.white,
-                        unselectedLabelColor: Colors.white.withOpacity(0.7),
-                        labelStyle: const TextStyle(
-                            fontWeight: FontWeight.bold, fontSize: 16),
-                        unselectedLabelStyle: const TextStyle(
-                            fontWeight: FontWeight.normal, fontSize: 16),
-                        tabs: const [
-                          Tab(text: 'My Task'),
-                          Tab(text: 'Application'),
-                        ],
-                      ),
-                    )
-                  ];
-                },
-                body: TabBarView(
-                  controller: _tabController,
-                  children: [
-                    TechnicianStatusTab(currentUser: currentUser!),
-                    _buildAppGrid(context),
-                  ],
+                    ),
+                  )
+                ];
+              },
+              body: TabBarView(
+                controller: _tabController,
+                children: [
+                  TechnicianStatusTab(currentUser: currentUser!),
+                  _buildAppGrid(context),
+                ],
+              ),
+            ),
+    );
+  }
+
+  Widget _buildLoading() {
+    return Container(
+      decoration: const BoxDecoration(
+        gradient: LinearGradient(
+          begin: Alignment.topCenter,
+          end: Alignment.bottomCenter,
+          colors: [
+            Color(0xFF0277BD),
+            Color(0xFF0288D1),
+          ],
+        ),
+      ),
+      child: Center(
+        child: Column(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            Container(
+              padding: const EdgeInsets.all(20),
+              decoration: BoxDecoration(
+                color: Colors.white.withOpacity(0.1),
+                shape: BoxShape.circle,
+              ),
+              child: Container(
+                padding: const EdgeInsets.all(20),
+                decoration: BoxDecoration(
+                  color: Colors.white.withOpacity(0.15),
+                  shape: BoxShape.circle,
+                ),
+                child: const CircularProgressIndicator(
+                  color: Colors.white,
+                  strokeWidth: 3,
                 ),
               ),
             ),
+            const SizedBox(height: 30),
+            const Text(
+              'Loading Dashboard',
+              style: TextStyle(
+                color: Colors.white,
+                fontSize: 20,
+                fontWeight: FontWeight.w600,
+                letterSpacing: 0.5,
+              ),
+            ),
+            const SizedBox(height: 8),
+            Text(
+              'Please wait a moment',
+              style: TextStyle(
+                color: Colors.white.withOpacity(0.8),
+                fontSize: 16,
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _buildProfileButton() {
+    return Container(
+      decoration: BoxDecoration(
+        shape: BoxShape.circle,
+        gradient: LinearGradient(
+          colors: [
+            Colors.white.withOpacity(0.2),
+            Colors.white.withOpacity(0.1),
+          ],
+          begin: Alignment.topLeft,
+          end: Alignment.bottomRight,
+        ),
+      ),
+      child: _buildProfileMenu(),
     );
   }
 
@@ -188,23 +253,24 @@ class _HomeDashboardTechnicianState extends State<HomeDashboardTechnician>
       decoration: const BoxDecoration(
         gradient: LinearGradient(
           colors: [
-            Color(0xFF4A90E2),
-            Color.fromARGB(255, 4, 117, 217),
+            Color.fromARGB(255, 25, 115, 184), // Darker blue
+            Color(0xFF0288D1), // Material blue
           ],
           begin: Alignment.topCenter,
           end: Alignment.bottomCenter,
-          stops: [0.0, 0.9],
+          stops: [0.0, 1.0],
         ),
       ),
       child: Stack(
         clipBehavior: Clip.none,
         children: [
+          // Decorative circle elements
           Positioned(
-            right: -40,
-            top: -60,
+            right: -60,
+            top: -30,
             child: Container(
-              width: 180,
-              height: 180,
+              width: 220,
+              height: 220,
               decoration: BoxDecoration(
                 gradient: RadialGradient(colors: [
                   Colors.white.withOpacity(0.1),
@@ -216,22 +282,25 @@ class _HomeDashboardTechnicianState extends State<HomeDashboardTechnician>
             ),
           ),
           Positioned(
-            left: -50,
-            bottom: -80,
+            left: -80,
+            bottom: -40,
             child: Container(
-              width: 150,
-              height: 150,
+              width: 180,
+              height: 180,
               decoration: BoxDecoration(
                 gradient: RadialGradient(colors: [
+                  Colors.white.withOpacity(0.07),
                   Colors.white.withOpacity(0.03),
+                  Colors.transparent,
                 ]),
                 shape: BoxShape.circle,
               ),
             ),
           ),
+          // Content
           SafeArea(
             child: Padding(
-              padding: const EdgeInsets.fromLTRB(20, 20, 20, 0),
+              padding: const EdgeInsets.fromLTRB(20, 10, 20, 0),
               child: LayoutBuilder(
                 builder: (context, constraints) {
                   final settings = context.dependOnInheritedWidgetOfExactType<
@@ -270,9 +339,18 @@ class _HomeDashboardTechnicianState extends State<HomeDashboardTechnician>
                                 ),
                               ),
                             ),
-                            Container(
+                            _buildProfileButton(),
+                          ],
+                        ),
+                        const SizedBox(height: 30),
+                        // User welcome section with glass effect
+                        ClipRRect(
+                          borderRadius: BorderRadius.circular(20),
+                          child: BackdropFilter(
+                            filter: ImageFilter.blur(sigmaX: 10, sigmaY: 10),
+                            child: Container(
+                              padding: const EdgeInsets.all(20),
                               decoration: BoxDecoration(
-                                shape: BoxShape.circle,
                                 gradient: LinearGradient(
                                   colors: [
                                     Colors.white.withOpacity(0.2),
@@ -281,90 +359,93 @@ class _HomeDashboardTechnicianState extends State<HomeDashboardTechnician>
                                   begin: Alignment.topLeft,
                                   end: Alignment.bottomRight,
                                 ),
-                              ),
-                              child: _buildProfileMenu(),
-                            ),
-                          ],
-                        ),
-                        const SizedBox(height: 24),
-                        Container(
-                          padding: const EdgeInsets.all(20),
-                          decoration: BoxDecoration(
-                            gradient: LinearGradient(
-                              colors: [
-                                Colors.white.withOpacity(0.1),
-                                Colors.white.withOpacity(0.05),
-                              ],
-                              begin: Alignment.topLeft,
-                              end: Alignment.bottomRight,
-                            ),
-                            borderRadius: BorderRadius.circular(20),
-                            border: Border.all(
-                              color: Colors.white.withOpacity(0.15),
-                              width: 1,
-                            ),
-                          ),
-                          child: Column(
-                            crossAxisAlignment: CrossAxisAlignment.start,
-                            mainAxisSize: MainAxisSize.min,
-                            children: [
-                              Row(
-                                children: [
-                                  Container(
-                                    padding: const EdgeInsets.all(8),
-                                    decoration: BoxDecoration(
-                                      color: Colors.white.withOpacity(0.2),
-                                      borderRadius: BorderRadius.circular(12),
-                                    ),
-                                    child: const Icon(
-                                      Icons.waving_hand,
-                                      color: Colors.white,
-                                      size: 20,
-                                    ),
-                                  ),
-                                  const SizedBox(width: 12),
-                                  Text(
-                                    'Welcome back,',
-                                    style: TextStyle(
-                                      color: Colors.white.withOpacity(0.9),
-                                      fontSize: 16,
-                                      fontWeight: FontWeight.w500,
-                                    ),
-                                  ),
-                                ],
-                              ),
-                              const SizedBox(height: 12),
-                              Text(
-                                currentUser!.name,
-                                style: const TextStyle(
-                                  color: Colors.white,
-                                  fontSize: 26,
-                                  fontWeight: FontWeight.bold,
-                                  letterSpacing: 0.5,
+                                borderRadius: BorderRadius.circular(20),
+                                border: Border.all(
+                                  color: Colors.white.withOpacity(0.2),
+                                  width: 1.5,
                                 ),
-                                maxLines: 1,
-                                overflow: TextOverflow.ellipsis,
                               ),
-                              const SizedBox(height: 8),
-                              Row(
+                              child: Column(
+                                crossAxisAlignment: CrossAxisAlignment.start,
+                                mainAxisSize: MainAxisSize.min,
                                 children: [
-                                  Icon(
-                                    Icons.calendar_today,
-                                    size: 14,
-                                    color: Colors.white.withOpacity(0.8),
+                                  Row(
+                                    children: [
+                                      Container(
+                                        padding: const EdgeInsets.all(10),
+                                        decoration: BoxDecoration(
+                                          color: Colors.white.withOpacity(0.25),
+                                          borderRadius:
+                                              BorderRadius.circular(14),
+                                        ),
+                                        child: const Icon(
+                                          Icons.waving_hand,
+                                          color: Colors.white,
+                                          size: 22,
+                                        ),
+                                      ),
+                                      const SizedBox(width: 12),
+                                      Text(
+                                        'Welcome back,',
+                                        style: TextStyle(
+                                          color: Colors.white.withOpacity(0.9),
+                                          fontSize: 16,
+                                          fontWeight: FontWeight.w500,
+                                        ),
+                                      ),
+                                    ],
                                   ),
-                                  const SizedBox(width: 6),
+                                  const SizedBox(height: 16),
                                   Text(
-                                    'Technician since ${DateFormat('dd MMM yyyy').format(currentUser!.createdAt)}',
-                                    style: TextStyle(
-                                      color: Colors.white.withOpacity(0.8),
-                                      fontSize: 13,
-                                      fontWeight: FontWeight.w500,
+                                    currentUser!.name,
+                                    style: const TextStyle(
+                                      color: Colors.white,
+                                      fontSize: 28,
+                                      fontWeight: FontWeight.bold,
+                                      letterSpacing: 0.5,
+                                      shadows: [
+                                        Shadow(
+                                          blurRadius: 8.0,
+                                          color: Colors.black26,
+                                          offset: Offset(0, 3.0),
+                                        ),
+                                      ],
+                                    ),
+                                    maxLines: 1,
+                                    overflow: TextOverflow.ellipsis,
+                                  ),
+                                  const SizedBox(height: 10),
+                                  Container(
+                                    padding: const EdgeInsets.symmetric(
+                                        horizontal: 12, vertical: 6),
+                                    decoration: BoxDecoration(
+                                      color: Colors.white.withOpacity(0.15),
+                                      borderRadius: BorderRadius.circular(30),
+                                    ),
+                                    child: Row(
+                                      mainAxisSize: MainAxisSize.min,
+                                      children: [
+                                        Icon(
+                                          Icons.calendar_today,
+                                          size: 14,
+                                          color: Colors.white.withOpacity(0.9),
+                                        ),
+                                        const SizedBox(width: 6),
+                                        Text(
+                                          'Technician since ${DateFormat('dd MMM yyyy').format(currentUser!.createdAt)}',
+                                          style: TextStyle(
+                                            color:
+                                                Colors.white.withOpacity(0.9),
+                                            fontSize: 13,
+                                            fontWeight: FontWeight.w500,
+                                          ),
+                                        ),
+                                      ],
                                     ),
                                   ),
                                 ],
                               ),
-                            ],
+                            ),
                           ),
                         ),
                       ],
@@ -385,6 +466,8 @@ class _HomeDashboardTechnicianState extends State<HomeDashboardTechnician>
         backgroundColor: Colors.white.withOpacity(0.25),
         child: const Icon(Icons.person, color: Colors.white),
       ),
+      offset: const Offset(0, 50),
+      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
       onSelected: (value) {
         if (value == 'profile') {
           _showProfileDialog();
@@ -392,20 +475,40 @@ class _HomeDashboardTechnicianState extends State<HomeDashboardTechnician>
           _showLogoutDialog();
         }
       },
-      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
       itemBuilder: (context) => [
-        const PopupMenuItem(
+        PopupMenuItem(
           value: 'profile',
-          child: ListTile(
-            leading: Icon(Icons.person_outline),
-            title: Text('My Profile'),
+          child: Row(
+            children: [
+              Container(
+                padding: const EdgeInsets.all(8),
+                decoration: BoxDecoration(
+                  color: Colors.blue.withOpacity(0.1),
+                  shape: BoxShape.circle,
+                ),
+                child: Icon(Icons.person_outline,
+                    color: Colors.blue[700], size: 20),
+              ),
+              const SizedBox(width: 12),
+              const Text('My Profile'),
+            ],
           ),
         ),
-        const PopupMenuItem(
+        PopupMenuItem(
           value: 'logout',
-          child: ListTile(
-            leading: Icon(Icons.logout, color: Colors.red),
-            title: Text('Logout', style: TextStyle(color: Colors.red)),
+          child: Row(
+            children: [
+              Container(
+                padding: const EdgeInsets.all(8),
+                decoration: BoxDecoration(
+                  color: Colors.red.withOpacity(0.1),
+                  shape: BoxShape.circle,
+                ),
+                child: Icon(Icons.logout, color: Colors.red[700], size: 20),
+              ),
+              const SizedBox(width: 12),
+              const Text('Logout', style: TextStyle(color: Colors.red)),
+            ],
           ),
         ),
       ],
@@ -415,19 +518,18 @@ class _HomeDashboardTechnicianState extends State<HomeDashboardTechnician>
   Widget _buildAppGrid(BuildContext context) {
     return Container(
       color: const Color(0xFFF4F6F8),
-      padding: const EdgeInsets.all(16.0),
+      padding: const EdgeInsets.fromLTRB(10.0, 0.0, 10.0, 10.0),
       child: GridView.count(
+        padding: const EdgeInsets.fromLTRB(6, 30, 6, 30),
         crossAxisCount: 2,
         crossAxisSpacing: 16,
         mainAxisSpacing: 16,
-        shrinkWrap: true,
-        physics: const NeverScrollableScrollPhysics(),
         children: [
           _buildAppCard(
             context: context,
             title: 'Maintenance',
             icon: Icons.construction,
-            color: Colors.orange,
+            color: Colors.orange[700]!,
             onTap: () {
               Navigator.push(
                 context,
@@ -438,8 +540,8 @@ class _HomeDashboardTechnicianState extends State<HomeDashboardTechnician>
           _buildAppCard(
             context: context,
             title: 'Resource/Item',
-            icon: Icons.groups,
-            color: Colors.blue,
+            icon: Icons.people_alt_outlined,
+            color: Colors.cyan[700]!,
             onTap: () {
               Navigator.push(
                 context,
@@ -452,7 +554,7 @@ class _HomeDashboardTechnicianState extends State<HomeDashboardTechnician>
             context: context,
             title: 'Operational',
             icon: Icons.directions_car,
-            color: Colors.red,
+            color: Colors.red[700]!,
             onTap: () {
               Navigator.push(
                 context,
@@ -464,7 +566,7 @@ class _HomeDashboardTechnicianState extends State<HomeDashboardTechnician>
             context: context,
             title: 'Booking Room',
             icon: Icons.meeting_room,
-            color: Colors.teal,
+            color: Colors.grey[700]!, // Greyed out color
             onTap: () {
               ScaffoldMessenger.of(context).showSnackBar(
                 const SnackBar(
@@ -487,23 +589,31 @@ class _HomeDashboardTechnicianState extends State<HomeDashboardTechnician>
     required Color color,
     required VoidCallback onTap,
   }) {
+    // Buat versi lebih terang dari warna utama untuk background card
+    Color bgColor = Color.lerp(Colors.white, color, 0.30)!;
+
     return Card(
-      elevation: 8,
-      shadowColor: color.withOpacity(0.3),
-      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
+      elevation: 0,
+      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(24)),
       child: InkWell(
         onTap: onTap,
-        borderRadius: BorderRadius.circular(20),
+        borderRadius: BorderRadius.circular(24),
         child: Container(
           decoration: BoxDecoration(
-            borderRadius: BorderRadius.circular(20),
-            gradient: LinearGradient(
-              colors: [
-                color.withOpacity(0.1),
-                color.withOpacity(0.05),
-              ],
-              begin: Alignment.topLeft,
-              end: Alignment.bottomRight,
+            borderRadius: BorderRadius.circular(24),
+            // Gunakan warna solid (bukan gradasi)
+            color: bgColor, // Warna solid yang sesuai dengan tema card
+            boxShadow: [
+              BoxShadow(
+                color: color.withOpacity(0.15),
+                blurRadius: 20,
+                spreadRadius: 0,
+                offset: const Offset(5, 10),
+              ),
+            ],
+            border: Border.all(
+              color: color.withOpacity(0.3),
+              width: 1.5,
             ),
           ),
           child: Column(
@@ -512,19 +622,47 @@ class _HomeDashboardTechnicianState extends State<HomeDashboardTechnician>
               Container(
                 padding: const EdgeInsets.all(16),
                 decoration: BoxDecoration(
-                  color: color.withOpacity(0.2),
+                  color: Colors.white
+                      .withOpacity(0.7), // Background putih semi-transparan
                   shape: BoxShape.circle,
+                  boxShadow: [
+                    BoxShadow(
+                      color: color.withOpacity(0.1),
+                      blurRadius: 10,
+                      spreadRadius: 0,
+                      offset: const Offset(0, 5),
+                    ),
+                  ],
                 ),
                 child: Icon(icon, size: 32, color: color),
               ),
-              const SizedBox(height: 12),
+              const SizedBox(height: 16),
               Text(
                 title,
                 textAlign: TextAlign.center,
                 style: TextStyle(
                   fontSize: 16,
                   fontWeight: FontWeight.w600,
-                  color: color,
+                  color: color.withOpacity(0.9), // Warna teks yang sesuai
+                  letterSpacing: 0.5,
+                ),
+              ),
+              const SizedBox(height: 8),
+              Container(
+                padding:
+                    const EdgeInsets.symmetric(horizontal: 12, vertical: 4),
+                decoration: BoxDecoration(
+                  color:
+                      Colors.white.withOpacity(0.5), // Background lebih terang
+                  borderRadius: BorderRadius.circular(12),
+                ),
+                child: Text(
+                  'Open',
+                  style: TextStyle(
+                    fontSize: 11,
+                    fontWeight: FontWeight.w600,
+                    color: color, // Warna teks yang sama dengan ikon
+                  ),
                 ),
               ),
             ],
@@ -539,35 +677,69 @@ class _HomeDashboardTechnicianState extends State<HomeDashboardTechnician>
 
     showDialog(
       context: context,
-      builder: (context) => AlertDialog(
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
-        title: const Text('Profil Information'),
-        content: Column(
-          mainAxisSize: MainAxisSize.min,
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            _buildProfileItem('Name', currentUser!.name),
-            _buildProfileItem('Email', currentUser!.email),
-            _buildProfileItem('Role', currentUser!.role.toUpperCase()),
-            _buildProfileItem(
-              'Technician since',
-              DateFormat('dd MMMM yyyy').format(currentUser!.createdAt),
-            ),
-          ],
-        ),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(context),
-            child: const Text('Close'),
+      builder: (context) => Dialog(
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
+        child: Padding(
+          padding: const EdgeInsets.all(24.0),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Container(
+                padding: const EdgeInsets.all(16),
+                decoration: BoxDecoration(
+                  color: Theme.of(context).primaryColor.withOpacity(0.1),
+                  shape: BoxShape.circle,
+                ),
+                child: Icon(
+                  Icons.person,
+                  size: 40,
+                  color: Theme.of(context).primaryColor,
+                ),
+              ),
+              const SizedBox(height: 24),
+              Text(
+                'Profile Information',
+                style: TextStyle(
+                  fontSize: 20,
+                  fontWeight: FontWeight.bold,
+                  color: Colors.grey[800],
+                ),
+              ),
+              const SizedBox(height: 20),
+              _buildProfileItem('Name', currentUser!.name),
+              _buildProfileItem('Email', currentUser!.email),
+              _buildProfileItem('Role', currentUser!.role.toUpperCase()),
+              _buildProfileItem(
+                'Technician since',
+                DateFormat('dd MMMM yyyy').format(currentUser!.createdAt),
+              ),
+              const SizedBox(height: 24),
+              ElevatedButton(
+                onPressed: () => Navigator.pop(context),
+                style: ElevatedButton.styleFrom(
+                  backgroundColor: Theme.of(context).primaryColor,
+                  foregroundColor: Colors.white,
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 24,
+                    vertical: 12,
+                  ),
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(12),
+                  ),
+                ),
+                child: const Text('Close'),
+              ),
+            ],
           ),
-        ],
+        ),
       ),
     );
   }
 
   Widget _buildProfileItem(String label, String value) {
-    return Padding(
-      padding: const EdgeInsets.symmetric(vertical: 6),
+    return Container(
+      width: double.infinity,
+      margin: const EdgeInsets.only(bottom: 16),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
@@ -575,12 +747,29 @@ class _HomeDashboardTechnicianState extends State<HomeDashboardTechnician>
             label,
             style: TextStyle(
               fontWeight: FontWeight.bold,
-              color: Colors.grey[700],
+              color: Colors.grey[600],
               fontSize: 12,
             ),
           ),
-          const SizedBox(height: 2),
-          Text(value, style: const TextStyle(fontSize: 16)),
+          const SizedBox(height: 4),
+          Container(
+            width: double.infinity,
+            padding: const EdgeInsets.symmetric(
+              horizontal: 16,
+              vertical: 12,
+            ),
+            decoration: BoxDecoration(
+              color: Colors.grey[100],
+              borderRadius: BorderRadius.circular(12),
+            ),
+            child: Text(
+              value,
+              style: TextStyle(
+                fontSize: 16,
+                color: Colors.grey[800],
+              ),
+            ),
+          ),
         ],
       ),
     );
@@ -589,24 +778,87 @@ class _HomeDashboardTechnicianState extends State<HomeDashboardTechnician>
   void _showLogoutDialog() {
     showDialog(
       context: context,
-      builder: (context) => AlertDialog(
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
-        title: const Text('Logout Confirmation'),
-        content:
-            const Text('Are you sure you want to log out of this account?'),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(context),
-            child: const Text('Cancel'),
+      builder: (context) => Dialog(
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
+        child: Padding(
+          padding: const EdgeInsets.all(24.0),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Container(
+                padding: const EdgeInsets.all(16),
+                decoration: BoxDecoration(
+                  color: Colors.red.withOpacity(0.1),
+                  shape: BoxShape.circle,
+                ),
+                child: Icon(
+                  Icons.logout,
+                  size: 40,
+                  color: Colors.red[700],
+                ),
+              ),
+              const SizedBox(height: 24),
+              Text(
+                'Logout Confirmation',
+                style: TextStyle(
+                  fontSize: 20,
+                  fontWeight: FontWeight.bold,
+                  color: Colors.grey[800],
+                ),
+              ),
+              const SizedBox(height: 16),
+              Text(
+                'Are you sure you want to log out of this account?',
+                textAlign: TextAlign.center,
+                style: TextStyle(
+                  fontSize: 16,
+                  color: Colors.grey[700],
+                ),
+              ),
+              const SizedBox(height: 24),
+              Row(
+                mainAxisAlignment: MainAxisAlignment.center,
+                children: [
+                  OutlinedButton(
+                    onPressed: () => Navigator.pop(context),
+                    style: OutlinedButton.styleFrom(
+                      foregroundColor: Colors.grey[700],
+                      side: BorderSide(color: Colors.grey[300]!),
+                      padding: const EdgeInsets.symmetric(
+                        horizontal: 20,
+                        vertical: 12,
+                      ),
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(12),
+                      ),
+                    ),
+                    child: const Text('Cancel'),
+                  ),
+                  const SizedBox(width: 16),
+                  ElevatedButton(
+                    onPressed: () {
+                      Navigator.pop(context);
+                      Provider.of<AuthService>(context, listen: false)
+                          .signOut();
+                    },
+                    style: ElevatedButton.styleFrom(
+                      backgroundColor: Colors.red,
+                      foregroundColor: Colors.white,
+                      padding: const EdgeInsets.symmetric(
+                        horizontal: 20,
+                        vertical: 12,
+                      ),
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(12),
+                      ),
+                    ),
+                    child: const Text('Logout'),
+                  ),
+                ],
+              ),
+            ],
           ),
-          TextButton(
-            onPressed: () {
-              Navigator.pop(context);
-              Provider.of<AuthService>(context, listen: false).signOut();
-            },
-            child: const Text('Logout', style: TextStyle(color: Colors.red)),
-          ),
-        ],
+        ),
       ),
     );
   }
@@ -650,7 +902,6 @@ class CustomButton extends StatelessWidget {
   }
 }
 
-// --- ADDED WIDGET: A basic implementation for CustomTextField was needed. ---
 class CustomTextField extends StatelessWidget {
   final String labelText;
   final String hintText;
@@ -697,7 +948,6 @@ class _TechnicianStatusTabState extends State<TechnicianStatusTab>
   final _completionResourceNoteController = TextEditingController();
   final _completionRideNoteController = TextEditingController();
 
-  // --- CORRECTION: Firestore services instantiated for use in methods. ---
   final _maintenanceFirestoreService = maintenance_service.FirestoreService();
   final _resourceFirestoreService = resource_service.FirestoreServiceResource();
   final _operasionalFirestoreService =
@@ -746,9 +996,6 @@ class _TechnicianStatusTabState extends State<TechnicianStatusTab>
   void _clearSearch() {
     setState(() {
       _searchController.clear();
-      _searchQuery = '';
-      _isSearching = false;
-      _filterData();
     });
   }
 
@@ -780,7 +1027,6 @@ class _TechnicianStatusTabState extends State<TechnicianStatusTab>
         }
       }
     } catch (e) {
-      print('Failed to select image: $e');
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(content: Text('Failed to select image: $e')),
@@ -812,19 +1058,16 @@ class _TechnicianStatusTabState extends State<TechnicianStatusTab>
 
     final maintenanceTasks = results[0] as List<maintenance_task.TaskModel>;
     final resourceTasks = results[1] as List<resource_task.TaskModel>;
-    // --- CORRECTION: Using the correct aliased type RideRequestModel. ---
     final operationalRequests =
         results[2] as List<operasional_task.RideRequestModel>;
 
     setState(() {
-      // --- CORRECTION: Fetch all tasks, not just active ones, to populate both tabs. ---
       _combinedList = [
         ...maintenanceTasks,
         ...resourceTasks,
         ...operationalRequests,
       ];
       _combinedList.sort((a, b) {
-        // --- CORRECTION: Use the correct aliased type for the check. ---
         DateTime dateA = a is operasional_task.RideRequestModel
             ? a.assignedAt!
             : (a as dynamic).assignedAt;
@@ -838,11 +1081,11 @@ class _TechnicianStatusTabState extends State<TechnicianStatusTab>
     });
   }
 
-  // --- CORRECTION: Rewritten filter logic to correctly handle tabs and search. ---
   void _filterData() {
     List<dynamic> tempFiltered = _combinedList;
     final now = DateTime.now();
 
+    // 1. Filter by Tab Status (In Progress vs. Completed)
     final isProgressTab = _statusTabController.index == 0;
     if (isProgressTab) {
       tempFiltered = tempFiltered
@@ -854,6 +1097,7 @@ class _TechnicianStatusTabState extends State<TechnicianStatusTab>
           tempFiltered.where((item) => item.status == 'completed').toList();
     }
 
+    // 2. Filter by Search Query
     if (_searchQuery.isNotEmpty) {
       tempFiltered = tempFiltered.where((item) {
         if (item is maintenance_task.TaskModel) {
@@ -874,9 +1118,9 @@ class _TechnicianStatusTabState extends State<TechnicianStatusTab>
       }).toList();
     }
 
+    // 3. Filter by Time
     if (_selectedFilter != 'all') {
       tempFiltered = tempFiltered.where((item) {
-        // Menentukan tanggal yang relevan berdasarkan status
         DateTime? relevantDate;
         if (item.status == 'completed' && item.completedAt != null) {
           relevantDate = item.completedAt;
@@ -914,52 +1158,91 @@ class _TechnicianStatusTabState extends State<TechnicianStatusTab>
   void _showFilterDialog() {
     showDialog(
       context: context,
-      builder: (context) => AlertDialog(
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
-        title: const Text('Filter By Time',
-            style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold)),
-        content: Column(
-          mainAxisSize: MainAxisSize.min,
+      builder: (context) => Dialog(
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
+        child: Padding(
+          padding: const EdgeInsets.all(20.0),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Row(
+                children: [
+                  Container(
+                    padding: const EdgeInsets.all(8),
+                    decoration: BoxDecoration(
+                      color: Colors.blue.withOpacity(0.1),
+                      shape: BoxShape.circle,
+                    ),
+                    child: Icon(Icons.filter_list,
+                        color: Colors.blue[700], size: 20),
+                  ),
+                  const SizedBox(width: 12),
+                  Text(
+                    'Filter By Time',
+                    style: TextStyle(
+                      fontSize: 18,
+                      fontWeight: FontWeight.bold,
+                      color: Colors.grey[800],
+                    ),
+                  ),
+                ],
+              ),
+              const SizedBox(height: 16),
+              _buildFilterOption('All Time', 'all'),
+              _buildFilterOption('Today', 'today'),
+              _buildFilterOption('This Week', 'week'),
+              _buildFilterOption('This Month', 'month'),
+              const SizedBox(height: 16),
+              ElevatedButton(
+                onPressed: () => Navigator.pop(context),
+                style: ElevatedButton.styleFrom(
+                  backgroundColor: Theme.of(context).primaryColor,
+                  foregroundColor: Colors.white,
+                  padding:
+                      const EdgeInsets.symmetric(horizontal: 20, vertical: 12),
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(12),
+                  ),
+                ),
+                child: const Text('Apply Filter'),
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+
+  Widget _buildFilterOption(String title, String value) {
+    return InkWell(
+      onTap: () {
+        setState(() => _selectedFilter = value);
+        _filterData();
+        Navigator.pop(context);
+      },
+      child: Padding(
+        padding: const EdgeInsets.symmetric(vertical: 12),
+        child: Row(
           children: [
-            RadioListTile<String>(
-              title: const Text('All Time'),
-              value: 'all',
-              groupValue: _selectedFilter,
-              onChanged: (value) {
-                setState(() => _selectedFilter = value!);
-                _filterData();
-                Navigator.pop(context);
-              },
+            Icon(
+              _selectedFilter == value
+                  ? Icons.radio_button_checked
+                  : Icons.radio_button_unchecked,
+              color: _selectedFilter == value
+                  ? Theme.of(context).primaryColor
+                  : Colors.grey[400],
+              size: 20,
             ),
-            RadioListTile<String>(
-              title: const Text('Today'),
-              value: 'today',
-              groupValue: _selectedFilter,
-              onChanged: (value) {
-                setState(() => _selectedFilter = value!);
-                _filterData();
-                Navigator.pop(context);
-              },
-            ),
-            RadioListTile<String>(
-              title: const Text('This Week'),
-              value: 'week',
-              groupValue: _selectedFilter,
-              onChanged: (value) {
-                setState(() => _selectedFilter = value!);
-                _filterData();
-                Navigator.pop(context);
-              },
-            ),
-            RadioListTile<String>(
-              title: const Text('This Month'),
-              value: 'month',
-              groupValue: _selectedFilter,
-              onChanged: (value) {
-                setState(() => _selectedFilter = value!);
-                _filterData();
-                Navigator.pop(context);
-              },
+            const SizedBox(width: 12),
+            Text(
+              title,
+              style: TextStyle(
+                fontSize: 16,
+                color: Colors.grey[800],
+                fontWeight: _selectedFilter == value
+                    ? FontWeight.w600
+                    : FontWeight.normal,
+              ),
             ),
           ],
         ),
@@ -979,11 +1262,35 @@ class _TechnicianStatusTabState extends State<TechnicianStatusTab>
         _filteredList.take(_currentPage * _itemsPerPage).toList();
 
     if (_isLoading) {
-      return const Center(child: CircularProgressIndicator());
+      return Center(
+        child: Column(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            SizedBox(
+              width: 50,
+              height: 50,
+              child: CircularProgressIndicator(
+                valueColor: AlwaysStoppedAnimation<Color>(
+                    Theme.of(context).primaryColor),
+                strokeWidth: 3,
+              ),
+            ),
+            const SizedBox(height: 16),
+            Text(
+              'Loading your tasks...',
+              style: TextStyle(
+                color: Colors.grey[600],
+                fontSize: 16,
+              ),
+            ),
+          ],
+        ),
+      );
     }
 
     return RefreshIndicator(
       onRefresh: _fetchData,
+      color: Theme.of(context).primaryColor,
       child: ListView(
         padding: EdgeInsets.zero,
         children: [
@@ -1011,9 +1318,13 @@ class _TechnicianStatusTabState extends State<TechnicianStatusTab>
                   unselectedLabelColor: Colors.grey[600],
                   indicatorColor: Theme.of(context).primaryColor,
                   indicatorWeight: 3,
+                  labelStyle: const TextStyle(
+                    fontWeight: FontWeight.bold,
+                    fontSize: 16,
+                  ),
                   tabs: const [
                     Tab(text: 'In Progress'),
-                    Tab(text: 'Done'),
+                    Tab(text: 'Completed'),
                   ],
                 ),
               ],
@@ -1024,12 +1335,66 @@ class _TechnicianStatusTabState extends State<TechnicianStatusTab>
               width: double.infinity,
               padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
               color: Colors.blue.withOpacity(0.1),
-              child: Text(
-                '${_filteredList.length} results for "${_searchController.text}"',
-                style: TextStyle(
-                  color: Colors.blue[800],
-                  fontWeight: FontWeight.w600,
-                ),
+              child: Row(
+                children: [
+                  Icon(Icons.search, color: Colors.blue[700], size: 20),
+                  const SizedBox(width: 8),
+                  Text(
+                    'Search results for "${_searchController.text}"',
+                    style: TextStyle(
+                      color: Colors.blue[700],
+                      fontWeight: FontWeight.w600,
+                    ),
+                  ),
+                  const Spacer(),
+                  TextButton.icon(
+                    onPressed: _clearSearch,
+                    icon: Icon(Icons.clear, color: Colors.blue[700], size: 16),
+                    label: Text(
+                      'Clear',
+                      style: TextStyle(color: Colors.blue[700]),
+                    ),
+                    style: TextButton.styleFrom(
+                      padding: const EdgeInsets.symmetric(horizontal: 8),
+                      minimumSize: Size.zero,
+                      tapTargetSize: MaterialTapTargetSize.shrinkWrap,
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          if (_selectedFilter != 'all')
+            Container(
+              width: double.infinity,
+              padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+              color: Colors.purple.withOpacity(0.1),
+              child: Row(
+                children: [
+                  Icon(Icons.filter_list, color: Colors.purple[700], size: 20),
+                  const SizedBox(width: 8),
+                  Text(
+                    'Filtered by: ${_getFilterName(_selectedFilter)}',
+                    style: TextStyle(
+                      color: Colors.purple[700],
+                      fontWeight: FontWeight.w600,
+                    ),
+                  ),
+                  const Spacer(),
+                  TextButton.icon(
+                    onPressed: _clearTimeFilter,
+                    icon:
+                        Icon(Icons.clear, color: Colors.purple[700], size: 16),
+                    label: Text(
+                      'Clear',
+                      style: TextStyle(color: Colors.purple[700]),
+                    ),
+                    style: TextButton.styleFrom(
+                      padding: const EdgeInsets.symmetric(horizontal: 8),
+                      minimumSize: Size.zero,
+                      tapTargetSize: MaterialTapTargetSize.shrinkWrap,
+                    ),
+                  ),
+                ],
               ),
             ),
           if (paginatedList.isEmpty)
@@ -1042,14 +1407,13 @@ class _TechnicianStatusTabState extends State<TechnicianStatusTab>
               padding: const EdgeInsets.all(16.0),
               child: Column(
                 children: [
-                  // --- CORRECTION: Corrected type checking for dispatching to the right card builder. ---
                   ...paginatedList.map((item) {
                     if (item is maintenance_task.TaskModel) {
-                      return _buildMaintenanceTaskCard(item);
+                      return _buildUnifiedMaintenanceTaskCard(item);
                     } else if (item is resource_task.TaskModel) {
-                      return _buildResourceTaskCard(item);
+                      return _buildUnifiedResourceTaskCard(item);
                     } else if (item is operasional_task.RideRequestModel) {
-                      return _buildRideRequestCard(item);
+                      return _buildUnifiedRideRequestCard(item);
                     }
                     return const SizedBox.shrink();
                   }).toList(),
@@ -1060,7 +1424,19 @@ class _TechnicianStatusTabState extends State<TechnicianStatusTab>
                         child: ElevatedButton.icon(
                           onPressed: _loadMore,
                           icon: const Icon(Icons.expand_more),
-                          label: const Text('See More'),
+                          label: const Text('Load More'),
+                          style: ElevatedButton.styleFrom(
+                            foregroundColor: Colors.white,
+                            backgroundColor: Theme.of(context).primaryColor,
+                            elevation: 2,
+                            shape: RoundedRectangleBorder(
+                              borderRadius: BorderRadius.circular(25),
+                            ),
+                            padding: const EdgeInsets.symmetric(
+                              horizontal: 20,
+                              vertical: 12,
+                            ),
+                          ),
                         ),
                       ),
                     ),
@@ -1070,6 +1446,19 @@ class _TechnicianStatusTabState extends State<TechnicianStatusTab>
         ],
       ),
     );
+  }
+
+  String _getFilterName(String filterValue) {
+    switch (filterValue) {
+      case 'today':
+        return 'Today';
+      case 'week':
+        return 'This Week';
+      case 'month':
+        return 'This Month';
+      default:
+        return 'All Time';
+    }
   }
 
   Widget _buildStatisticsCards() {
@@ -1090,17 +1479,17 @@ class _TechnicianStatusTabState extends State<TechnicianStatusTab>
               count: inProgressCount,
               icon: Icons.sync_outlined,
               color: Colors.purple.shade800,
-              backgroundColor: Colors.purple.shade50,
+              backgroundColor: Colors.white,
             ),
           ),
           const SizedBox(width: 16),
           Expanded(
             child: _buildStatCard(
-              title: 'Done',
+              title: 'Completed',
               count: completedCount,
               icon: Icons.check_circle_outline,
               color: Colors.green.shade800,
-              backgroundColor: Colors.green.shade50,
+              backgroundColor: Colors.white,
             ),
           ),
         ],
@@ -1119,34 +1508,45 @@ class _TechnicianStatusTabState extends State<TechnicianStatusTab>
       padding: const EdgeInsets.all(16),
       decoration: BoxDecoration(
         color: backgroundColor,
-        borderRadius: BorderRadius.circular(16),
+        borderRadius: BorderRadius.circular(20),
+        boxShadow: [
+          BoxShadow(
+            color: color.withOpacity(0.15),
+            blurRadius: 10,
+            offset: const Offset(0, 4),
+          ),
+        ],
       ),
       child: Row(
         children: [
-          Icon(icon, color: color, size: 28),
-          const SizedBox(width: 12),
-          Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(
-                  count.toString(),
-                  style: TextStyle(
-                    fontSize: 22,
-                    fontWeight: FontWeight.bold,
-                    color: color,
-                  ),
-                ),
-                Text(
-                  title,
-                  style: TextStyle(
-                    fontSize: 14,
-                    color: color.withOpacity(0.8),
-                  ),
-                  overflow: TextOverflow.ellipsis,
-                ),
-              ],
+          Container(
+            padding: const EdgeInsets.all(10),
+            decoration: BoxDecoration(
+              color: color.withOpacity(0.1),
+              shape: BoxShape.circle,
             ),
+            child: Icon(icon, color: color, size: 24),
+          ),
+          const SizedBox(width: 12),
+          Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Text(
+                count.toString(),
+                style: TextStyle(
+                  fontSize: 24,
+                  fontWeight: FontWeight.bold,
+                  color: color,
+                ),
+              ),
+              Text(
+                title,
+                style: TextStyle(
+                  fontSize: 14,
+                  color: color.withOpacity(0.8),
+                ),
+              ),
+            ],
           ),
         ],
       ),
@@ -1157,39 +1557,46 @@ class _TechnicianStatusTabState extends State<TechnicianStatusTab>
     return Row(
       children: [
         Expanded(
-          child: TextField(
-            controller: _searchController,
-            decoration: InputDecoration(
-              hintText: 'Search Task...',
-              prefixIcon: Icon(Icons.search, color: Colors.grey[600]),
-              suffixIcon: _searchQuery.isNotEmpty
-                  ? IconButton(
-                      icon: Icon(Icons.clear, color: Colors.grey[600]),
-                      onPressed: _clearSearch,
-                    )
-                  : null,
-              border: OutlineInputBorder(
-                borderRadius: BorderRadius.circular(12),
-                borderSide: BorderSide.none,
+          child: Container(
+            decoration: BoxDecoration(
+              color: Colors.grey[100],
+              borderRadius: BorderRadius.circular(16),
+            ),
+            child: TextField(
+              controller: _searchController,
+              decoration: InputDecoration(
+                hintText: 'Find your task here...',
+                hintStyle: TextStyle(color: Colors.grey[500], fontSize: 14),
+                prefixIcon: Icon(Icons.search, color: Colors.grey[600]),
+                suffixIcon: _searchQuery.isNotEmpty
+                    ? IconButton(
+                        icon: Icon(Icons.clear, color: Colors.grey[600]),
+                        onPressed: _clearSearch,
+                      )
+                    : null,
+                border: InputBorder.none,
+                contentPadding:
+                    const EdgeInsets.symmetric(vertical: 12, horizontal: 16),
               ),
-              filled: true,
-              fillColor: Colors.grey[100],
-              contentPadding:
-                  const EdgeInsets.symmetric(vertical: 12, horizontal: 16),
             ),
           ),
         ),
         const SizedBox(width: 8),
+        // Filter Button
         Container(
           decoration: BoxDecoration(
-            color: Colors.grey[100],
-            borderRadius: BorderRadius.circular(12),
+            color: _selectedFilter != 'all'
+                ? Colors.purple.withOpacity(0.1)
+                : Colors.grey[100],
+            shape: BoxShape.circle,
           ),
           child: IconButton(
             onPressed: _showFilterDialog,
             icon: Icon(
               Icons.filter_list,
-              color: Theme.of(context).primaryColor,
+              color: _selectedFilter != 'all'
+                  ? Colors.purple[700]
+                  : Theme.of(context).primaryColor,
             ),
             tooltip: 'Filter By Time',
           ),
@@ -1207,7 +1614,6 @@ class _TechnicianStatusTabState extends State<TechnicianStatusTab>
     String description = 'There are no tasks with this status at this time.';
     Widget? actionButton;
 
-    // 1. Cek apakah ada pencarian aktif
     if (isSearchActive) {
       icon = Icons.search_off;
       title = 'Search Not Found';
@@ -1215,11 +1621,12 @@ class _TechnicianStatusTabState extends State<TechnicianStatusTab>
       actionButton = TextButton.icon(
         onPressed: _clearSearch,
         icon: const Icon(Icons.clear, color: Colors.red),
-        label: const Text('Clear Search', style: TextStyle(color: Colors.red)),
+        label: const Text(
+          'Clear Search',
+          style: TextStyle(color: Colors.red),
+        ),
       );
-    }
-    // 2. Jika tidak, cek apakah ada filter waktu aktif
-    else if (isTimeFilterActive) {
+    } else if (isTimeFilterActive) {
       icon = Icons.filter_alt_off_outlined;
       title = 'Data Not Found';
       description = 'There is no data in the selected time range.';
@@ -1232,7 +1639,6 @@ class _TechnicianStatusTabState extends State<TechnicianStatusTab>
         ),
       );
     }
-
     return Center(
       child: Column(
         mainAxisAlignment: MainAxisAlignment.center,
@@ -1260,7 +1666,7 @@ class _TechnicianStatusTabState extends State<TechnicianStatusTab>
           ),
           const SizedBox(height: 8),
           Padding(
-            padding: const EdgeInsets.symmetric(horizontal: 32.0),
+            padding: const EdgeInsets.symmetric(horizontal: 32),
             child: Text(
               description,
               textAlign: TextAlign.center,
@@ -1278,53 +1684,424 @@ class _TechnicianStatusTabState extends State<TechnicianStatusTab>
   }
 
   Widget _buildStatusChip(String status) {
-    Color color;
     String text;
+    Color color;
+    Color backgroundColor;
 
     switch (status.toLowerCase()) {
       case 'in_progress':
       case 'inprogress':
         text = 'IN PROGRESS';
-        color = Colors.blue;
+        color = Colors.blue.shade700;
+        backgroundColor = Colors.blue.withOpacity(0.1);
         break;
       case 'completed':
         text = 'COMPLETED';
-        color = Colors.green;
+        color = Colors.green.shade700;
+        backgroundColor = Colors.green.withOpacity(0.1);
         break;
       default:
         text = status.toUpperCase();
-        color = Colors.grey;
+        color = Colors.grey.shade700;
+        backgroundColor = Colors.grey.withOpacity(0.1);
     }
 
     return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+      padding: const EdgeInsets.symmetric(
+          horizontal: 8, vertical: 2), // Reduced padding
       decoration: BoxDecoration(
-        color: color.withOpacity(0.1),
-        borderRadius: BorderRadius.circular(12),
+        color: backgroundColor,
+        borderRadius: BorderRadius.circular(8), // Smaller border radius
       ),
       child: Text(
         text,
-        style:
-            TextStyle(fontSize: 10, fontWeight: FontWeight.bold, color: color),
+        style: TextStyle(
+          fontSize: 9, // Smaller font
+          fontWeight: FontWeight.bold,
+          color: color,
+        ),
       ),
     );
   }
 
-  String _getFormattedDate(DateTime date) {
-    return DateFormat('d MMM yyyy, HH:mm').format(date);
+  // --- NEW UNIFIED TASK CARDS ---
+
+  Widget _buildUnifiedMaintenanceTaskCard(maintenance_task.TaskModel task) {
+    return Card(
+      margin: const EdgeInsets.only(bottom: 16),
+      elevation: 0,
+      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
+      child: InkWell(
+        onTap: () => _showTaskDetailMaintenance(task),
+        borderRadius: BorderRadius.circular(20),
+        child: Container(
+          decoration: BoxDecoration(
+            borderRadius: BorderRadius.circular(20),
+            color: Colors.white,
+            boxShadow: [
+              BoxShadow(
+                color: Colors.orange.withOpacity(0.15),
+                blurRadius: 10,
+                spreadRadius: 0,
+                offset: const Offset(0, 5),
+              ),
+            ],
+            border: Border.all(
+              color: Colors.orange.withOpacity(0.1),
+              width: 1.5,
+            ),
+          ),
+          child: Padding(
+            padding: const EdgeInsets.all(12.0),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                Row(
+                  children: [
+                    Container(
+                      padding: const EdgeInsets.all(8),
+                      decoration: BoxDecoration(
+                        color: Colors.orange.withOpacity(0.1),
+                        borderRadius: BorderRadius.circular(12),
+                      ),
+                      child: Icon(Icons.construction,
+                          color: Colors.orange[700], size: 18),
+                    ),
+                    const SizedBox(width: 8),
+                    Expanded(
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          const Text(
+                            'Maintenance Task',
+                            style: TextStyle(
+                              fontWeight: FontWeight.bold,
+                              fontSize: 14,
+                              color: Color(0xFF2D3748),
+                            ),
+                          ),
+                          const SizedBox(height: 2),
+                          _buildStatusChip(task.status),
+                        ],
+                      ),
+                    ),
+                    Icon(Icons.arrow_forward_ios,
+                        size: 14, color: Colors.grey[400]),
+                  ],
+                ),
+                if (task.imageUrl != null) ...[
+                  const SizedBox(height: 8),
+                  SizedBox(
+                    height: 100,
+                    child: ClipRRect(
+                      borderRadius: BorderRadius.circular(12),
+                      child: FirebaseStorageImage(
+                        imageUrl: task.imageUrl!,
+                        fit: BoxFit.cover,
+                        width: double.infinity,
+                      ),
+                    ),
+                  ),
+                ],
+                const SizedBox(height: 8),
+                Row(
+                  children: [
+                    Icon(Icons.location_on, size: 14, color: Colors.grey[600]),
+                    const SizedBox(width: 4),
+                    Expanded(
+                      child: Text(
+                        '${task.roomName}',
+                        style: TextStyle(
+                          fontWeight: FontWeight.w600,
+                          fontSize: 12,
+                          color: Colors.grey[800],
+                        ),
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
+                      ),
+                    ),
+                  ],
+                ),
+                const SizedBox(height: 6),
+                Container(
+                  width: double.infinity,
+                  padding:
+                      const EdgeInsets.symmetric(horizontal: 10, vertical: 8),
+                  decoration: BoxDecoration(
+                    color: Colors.grey[50],
+                    borderRadius: BorderRadius.circular(10),
+                    border: Border.all(
+                      color: Colors.grey[200]!,
+                      width: 1,
+                    ),
+                  ),
+                  child: Text(
+                    task.description,
+                    style: TextStyle(
+                      fontSize: 12,
+                      color: Colors.grey[700],
+                      height: 1.2,
+                    ),
+                    maxLines: 2,
+                    overflow: TextOverflow.ellipsis,
+                  ),
+                ),
+                const SizedBox(height: 6),
+                _buildCompactInfoRow(
+                  Icons.access_time,
+                  'Assigned: ${DateFormat('dd MMM').format(task.assignedAt)}',
+                ),
+              ],
+            ),
+          ),
+        ),
+      ),
+    );
   }
 
-  String _getTimeAgo(DateTime date) {
-    final now = DateTime.now();
-    final difference = now.difference(date);
+  Widget _buildUnifiedResourceTaskCard(resource_task.TaskModel task) {
+    final bool isResourceRequest = task.request == 'resource';
+    return Card(
+      margin: const EdgeInsets.only(bottom: 16),
+      elevation: 0,
+      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
+      child: InkWell(
+        onTap: () => _showTaskDetailResource(task),
+        borderRadius: BorderRadius.circular(20),
+        child: Container(
+          decoration: BoxDecoration(
+            borderRadius: BorderRadius.circular(20),
+            color: Colors.white,
+            boxShadow: [
+              BoxShadow(
+                color: Colors.cyan.withOpacity(0.15),
+                blurRadius: 10,
+                spreadRadius: 0,
+                offset: const Offset(0, 5),
+              ),
+            ],
+            border: Border.all(
+              color: Colors.cyan.withOpacity(0.1),
+              width: 1.5,
+            ),
+          ),
+          child: Padding(
+            padding: const EdgeInsets.all(12.0),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                Row(
+                  children: [
+                    Container(
+                      padding: const EdgeInsets.all(8),
+                      decoration: BoxDecoration(
+                        color: Colors.cyan.withOpacity(0.1),
+                        borderRadius: BorderRadius.circular(12),
+                      ),
+                      child: Icon(
+                        isResourceRequest
+                            ? Icons.supervisor_account
+                            : Icons.inventory,
+                        size: 18,
+                        color: Colors.cyan[700],
+                      ),
+                    ),
+                    const SizedBox(width: 8),
+                    Expanded(
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          const Text(
+                            'Resource/Item Task',
+                            style: TextStyle(
+                              fontWeight: FontWeight.bold,
+                              fontSize: 14,
+                              color: Color(0xFF2D3748),
+                            ),
+                          ),
+                          const SizedBox(height: 2),
+                          _buildStatusChip(task.status),
+                        ],
+                      ),
+                    ),
+                    Icon(Icons.arrow_forward_ios,
+                        size: 14, color: Colors.grey[400]),
+                  ],
+                ),
+                const SizedBox(height: 8),
+                Container(
+                  width: double.infinity,
+                  padding:
+                      const EdgeInsets.symmetric(horizontal: 10, vertical: 8),
+                  decoration: BoxDecoration(
+                    color: Colors.grey[50],
+                    borderRadius: BorderRadius.circular(10),
+                    border: Border.all(
+                      color: Colors.grey[200]!,
+                      width: 1,
+                    ),
+                  ),
+                  child: Text(
+                    task.description,
+                    style: TextStyle(
+                      fontSize: 12,
+                      color: Colors.grey[700],
+                      height: 1.2,
+                    ),
+                    maxLines: 2,
+                    overflow: TextOverflow.ellipsis,
+                  ),
+                ),
+                const SizedBox(height: 6),
+                _buildCompactInfoRow(
+                  Icons.person_outline,
+                  'Requester: ${task.requesterName}',
+                ),
+                if (task.timeRequired != null && task.timeRequired!.isNotEmpty)
+                  _buildCompactInfoRow(
+                    Icons.calendar_today_outlined,
+                    'Time: ${task.timeRequired!}',
+                  ),
+              ],
+            ),
+          ),
+        ),
+      ),
+    );
+  }
 
-    if (difference.inDays > 0) {
-      return '${difference.inDays} days ago';
-    } else if (difference.inHours > 0) {
-      return '${difference.inHours} hours ago';
-    } else {
-      return '${difference.inMinutes} minutes ago';
-    }
+  Widget _buildUnifiedRideRequestCard(
+      operasional_task.RideRequestModel request) {
+    return Card(
+      margin: const EdgeInsets.only(bottom: 16),
+      elevation: 0,
+      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
+      child: InkWell(
+        onTap: () => _showRequestDetailRide(request),
+        borderRadius: BorderRadius.circular(20),
+        child: Container(
+          decoration: BoxDecoration(
+            borderRadius: BorderRadius.circular(20),
+            color: Colors.white,
+            boxShadow: [
+              BoxShadow(
+                color: Colors.red.withOpacity(0.15),
+                blurRadius: 10,
+                spreadRadius: 0,
+                offset: const Offset(0, 5),
+              ),
+            ],
+            border: Border.all(
+              color: Colors.red.withOpacity(0.1),
+              width: 1.5,
+            ),
+          ),
+          child: Padding(
+            padding: const EdgeInsets.all(12.0),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                Row(
+                  children: [
+                    Container(
+                      padding: const EdgeInsets.all(8),
+                      decoration: BoxDecoration(
+                        color: Colors.red.withOpacity(0.1),
+                        borderRadius: BorderRadius.circular(12),
+                      ),
+                      child: Icon(Icons.directions_car,
+                          color: Colors.red[700], size: 18),
+                    ),
+                    const SizedBox(width: 8),
+                    Expanded(
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          const Text(
+                            'Operational Ride',
+                            style: TextStyle(
+                              fontWeight: FontWeight.bold,
+                              fontSize: 14,
+                              color: Color(0xFF2D3748),
+                            ),
+                          ),
+                          const SizedBox(height: 2),
+                          _buildStatusChip(request.status),
+                        ],
+                      ),
+                    ),
+                    Icon(Icons.arrow_forward_ios,
+                        size: 14, color: Colors.grey[400]),
+                  ],
+                ),
+                const SizedBox(height: 8),
+                _buildCompactInfoRow(
+                  Icons.my_location,
+                  'From: ${request.pickupLocation}',
+                ),
+                _buildCompactInfoRow(
+                  Icons.location_on_outlined,
+                  'To: ${request.dropoffLocation}',
+                ),
+                const SizedBox(height: 6),
+                Container(
+                  width: double.infinity,
+                  padding:
+                      const EdgeInsets.symmetric(horizontal: 10, vertical: 8),
+                  decoration: BoxDecoration(
+                    color: Colors.grey[50],
+                    borderRadius: BorderRadius.circular(10),
+                    border: Border.all(
+                      color: Colors.grey[200]!,
+                      width: 1,
+                    ),
+                  ),
+                  child: Text(
+                    'Requester: ${request.employeeName}',
+                    style: TextStyle(
+                      fontSize: 12,
+                      color: Colors.grey[700],
+                      height: 1.2,
+                    ),
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                  ),
+                ),
+                const SizedBox(height: 6),
+                _buildCompactInfoRow(
+                  Icons.event,
+                  'Pickup: ${DateFormat('dd MMM, HH:mm').format(request.pickupDateTime)}',
+                ),
+              ],
+            ),
+          ),
+        ),
+      ),
+    );
+  }
+
+  Widget _buildCompactInfoRow(IconData icon, String text) {
+    return Padding(
+      padding: const EdgeInsets.only(top: 2.0, bottom: 2.0),
+      child: Row(
+        crossAxisAlignment: CrossAxisAlignment.center,
+        children: [
+          Icon(icon, size: 12, color: Colors.grey[500]),
+          const SizedBox(width: 4),
+          Expanded(
+            child: Text(
+              text,
+              style: TextStyle(fontSize: 11, color: Colors.grey[600]),
+              maxLines: 1,
+              overflow: TextOverflow.ellipsis,
+            ),
+          ),
+        ],
+      ),
+    );
   }
 
   void _showTaskDetailMaintenance(maintenance_task.TaskModel task) {
@@ -1334,7 +2111,7 @@ class _TechnicianStatusTabState extends State<TechnicianStatusTab>
       backgroundColor: Colors.transparent,
       builder: (context) => Container(
         height: MediaQuery.of(context).size.height * 0.75,
-        decoration: BoxDecoration(
+        decoration: const BoxDecoration(
           color: Colors.white,
           borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
         ),
@@ -1344,20 +2121,18 @@ class _TechnicianStatusTabState extends State<TechnicianStatusTab>
             Container(
               width: 40,
               height: 4,
-              margin: EdgeInsets.symmetric(vertical: 12),
+              margin: const EdgeInsets.symmetric(vertical: 12),
               decoration: BoxDecoration(
                 color: Colors.grey[300],
                 borderRadius: BorderRadius.circular(2),
               ),
             ),
-
-            // Header with status
             Padding(
-              padding: EdgeInsets.symmetric(horizontal: 20),
+              padding: const EdgeInsets.symmetric(horizontal: 20),
               child: Row(
                 mainAxisAlignment: MainAxisAlignment.spaceBetween,
                 children: [
-                  Text(
+                  const Text(
                     'Task Details',
                     style: TextStyle(
                       fontSize: 20,
@@ -1368,19 +2143,15 @@ class _TechnicianStatusTabState extends State<TechnicianStatusTab>
                 ],
               ),
             ),
-
-            Divider(height: 24),
-
-            // Content
+            const Divider(height: 24),
             Expanded(
               child: SingleChildScrollView(
-                padding: EdgeInsets.all(20),
+                padding: const EdgeInsets.all(20),
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    // Task info card
                     Container(
-                      padding: EdgeInsets.all(16),
+                      padding: const EdgeInsets.all(16),
                       decoration: BoxDecoration(
                         color: Colors.blue[50],
                         borderRadius: BorderRadius.circular(12),
@@ -1410,19 +2181,16 @@ class _TechnicianStatusTabState extends State<TechnicianStatusTab>
                         ],
                       ),
                     ),
-
-                    SizedBox(height: 20),
-
-                    // Image if available
+                    const SizedBox(height: 20),
                     if (task.imageUrl != null) ...[
-                      Text(
+                      const Text(
                         'Issue Photo',
                         style: TextStyle(
                           fontWeight: FontWeight.bold,
                           fontSize: 16,
                         ),
                       ),
-                      SizedBox(height: 8),
+                      const SizedBox(height: 8),
                       GestureDetector(
                         onTap: () =>
                             _showFullScreenImage(context, task.imageUrl!),
@@ -1447,12 +2215,12 @@ class _TechnicianStatusTabState extends State<TechnicianStatusTab>
                                 right: 10,
                                 bottom: 10,
                                 child: Container(
-                                  padding: EdgeInsets.all(8),
+                                  padding: const EdgeInsets.all(8),
                                   decoration: BoxDecoration(
                                     color: Colors.black.withOpacity(0.5),
                                     borderRadius: BorderRadius.circular(20),
                                   ),
-                                  child: Icon(
+                                  child: const Icon(
                                     Icons.zoom_in,
                                     color: Colors.white,
                                     size: 24,
@@ -1463,21 +2231,19 @@ class _TechnicianStatusTabState extends State<TechnicianStatusTab>
                           ),
                         ),
                       ),
-                      SizedBox(height: 20),
+                      const SizedBox(height: 20),
                     ],
-
-                    // Description section
-                    Text(
+                    const Text(
                       'Description',
                       style: TextStyle(
                         fontWeight: FontWeight.bold,
                         fontSize: 16,
                       ),
                     ),
-                    SizedBox(height: 8),
+                    const SizedBox(height: 8),
                     Container(
                       width: double.infinity,
-                      padding: EdgeInsets.all(16),
+                      padding: const EdgeInsets.all(16),
                       decoration: BoxDecoration(
                         color: Colors.grey[50],
                         borderRadius: BorderRadius.circular(12),
@@ -1491,11 +2257,9 @@ class _TechnicianStatusTabState extends State<TechnicianStatusTab>
                         ),
                       ),
                     ),
-
-                    // Completion Notes
                     if (task.status == 'completed' &&
                         task.completionNote != null) ...[
-                      SizedBox(height: 20),
+                      const SizedBox(height: 20),
                       Text(
                         'Completion Notes',
                         style: TextStyle(
@@ -1504,10 +2268,10 @@ class _TechnicianStatusTabState extends State<TechnicianStatusTab>
                           color: Colors.green[700],
                         ),
                       ),
-                      SizedBox(height: 8),
+                      const SizedBox(height: 8),
                       Container(
                         width: double.infinity,
-                        padding: EdgeInsets.all(16),
+                        padding: const EdgeInsets.all(16),
                         decoration: BoxDecoration(
                           color: Colors.green[50],
                           borderRadius: BorderRadius.circular(12),
@@ -1522,17 +2286,14 @@ class _TechnicianStatusTabState extends State<TechnicianStatusTab>
                         ),
                       ),
                     ],
-
-                    SizedBox(height: 20),
+                    const SizedBox(height: 20),
                   ],
                 ),
               ),
             ),
-
-            // Action button
             if (task.status == 'inProgress' || task.status == 'in_progress')
               Padding(
-                padding: EdgeInsets.all(16),
+                padding: const EdgeInsets.all(16),
                 child: CustomButton(
                   text: 'Mark as Completed',
                   onPressed: () {
@@ -1542,16 +2303,15 @@ class _TechnicianStatusTabState extends State<TechnicianStatusTab>
                   backgroundColor: Colors.green,
                 ),
               ),
-
             if (task.status == 'completed')
               Padding(
-                padding: EdgeInsets.all(16),
+                padding: const EdgeInsets.all(16),
                 child: ElevatedButton.icon(
                   onPressed: () => Navigator.pop(context),
-                  icon: Icon(Icons.keyboard_return),
-                  label: Text('Back to Tasks'),
+                  icon: const Icon(Icons.keyboard_return),
+                  label: const Text('Back to Tasks'),
                   style: ElevatedButton.styleFrom(
-                    minimumSize: Size(double.infinity, 50),
+                    minimumSize: const Size(double.infinity, 50),
                     shape: RoundedRectangleBorder(
                       borderRadius: BorderRadius.circular(12),
                     ),
@@ -1566,12 +2326,12 @@ class _TechnicianStatusTabState extends State<TechnicianStatusTab>
 
   Widget _buildDetailItem(String label, String value, IconData icon) {
     return Padding(
-      padding: EdgeInsets.symmetric(vertical: 8),
+      padding: const EdgeInsets.symmetric(vertical: 8),
       child: Row(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           Icon(icon, size: 18, color: Colors.blue[700]),
-          SizedBox(width: 12),
+          const SizedBox(width: 12),
           SizedBox(
             width: 80,
             child: Text(
@@ -1602,12 +2362,12 @@ class _TechnicianStatusTabState extends State<TechnicianStatusTab>
           backgroundColor: Colors.black,
           appBar: AppBar(
             backgroundColor: Colors.black,
-            iconTheme: IconThemeData(color: Colors.white),
+            iconTheme: const IconThemeData(color: Colors.white),
           ),
           body: Center(
             child: InteractiveViewer(
               panEnabled: true,
-              boundaryMargin: EdgeInsets.all(20),
+              boundaryMargin: const EdgeInsets.all(20),
               minScale: 0.5,
               maxScale: 4,
               child: Image.network(
@@ -1716,7 +2476,6 @@ class _TechnicianStatusTabState extends State<TechnicianStatusTab>
                         ],
                       ),
                     ),
-                    // Tampilkan foto jika ini adalah permintaan item
                     if (!isResourceRequest && task.hasValidImage()) ...[
                       const SizedBox(height: 24),
                       const Text('Item Photo',
@@ -1725,7 +2484,6 @@ class _TechnicianStatusTabState extends State<TechnicianStatusTab>
                       const SizedBox(height: 12),
                       GestureDetector(
                         onTap: () {
-                          // Panggil fungsi untuk menampilkan gambar fullscreen
                           _showFullScreenImage(
                               context, task.getNormalizedImageUrl()!);
                         },
@@ -1848,7 +2606,6 @@ class _TechnicianStatusTabState extends State<TechnicianStatusTab>
     );
   }
 
-  // --- CORRECTION: Using correct aliased type RideRequestModel. ---
   void _showRequestDetailRide(operasional_task.RideRequestModel request) {
     showModalBottomSheet(
       context: context,
@@ -1856,30 +2613,27 @@ class _TechnicianStatusTabState extends State<TechnicianStatusTab>
       backgroundColor: Colors.transparent,
       builder: (context) => Container(
         height: MediaQuery.of(context).size.height * 0.8,
-        decoration: BoxDecoration(
+        decoration: const BoxDecoration(
           color: Colors.white,
           borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
         ),
         child: Column(
           children: [
-            // Drag handle
             Container(
               width: 40,
               height: 4,
-              margin: EdgeInsets.symmetric(vertical: 12),
+              margin: const EdgeInsets.symmetric(vertical: 12),
               decoration: BoxDecoration(
                 color: Colors.grey[300],
                 borderRadius: BorderRadius.circular(2),
               ),
             ),
-
-            // Header with status
             Padding(
-              padding: EdgeInsets.symmetric(horizontal: 20),
+              padding: const EdgeInsets.symmetric(horizontal: 20),
               child: Row(
                 mainAxisAlignment: MainAxisAlignment.spaceBetween,
                 children: [
-                  Text(
+                  const Text(
                     'Ride Details',
                     style: TextStyle(
                       fontSize: 20,
@@ -1890,19 +2644,15 @@ class _TechnicianStatusTabState extends State<TechnicianStatusTab>
                 ],
               ),
             ),
-
-            Divider(height: 24),
-
-            // Content
+            const Divider(height: 24),
             Expanded(
               child: SingleChildScrollView(
-                padding: EdgeInsets.all(20),
+                padding: const EdgeInsets.all(20),
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    // Ride info card
                     Container(
-                      padding: EdgeInsets.all(16),
+                      padding: const EdgeInsets.all(16),
                       decoration: BoxDecoration(
                         color: Colors.blue[50],
                         borderRadius: BorderRadius.circular(12),
@@ -1947,21 +2697,18 @@ class _TechnicianStatusTabState extends State<TechnicianStatusTab>
                         ],
                       ),
                     ),
-
-                    SizedBox(height: 20),
-
-                    // Description section
-                    Text(
+                    const SizedBox(height: 20),
+                    const Text(
                       'Description',
                       style: TextStyle(
                         fontWeight: FontWeight.bold,
                         fontSize: 16,
                       ),
                     ),
-                    SizedBox(height: 8),
+                    const SizedBox(height: 8),
                     Container(
                       width: double.infinity,
-                      padding: EdgeInsets.all(16),
+                      padding: const EdgeInsets.all(16),
                       decoration: BoxDecoration(
                         color: Colors.grey[50],
                         borderRadius: BorderRadius.circular(12),
@@ -1975,11 +2722,9 @@ class _TechnicianStatusTabState extends State<TechnicianStatusTab>
                         ),
                       ),
                     ),
-
-                    // Completion Notes
                     if (request.status == 'completed' &&
                         request.completionNote != null) ...[
-                      SizedBox(height: 20),
+                      const SizedBox(height: 20),
                       Text(
                         'Completion Notes',
                         style: TextStyle(
@@ -1988,10 +2733,10 @@ class _TechnicianStatusTabState extends State<TechnicianStatusTab>
                           color: Colors.green[700],
                         ),
                       ),
-                      SizedBox(height: 8),
+                      const SizedBox(height: 8),
                       Container(
                         width: double.infinity,
-                        padding: EdgeInsets.all(16),
+                        padding: const EdgeInsets.all(16),
                         decoration: BoxDecoration(
                           color: Colors.green[50],
                           borderRadius: BorderRadius.circular(12),
@@ -2006,18 +2751,15 @@ class _TechnicianStatusTabState extends State<TechnicianStatusTab>
                         ),
                       ),
                     ],
-
-                    SizedBox(height: 20),
+                    const SizedBox(height: 20),
                   ],
                 ),
               ),
             ),
-
-            // Action button
             if (request.status == 'inProgress' ||
                 request.status == 'in_progress')
               Padding(
-                padding: EdgeInsets.all(16),
+                padding: const EdgeInsets.all(16),
                 child: CustomButton(
                   text: 'Mark as Completed',
                   onPressed: () {
@@ -2027,16 +2769,15 @@ class _TechnicianStatusTabState extends State<TechnicianStatusTab>
                   backgroundColor: Colors.green,
                 ),
               ),
-
             if (request.status == 'completed')
               Padding(
-                padding: EdgeInsets.all(16),
+                padding: const EdgeInsets.all(16),
                 child: ElevatedButton.icon(
                   onPressed: () => Navigator.pop(context),
-                  icon: Icon(Icons.keyboard_return),
-                  label: Text('Back to Rides'),
+                  icon: const Icon(Icons.keyboard_return),
+                  label: const Text('Back to Rides'),
                   style: ElevatedButton.styleFrom(
-                    minimumSize: Size(double.infinity, 50),
+                    minimumSize: const Size(double.infinity, 50),
                     shape: RoundedRectangleBorder(
                       borderRadius: BorderRadius.circular(12),
                     ),
@@ -2055,13 +2796,13 @@ class _TechnicianStatusTabState extends State<TechnicianStatusTab>
     showDialog(
       context: context,
       builder: (context) => AlertDialog(
-        title: Text('Mark Task as Completed'),
+        title: const Text('Mark Task as Completed'),
         content: Column(
           mainAxisSize: MainAxisSize.min,
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            Text('Please provide completion notes:'),
-            SizedBox(height: 16),
+            const Text('Please provide completion notes:'),
+            const SizedBox(height: 16),
             CustomTextField(
               labelText: 'Completion Notes',
               hintText: 'Enter notes about the completed work...',
@@ -2076,12 +2817,12 @@ class _TechnicianStatusTabState extends State<TechnicianStatusTab>
               _completionMaintncNoteController.clear();
               Navigator.pop(context);
             },
-            child: Text('Cancel'),
+            child: const Text('Cancel'),
           ),
           TextButton(
             onPressed: () => _completeTaskMaintnc(task),
             child: _isLoading
-                ? Container(
+                ? const SizedBox(
                     width: 20,
                     height: 20,
                     child: CircularProgressIndicator(
@@ -2089,7 +2830,7 @@ class _TechnicianStatusTabState extends State<TechnicianStatusTab>
                       valueColor: AlwaysStoppedAnimation<Color>(Colors.green),
                     ),
                   )
-                : Text('Complete', style: TextStyle(color: Colors.green)),
+                : const Text('Complete', style: TextStyle(color: Colors.green)),
           ),
         ],
       ),
@@ -2099,7 +2840,7 @@ class _TechnicianStatusTabState extends State<TechnicianStatusTab>
   Future<void> _completeTaskMaintnc(maintenance_task.TaskModel task) async {
     if (_completionMaintncNoteController.text.trim().isEmpty) {
       ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
+        const SnackBar(
           content: Text('Please provide completion notes'),
           backgroundColor: Colors.red,
           behavior: SnackBarBehavior.floating,
@@ -2119,7 +2860,7 @@ class _TechnicianStatusTabState extends State<TechnicianStatusTab>
       );
 
       ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
+        const SnackBar(
           content: Text('Task marked as completed'),
           backgroundColor: Colors.green,
           behavior: SnackBarBehavior.floating,
@@ -2150,8 +2891,6 @@ class _TechnicianStatusTabState extends State<TechnicianStatusTab>
     showDialog(
       context: context,
       builder: (context) {
-        XFile? localSelectedImage;
-        Uint8List? localSelectedImageBytes;
         return StatefulBuilder(
           builder: (context, setStateDialog) {
             return AlertDialog(
@@ -2285,7 +3024,6 @@ class _TechnicianStatusTabState extends State<TechnicianStatusTab>
       );
 
       if (mounted) {
-        Navigator.pop(context);
         ScaffoldMessenger.of(context).showSnackBar(
           const SnackBar(
               content: Text('Task successfully completed!'),
@@ -2307,6 +3045,7 @@ class _TechnicianStatusTabState extends State<TechnicianStatusTab>
           _selectedImage = null;
           _selectedImageBytes = null;
         });
+        _fetchData();
       }
     }
   }
@@ -2317,13 +3056,13 @@ class _TechnicianStatusTabState extends State<TechnicianStatusTab>
     showDialog(
       context: context,
       builder: (context) => AlertDialog(
-        title: Text('Mark Ride as Completed'),
+        title: const Text('Mark Ride as Completed'),
         content: Column(
           mainAxisSize: MainAxisSize.min,
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            Text('Please provide completion notes:'),
-            SizedBox(height: 16),
+            const Text('Please provide completion notes:'),
+            const SizedBox(height: 16),
             CustomTextField(
               labelText: 'Completion Notes',
               hintText: 'Enter notes about the completed ride...',
@@ -2338,13 +3077,12 @@ class _TechnicianStatusTabState extends State<TechnicianStatusTab>
               _completionRideNoteController.clear();
               Navigator.pop(context);
             },
-            child: Text('Cancel'),
+            child: const Text('Cancel'),
           ),
-          // --- CORRECTION: Fixed typo, it should call _completeRequestRide(task) ---
           TextButton(
             onPressed: () => _completeRequestRide(task),
             child: _isLoading
-                ? Container(
+                ? const SizedBox(
                     width: 20,
                     height: 20,
                     child: CircularProgressIndicator(
@@ -2352,19 +3090,18 @@ class _TechnicianStatusTabState extends State<TechnicianStatusTab>
                       valueColor: AlwaysStoppedAnimation<Color>(Colors.green),
                     ),
                   )
-                : Text('Complete', style: TextStyle(color: Colors.green)),
+                : const Text('Complete', style: TextStyle(color: Colors.green)),
           ),
         ],
       ),
     );
   }
 
-  // --- CORRECTION: Fixed function signature and variable names (task vs request) ---
   Future<void> _completeRequestRide(
       operasional_task.RideRequestModel task) async {
     if (_completionRideNoteController.text.trim().isEmpty) {
       ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
+        const SnackBar(
           content: Text('Please provide completion notes'),
           backgroundColor: Colors.red,
           behavior: SnackBarBehavior.floating,
@@ -2385,7 +3122,7 @@ class _TechnicianStatusTabState extends State<TechnicianStatusTab>
       );
 
       ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
+        const SnackBar(
           content: Text('Ride marked as completed'),
           backgroundColor: Colors.green,
           behavior: SnackBarBehavior.floating,
@@ -2405,459 +3142,5 @@ class _TechnicianStatusTabState extends State<TechnicianStatusTab>
         _fetchData(); // Refresh the list
       }
     }
-  }
-
-  // --- KARTU TUGAS UNTUK TEKNISI ---
-
-  Widget _buildMaintenanceTaskCard(maintenance_task.TaskModel task) {
-    return Card(
-      margin: EdgeInsets.symmetric(horizontal: 8, vertical: 6),
-      elevation: 2,
-      shadowColor: Colors.orange.withOpacity(0.2),
-      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
-      child: InkWell(
-        onTap: () => _showTaskDetailMaintenance(task),
-        borderRadius: BorderRadius.circular(16),
-        child: Container(
-          decoration: BoxDecoration(
-            borderRadius: BorderRadius.circular(16),
-            gradient: LinearGradient(
-              colors: [
-                Colors.orange.withOpacity(0.05),
-                Colors.white,
-              ],
-              begin: Alignment.topLeft,
-              end: Alignment.bottomRight,
-            ),
-          ),
-          child: Padding(
-            padding: const EdgeInsets.all(16.0),
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Row(
-                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                  children: [
-                    Expanded(
-                      child: Row(
-                        children: [
-                          Container(
-                            padding: const EdgeInsets.all(8),
-                            decoration: BoxDecoration(
-                              color: Colors.orange[50],
-                              borderRadius: BorderRadius.circular(8),
-                            ),
-                            child: Icon(Icons.construction,
-                                color: Colors.orange[700], size: 16),
-                          ),
-                          const SizedBox(width: 12),
-                          Expanded(
-                            child: Column(
-                              crossAxisAlignment: CrossAxisAlignment.start,
-                              children: [
-                                const Text(
-                                  'Report Maintenance',
-                                  style: TextStyle(
-                                    fontWeight: FontWeight.bold,
-                                    fontSize: 16,
-                                    color: Color(0xFF2D3748),
-                                  ),
-                                ),
-                                if (task.itemName.isNotEmpty)
-                                  Text(
-                                    'Item: ${task.itemName}',
-                                    style: TextStyle(
-                                        fontSize: 14, color: Colors.grey[600]),
-                                  ),
-                              ],
-                            ),
-                          ),
-                        ],
-                      ),
-                    ),
-                    _buildStatusChip(task.status),
-                  ],
-                ),
-                const SizedBox(height: 12),
-                if (task.imageUrl != null) ...[
-                  ClipRRect(
-                    borderRadius: BorderRadius.circular(8),
-                    child: Image.network(
-                      task.imageUrl!,
-                      height: 120,
-                      width: double.infinity,
-                      fit: BoxFit.cover,
-                    ),
-                  ),
-                  const SizedBox(height: 12),
-                ],
-                Container(
-                  width: double.infinity,
-                  padding: const EdgeInsets.all(12),
-                  decoration: BoxDecoration(
-                    color: Colors.grey[50],
-                    borderRadius: BorderRadius.circular(8),
-                  ),
-                  child: Text(
-                    task.description,
-                    style: TextStyle(
-                        fontSize: 14, color: Colors.grey[700], height: 1.4),
-                    maxLines: 2,
-                    overflow: TextOverflow.ellipsis,
-                  ),
-                ),
-                const SizedBox(height: 12),
-                Row(
-                  crossAxisAlignment: CrossAxisAlignment.center,
-                  children: [
-                    // --- FIX: Menambahkan null-check untuk waktu ---
-                    if (task.status == 'completed' && task.completedAt != null)
-                      Icon(Icons.check_circle,
-                          size: 14, color: Colors.green[700])
-                    else if (task.assignedAt != null)
-                      Icon(Icons.access_time,
-                          size: 14, color: Colors.grey[600]),
-
-                    const SizedBox(width: 8),
-
-                    if (task.status == 'completed' && task.completedAt != null)
-                      Text(
-                        'Completed: ${_getTimeAgo(task.completedAt!)}',
-                        style: TextStyle(
-                            color: Colors.green[700],
-                            fontSize: 12,
-                            fontWeight: FontWeight.w500),
-                      )
-                    else if (task.assignedAt != null)
-                      Text(
-                        'Assigned: ${_getTimeAgo(task.assignedAt!)}',
-                        style: TextStyle(color: Colors.grey[600], fontSize: 12),
-                      ),
-
-                    const Spacer(),
-                  ],
-                ),
-                if (task.status == 'inProgress' ||
-                    task.status == 'in_progress') ...[
-                  const SizedBox(height: 16),
-                  CustomButton(
-                    text: 'Mark Complete',
-                    onPressed: () => _showCompleteDialogMaintenance(task),
-                    backgroundColor: Colors.green,
-                  ),
-                ],
-              ],
-            ),
-          ),
-        ),
-      ),
-    );
-  }
-
-  // --- CORRECTION: Using correct aliased type RideRequestModel. ---
-  Widget _buildRideRequestCard(operasional_task.RideRequestModel request) {
-    return Card(
-      margin: EdgeInsets.symmetric(horizontal: 8, vertical: 6),
-      elevation: 2,
-      shadowColor: Colors.red.withOpacity(0.2),
-      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
-      child: InkWell(
-        onTap: () => _showRequestDetailRide(request),
-        borderRadius: BorderRadius.circular(16),
-        child: Container(
-          decoration: BoxDecoration(
-            borderRadius: BorderRadius.circular(16),
-            gradient: LinearGradient(
-              colors: [
-                Colors.red.withOpacity(0.05),
-                Colors.white,
-              ],
-              begin: Alignment.topLeft,
-              end: Alignment.bottomRight,
-            ),
-          ),
-          child: Padding(
-            padding: EdgeInsets.all(16),
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Row(
-                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                  children: [
-                    Expanded(
-                      child: Row(
-                        children: [
-                          Container(
-                            padding: const EdgeInsets.all(8),
-                            decoration: BoxDecoration(
-                              color: Colors.red[50],
-                              borderRadius: BorderRadius.circular(8),
-                            ),
-                            child: Icon(Icons.directions_car,
-                                color: Colors.red[700], size: 16),
-                          ),
-                          const SizedBox(width: 12),
-                          Expanded(
-                            child: Column(
-                              crossAxisAlignment: CrossAxisAlignment.start,
-                              children: [
-                                Text(
-                                  'Pickup: ${request.pickupLocation}',
-                                  style: TextStyle(
-                                      fontSize: 16,
-                                      fontWeight: FontWeight.bold,
-                                      color: Colors.grey[800]),
-                                  overflow: TextOverflow.ellipsis,
-                                ),
-                                const SizedBox(height: 4),
-                                Text(
-                                  'Drop off: ${request.dropoffLocation}',
-                                  style: TextStyle(
-                                      fontSize: 14, color: Colors.grey[600]),
-                                  overflow: TextOverflow.ellipsis,
-                                ),
-                              ],
-                            ),
-                          ),
-                        ],
-                      ),
-                    ),
-                    _buildStatusChip(request.status),
-                  ],
-                ),
-                const SizedBox(height: 12),
-                _buildInfoRow(Icons.event, 'Pickup: ',
-                    DateFormat('MMM dd, HH:mm').format(request.pickupDateTime)),
-                _buildInfoRow(Icons.group, 'Passenger: ',
-                    request.passengerCapacity.toString()),
-                _buildInfoRow(
-                    Icons.person, 'Applicant: ', request.employeeName),
-                const SizedBox(height: 12),
-                if (request.status == 'inProgress' ||
-                    request.status == 'in_progress') ...[
-                  const SizedBox(height: 16),
-                  CustomButton(
-                    text: 'Mark Complete',
-                    onPressed: () => _showCompleteDialogRide(request),
-                    backgroundColor: Colors.green,
-                  ),
-                ],
-              ],
-            ),
-          ),
-        ),
-      ),
-    );
-  }
-
-  Widget _buildResourceTaskCard(resource_task.TaskModel task) {
-    final bool isResourceRequest = task.request == 'resource';
-    return Card(
-      color: Colors.white,
-      margin: const EdgeInsets.only(bottom: 16),
-      elevation: 2,
-      shadowColor: Colors.cyan.withOpacity(0.2),
-      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
-      child: InkWell(
-        onTap: () => _showTaskDetailResource(task),
-        borderRadius: BorderRadius.circular(16),
-        child: Container(
-          decoration: BoxDecoration(
-            borderRadius: BorderRadius.circular(16),
-            gradient: LinearGradient(
-              colors: [
-                Colors.cyan.withOpacity(0.05),
-                Colors.white,
-              ],
-              begin: Alignment.topLeft,
-              end: Alignment.bottomRight,
-            ),
-          ),
-          child: Padding(
-            padding: const EdgeInsets.all(16.0),
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Row(
-                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Container(
-                      padding: const EdgeInsets.all(8),
-                      decoration: BoxDecoration(
-                        color: Colors.cyan.withOpacity(0.1),
-                        borderRadius: BorderRadius.circular(8),
-                      ),
-                      child: Icon(
-                        isResourceRequest ? Icons.groups : Icons.inventory,
-                        color: Colors.cyan[700],
-                        size: 20,
-                      ),
-                    ),
-                    const SizedBox(width: 12),
-                    Expanded(
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          const Text(
-                            'Request Resource/Item',
-                            style: TextStyle(
-                              fontWeight: FontWeight.bold,
-                              fontSize: 16,
-                              color: Color(0xFF2D3748),
-                            ),
-                          ),
-                          Text(
-                            'By: ${task.requesterName ?? "N/A"}',
-                            style: TextStyle(
-                              fontSize: 12,
-                              color: Colors.grey[600],
-                            ),
-                          ),
-                        ],
-                      ),
-                    ),
-                    _buildStatusChip(task.status),
-                  ],
-                ),
-                if (!isResourceRequest && task.hasValidImage()) ...[
-                  const SizedBox(height: 12),
-                  SizedBox(
-                    width: double.infinity,
-                    height: 150,
-                    child: ClipRRect(
-                      borderRadius: BorderRadius.circular(12),
-                      child: FirebaseStorageImage(
-                        imageUrl: task.getNormalizedImageUrl(),
-                        fit: BoxFit.cover,
-                        placeholder: Container(
-                          color: Colors.grey[200],
-                          child:
-                              const Center(child: CircularProgressIndicator()),
-                        ),
-                        errorWidget: Container(
-                          color: Colors.grey[200],
-                          child: Center(
-                            child: Icon(
-                              Icons.image_not_supported_outlined,
-                              color: Colors.grey[400],
-                              size: 40,
-                            ),
-                          ),
-                        ),
-                      ),
-                    ),
-                  ),
-                ],
-                const SizedBox(height: 12),
-                Container(
-                  width: double.infinity,
-                  padding: const EdgeInsets.all(12),
-                  decoration: BoxDecoration(
-                    color: Colors.grey[50],
-                    borderRadius: BorderRadius.circular(8),
-                  ),
-                  child: Text(
-                    task.description ?? 'There is no description.',
-                    style: TextStyle(fontSize: 14, color: Colors.grey[700]),
-                    maxLines: 2,
-                    overflow: TextOverflow.ellipsis,
-                  ),
-                ),
-                const SizedBox(height: 12),
-                if (task.request != null)
-                  _buildInfoRow(
-                    isResourceRequest
-                        ? Icons.supervisor_account
-                        : Icons.inventory,
-                    'Need',
-                    '${task.request![0].toUpperCase()}${task.request!.substring(1)}',
-                  ),
-                if (task.timeRequired != null && task.timeRequired!.isNotEmpty)
-                  _buildInfoRow(
-                      Icons.calendar_today, 'Time', task.timeRequired!),
-                const SizedBox(height: 12),
-                const Divider(height: 1),
-                const SizedBox(height: 12),
-                Row(
-                  crossAxisAlignment: CrossAxisAlignment.center,
-                  children: [
-                    // --- FIX: Menambahkan null-check untuk waktu ---
-                    if (task.status == 'completed' && task.completedAt != null)
-                      Icon(Icons.check_circle,
-                          size: 14, color: Colors.green[700])
-                    else if (task.assignedAt != null)
-                      Icon(Icons.access_time,
-                          size: 14, color: Colors.grey[600]),
-
-                    const SizedBox(width: 8),
-
-                    if (task.status == 'completed' && task.completedAt != null)
-                      Text(
-                        'Completed at: ${_getTimeAgo(task.completedAt!)}',
-                        style: TextStyle(
-                            color: Colors.green[700],
-                            fontSize: 12,
-                            fontWeight: FontWeight.w500),
-                      )
-                    else if (task.assignedAt != null)
-                      Text(
-                        'Assigned at: ${_getTimeAgo(task.assignedAt!)}',
-                        style: TextStyle(color: Colors.grey[600], fontSize: 12),
-                      ),
-
-                    const Spacer(),
-                  ],
-                ),
-                if (task.status == 'inProgress' ||
-                    task.status == 'in_progress') ...[
-                  const SizedBox(height: 16),
-                  CustomButton(
-                    text: 'Mark Complete',
-                    onPressed: () => _showCompleteDialogResource(task),
-                    backgroundColor: Colors.green,
-                    icon: Icons.check_circle,
-                  ),
-                ],
-              ],
-            ),
-          ),
-        ),
-      ),
-    );
-  }
-
-  Widget _buildInfoRow(IconData icon, String label, String value) {
-    return Padding(
-      padding: const EdgeInsets.only(bottom: 6.0),
-      child: Row(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Icon(icon, size: 18, color: Colors.grey[600]),
-          const SizedBox(width: 12),
-          Expanded(
-            child: RichText(
-              text: TextSpan(
-                style: DefaultTextStyle.of(context).style,
-                children: <TextSpan>[
-                  TextSpan(
-                    text: '$label ',
-                    style: TextStyle(fontSize: 14, color: Colors.grey[600]),
-                  ),
-                  TextSpan(
-                    text: value,
-                    style: const TextStyle(
-                      fontSize: 14,
-                      fontWeight: FontWeight.w500,
-                      color: Colors.black87,
-                    ),
-                  ),
-                ],
-              ),
-            ),
-          ),
-        ],
-      ),
-    );
   }
 }
