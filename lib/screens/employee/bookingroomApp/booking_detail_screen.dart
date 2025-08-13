@@ -63,7 +63,7 @@ class _BookingDetailScreenState extends State<BookingDetailScreen> {
     if (_rating == 0) {
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(
-          content: Text('Silakan berikan minimal 1 bintang.'),
+          content: Text('Please give at least 1 star.'),
           backgroundColor: Colors.orange,
         ),
       );
@@ -91,7 +91,7 @@ class _BookingDetailScreenState extends State<BookingDetailScreen> {
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
           const SnackBar(
-            content: Text('Terima kasih! Penilaian Anda telah disimpan.'),
+            content: Text('Thank You! Your rating has been saved.'),
             backgroundColor: Colors.green,
           ),
         );
@@ -100,7 +100,7 @@ class _BookingDetailScreenState extends State<BookingDetailScreen> {
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
-            content: Text('Gagal mengirim penilaian: $e'),
+            content: Text('Failed to send assessment: $e'),
             backgroundColor: Colors.red,
           ),
         );
@@ -126,7 +126,7 @@ class _BookingDetailScreenState extends State<BookingDetailScreen> {
         crossAxisAlignment: CrossAxisAlignment.center,
         children: [
           Text(
-            hasRated ? 'Penilaian Anda' : 'Beri Penilaian Kesiapan Ruangan',
+            hasRated ? 'Your Rating' : 'Rate Room Readiness',
             style: TextStyle(
               fontSize: 16,
               fontWeight: FontWeight.w600,
@@ -160,7 +160,7 @@ class _BookingDetailScreenState extends State<BookingDetailScreen> {
               controller: _commentController,
               maxLines: 3,
               decoration: InputDecoration(
-                hintText: 'Tulis ulasan Anda (opsional)...',
+                hintText: 'Write your review (optional)...',
                 border: OutlineInputBorder(
                   borderRadius: BorderRadius.circular(8),
                   borderSide: BorderSide.none,
@@ -188,7 +188,7 @@ class _BookingDetailScreenState extends State<BookingDetailScreen> {
                           color: Colors.white, strokeWidth: 2),
                     )
                   : const Icon(Icons.send_outlined),
-              label: Text(_isSubmitting ? 'Mengirim...' : 'Kirim Penilaian'),
+              label: Text(_isSubmitting ? 'Send...' : 'Submit Assessment'),
             ),
           ] else ...[
             // --- Tampilan setelah memberi rating ---
@@ -214,7 +214,7 @@ class _BookingDetailScreenState extends State<BookingDetailScreen> {
               )
             else
               Text(
-                'Terima kasih atas penilaian Anda!',
+                'Thank you for your rating!',
                 style: TextStyle(
                   color: Colors.green[700],
                   fontWeight: FontWeight.w500,
@@ -230,7 +230,7 @@ class _BookingDetailScreenState extends State<BookingDetailScreen> {
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
-        title: const Text('Detail Booking'),
+        title: const Text('Booking Details'),
         backgroundColor: Theme.of(context).primaryColor,
         foregroundColor: Colors.white,
       ),
@@ -249,33 +249,33 @@ class _BookingDetailScreenState extends State<BookingDetailScreen> {
             ],
 
             // --- Informasi Booking ---
-            _buildSectionTitle('Informasi Booking'),
+            _buildSectionTitle('Booking Details'),
             const SizedBox(height: 12),
             _buildInfoCard([
-              _buildInfoRow(Icons.meeting_room_outlined, 'Ruangan',
+              _buildInfoRow(Icons.meeting_room_outlined, 'Room',
                   _currentBooking.roomName),
-              _buildInfoRow(Icons.person_outline, 'Dipesan oleh',
+              _buildInfoRow(Icons.person_outline, 'Booked by',
                   _currentBooking.employeeName),
               _buildInfoRow(
                   Icons.calendar_today,
-                  'Jadwal Acara',
+                  'Event schedule',
                   _formatBookingDuration(_currentBooking.usageStartDate,
                       _currentBooking.usageEndDate)),
-              _buildInfoRow(Icons.local_activity_outlined, 'Jenis Kegiatan',
+              _buildInfoRow(Icons.local_activity_outlined, 'Type of activity',
                   _currentBooking.activityType),
-              _buildInfoRow(Icons.group_outlined, 'Jumlah Peserta',
-                  '${_currentBooking.numberOfParticipants} orang'),
+              _buildInfoRow(Icons.group_outlined, 'Number of participants',
+                  '${_currentBooking.numberOfParticipants} people'),
             ]),
             const SizedBox(height: 24),
 
             // --- Agenda Acara ---
-            _buildSectionTitle('Agenda Acara'),
+            _buildSectionTitle('Event Agenda'),
             const SizedBox(height: 12),
             _buildDescriptionBox(_currentBooking.eventAgenda),
 
             // --- Kebutuhan Tambahan ---
             const SizedBox(height: 24),
-            _buildSectionTitle('Kebutuhan Tambahan'),
+            _buildSectionTitle('Event needs'),
             const SizedBox(height: 12),
             _buildDescriptionBox(_currentBooking.needs),
 
@@ -287,8 +287,8 @@ class _BookingDetailScreenState extends State<BookingDetailScreen> {
               const SizedBox(height: 24),
               _buildSectionTitle(
                 _currentBooking.status == 'approved'
-                    ? 'Catatan Persetujuan'
-                    : 'Alasan Pembatalan',
+                    ? 'Consent Note'
+                    : 'Reason for Cancellation',
               ),
               const SizedBox(height: 12),
               _buildReasonBox(),
@@ -328,14 +328,14 @@ class _BookingDetailScreenState extends State<BookingDetailScreen> {
           ),
           const SizedBox(height: 8),
           Text(
-            'Dibuat pada ${DateFormat('d MMMM yyyy, HH:mm', 'id_ID').format(_currentBooking.createdAt)}',
+            'Created at ${DateFormat('d MMMM yyyy, HH:mm', 'id_ID').format(_currentBooking.createdAt)}',
             style: TextStyle(color: Colors.grey[600], fontSize: 14),
           ),
           if (_currentBooking.status == 'approved' &&
               _currentBooking.completionDate != null) ...[
             const SizedBox(height: 8),
             Text(
-              'Disetujui pada ${DateFormat('dd MMM yyyy, HH:mm', 'id_ID').format(_currentBooking.completionDate!)}',
+              'Approved on ${DateFormat('dd MMM yyyy, HH:mm', 'id_ID').format(_currentBooking.completionDate!)}',
               style: TextStyle(
                 color: _currentBooking.getStatusColor().withOpacity(0.8),
                 fontSize: 14,
@@ -347,7 +347,7 @@ class _BookingDetailScreenState extends State<BookingDetailScreen> {
               _currentBooking.completionDate != null) ...[
             const SizedBox(height: 8),
             Text(
-              'Dibatalkan pada ${DateFormat('dd MMM yyyy, HH:mm', 'id_ID').format(_currentBooking.completionDate!)}',
+              'Cancelled on ${DateFormat('dd MMM yyyy, HH:mm', 'id_ID').format(_currentBooking.completionDate!)}',
               style: TextStyle(
                 color: _currentBooking.getStatusColor().withOpacity(0.8),
                 fontSize: 14,

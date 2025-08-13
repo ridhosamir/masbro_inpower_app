@@ -164,7 +164,7 @@ class _HomeDashboardUserState extends State<HomeDashboardUser>
                             fontWeight: FontWeight.normal, fontSize: 16),
                         tabs: const [
                           Tab(text: 'Status'),
-                          Tab(text: 'Aplikasi'),
+                          Tab(text: 'Application'),
                         ],
                       ),
                     )
@@ -231,131 +231,145 @@ class _HomeDashboardUserState extends State<HomeDashboardUser>
           SafeArea(
             child: Padding(
               padding: const EdgeInsets.fromLTRB(20, 20, 20, 0),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Row(
-                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                    children: [
-                      Container(
-                        padding: const EdgeInsets.symmetric(
-                            horizontal: 16, vertical: 8),
-                        decoration: BoxDecoration(
-                          color: Colors.white.withOpacity(0.15),
-                          borderRadius: BorderRadius.circular(20),
-                          border: Border.all(
-                            color: Colors.white.withOpacity(0.2),
-                            width: 1,
-                          ),
-                        ),
-                        child: const Text(
-                          'Home Dashboard',
-                          style: TextStyle(
-                            color: Colors.white,
-                            fontSize: 18,
-                            fontWeight: FontWeight.w600,
-                            letterSpacing: 0.5,
-                          ),
-                        ),
-                      ),
-                      Container(
-                        decoration: BoxDecoration(
-                          shape: BoxShape.circle,
-                          gradient: LinearGradient(
-                            colors: [
-                              Colors.white.withOpacity(0.2),
-                              Colors.white.withOpacity(0.1),
-                            ],
-                            begin: Alignment.topLeft,
-                            end: Alignment.bottomRight,
-                          ),
-                        ),
-                        child: _buildProfileMenu(),
-                      ),
-                    ],
-                  ),
-                  const SizedBox(height: 24),
-                  Container(
-                    padding: const EdgeInsets.all(20),
-                    decoration: BoxDecoration(
-                      gradient: LinearGradient(
-                        colors: [
-                          Colors.white.withOpacity(0.1),
-                          Colors.white.withOpacity(0.05),
-                        ],
-                        begin: Alignment.topLeft,
-                        end: Alignment.bottomRight,
-                      ),
-                      borderRadius: BorderRadius.circular(20),
-                      border: Border.all(
-                        color: Colors.white.withOpacity(0.15),
-                        width: 1,
-                      ),
-                    ),
+              child: LayoutBuilder(
+                builder: (context, constraints) {
+                  final settings = context.dependOnInheritedWidgetOfExactType<
+                      FlexibleSpaceBarSettings>()!;
+                  final delta = settings.maxExtent - settings.minExtent;
+                  final opacity =
+                      ((settings.currentExtent - settings.minExtent) / delta)
+                          .clamp(0.0, 1.0);
+
+                  return Opacity(
+                    opacity: opacity,
                     child: Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
-                      mainAxisSize: MainAxisSize.min,
                       children: [
                         Row(
+                          mainAxisAlignment: MainAxisAlignment.spaceBetween,
                           children: [
                             Container(
-                              padding: const EdgeInsets.all(8),
+                              padding: const EdgeInsets.symmetric(
+                                  horizontal: 16, vertical: 8),
                               decoration: BoxDecoration(
-                                color: Colors.white.withOpacity(0.2),
-                                borderRadius: BorderRadius.circular(12),
+                                color: Colors.white.withOpacity(0.15),
+                                borderRadius: BorderRadius.circular(20),
+                                border: Border.all(
+                                  color: Colors.white.withOpacity(0.2),
+                                  width: 1,
+                                ),
                               ),
-                              child: const Icon(
-                                Icons.waving_hand,
-                                color: Colors.white,
-                                size: 20,
+                              child: const Text(
+                                'Home Dashboard',
+                                style: TextStyle(
+                                  color: Colors.white,
+                                  fontSize: 18,
+                                  fontWeight: FontWeight.w600,
+                                  letterSpacing: 0.5,
+                                ),
                               ),
                             ),
-                            const SizedBox(width: 12),
-                            Text(
-                              'Selamat Datang,',
-                              style: TextStyle(
-                                color: Colors.white.withOpacity(0.9),
-                                fontSize: 16,
-                                fontWeight: FontWeight.w500,
+                            Container(
+                              decoration: BoxDecoration(
+                                shape: BoxShape.circle,
+                                gradient: LinearGradient(
+                                  colors: [
+                                    Colors.white.withOpacity(0.2),
+                                    Colors.white.withOpacity(0.1),
+                                  ],
+                                  begin: Alignment.topLeft,
+                                  end: Alignment.bottomRight,
+                                ),
                               ),
+                              child: _buildProfileMenu(),
                             ),
                           ],
                         ),
-                        const SizedBox(height: 12),
-                        Text(
-                          currentUser!.name,
-                          style: const TextStyle(
-                            color: Colors.white,
-                            fontSize: 26,
-                            fontWeight: FontWeight.bold,
-                            letterSpacing: 0.5,
+                        const SizedBox(height: 24),
+                        Container(
+                          padding: const EdgeInsets.all(20),
+                          decoration: BoxDecoration(
+                            gradient: LinearGradient(
+                              colors: [
+                                Colors.white.withOpacity(0.1),
+                                Colors.white.withOpacity(0.05),
+                              ],
+                              begin: Alignment.topLeft,
+                              end: Alignment.bottomRight,
+                            ),
+                            borderRadius: BorderRadius.circular(20),
+                            border: Border.all(
+                              color: Colors.white.withOpacity(0.15),
+                              width: 1,
+                            ),
                           ),
-                          maxLines: 1,
-                          overflow: TextOverflow.ellipsis,
-                        ),
-                        const SizedBox(height: 8),
-                        Row(
-                          children: [
-                            Icon(
-                              Icons.calendar_today,
-                              size: 14,
-                              color: Colors.white.withOpacity(0.8),
-                            ),
-                            const SizedBox(width: 6),
-                            Text(
-                              'Anggota Sejak ${DateFormat('dd MMM yyyy').format(currentUser!.createdAt)}',
-                              style: TextStyle(
-                                color: Colors.white.withOpacity(0.8),
-                                fontSize: 13,
-                                fontWeight: FontWeight.w500,
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            mainAxisSize: MainAxisSize.min,
+                            children: [
+                              Row(
+                                children: [
+                                  Container(
+                                    padding: const EdgeInsets.all(8),
+                                    decoration: BoxDecoration(
+                                      color: Colors.white.withOpacity(0.2),
+                                      borderRadius: BorderRadius.circular(12),
+                                    ),
+                                    child: const Icon(
+                                      Icons.waving_hand,
+                                      color: Colors.white,
+                                      size: 20,
+                                    ),
+                                  ),
+                                  const SizedBox(width: 12),
+                                  Text(
+                                    'Welcome back,',
+                                    style: TextStyle(
+                                      color: Colors.white.withOpacity(0.9),
+                                      fontSize: 16,
+                                      fontWeight: FontWeight.w500,
+                                    ),
+                                  ),
+                                ],
                               ),
-                            ),
-                          ],
+                              const SizedBox(height: 12),
+                              Text(
+                                currentUser!.name,
+                                style: const TextStyle(
+                                  color: Colors.white,
+                                  fontSize: 26,
+                                  fontWeight: FontWeight.bold,
+                                  letterSpacing: 0.5,
+                                ),
+                                maxLines: 1,
+                                overflow: TextOverflow.ellipsis,
+                              ),
+                              const SizedBox(height: 8),
+                              Row(
+                                children: [
+                                  Icon(
+                                    Icons.calendar_today,
+                                    size: 14,
+                                    color: Colors.white.withOpacity(0.8),
+                                  ),
+                                  const SizedBox(width: 6),
+                                  Text(
+                                    'Member since ${DateFormat('dd MMM yyyy').format(currentUser!.createdAt)}',
+                                    style: TextStyle(
+                                      color: Colors.white.withOpacity(0.8),
+                                      fontSize: 13,
+                                      fontWeight: FontWeight.w500,
+                                    ),
+                                  ),
+                                ],
+                              ),
+                            ],
+                          ),
                         ),
                       ],
                     ),
-                  ),
-                ],
+                  );
+                },
               ),
             ),
           ),
@@ -383,14 +397,14 @@ class _HomeDashboardUserState extends State<HomeDashboardUser>
           value: 'profile',
           child: ListTile(
             leading: Icon(Icons.person_outline),
-            title: Text('Profil Saya'),
+            title: Text('My Profile'),
           ),
         ),
         const PopupMenuItem(
           value: 'logout',
           child: ListTile(
             leading: Icon(Icons.logout, color: Colors.red),
-            title: Text('Keluar', style: TextStyle(color: Colors.red)),
+            title: Text('Logout', style: TextStyle(color: Colors.red)),
           ),
         ),
       ],
@@ -523,16 +537,16 @@ class _HomeDashboardUserState extends State<HomeDashboardUser>
       context: context,
       builder: (context) => AlertDialog(
         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
-        title: const Text('Informasi Profil'),
+        title: const Text('Profil Information'),
         content: Column(
           mainAxisSize: MainAxisSize.min,
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            _buildProfileItem('Nama', currentUser!.name),
+            _buildProfileItem('Name', currentUser!.name),
             _buildProfileItem('Email', currentUser!.email),
-            _buildProfileItem('Peran', currentUser!.role.toUpperCase()),
+            _buildProfileItem('Role', currentUser!.role.toUpperCase()),
             _buildProfileItem(
-              'Anggota Sejak',
+              'Member since',
               DateFormat('dd MMMM yyyy').format(currentUser!.createdAt),
             ),
           ],
@@ -540,7 +554,7 @@ class _HomeDashboardUserState extends State<HomeDashboardUser>
         actions: [
           TextButton(
             onPressed: () => Navigator.pop(context),
-            child: const Text('Tutup'),
+            child: const Text('Close'),
           ),
         ],
       ),
@@ -573,19 +587,20 @@ class _HomeDashboardUserState extends State<HomeDashboardUser>
       context: context,
       builder: (context) => AlertDialog(
         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
-        title: const Text('Keluar'),
-        content: const Text('Apakah Anda yakin ingin keluar dari akun ini?'),
+        title: const Text('Logout Confirmation'),
+        content:
+            const Text('Are you sure you want to log out of this account?'),
         actions: [
           TextButton(
             onPressed: () => Navigator.pop(context),
-            child: const Text('Batal'),
+            child: const Text('Cancel'),
           ),
           TextButton(
             onPressed: () {
               Navigator.pop(context);
               Provider.of<AuthService>(context, listen: false).signOut();
             },
-            child: const Text('Keluar', style: TextStyle(color: Colors.red)),
+            child: const Text('Logout', style: TextStyle(color: Colors.red)),
           ),
         ],
       ),
@@ -659,13 +674,13 @@ class _StatusTabState extends State<StatusTab>
       context: context,
       builder: (context) => AlertDialog(
         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
-        title: const Text('Filter Berdasarkan Waktu',
+        title: const Text('Filter By Time',
             style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold)),
         content: Column(
           mainAxisSize: MainAxisSize.min,
           children: [
             RadioListTile<String>(
-              title: const Text('Semua Waktu'),
+              title: const Text('All Time'),
               value: 'all',
               groupValue: _selectedFilter,
               onChanged: (value) {
@@ -675,7 +690,7 @@ class _StatusTabState extends State<StatusTab>
               },
             ),
             RadioListTile<String>(
-              title: const Text('Hari Ini'),
+              title: const Text('Today'),
               value: 'today',
               groupValue: _selectedFilter,
               onChanged: (value) {
@@ -685,7 +700,7 @@ class _StatusTabState extends State<StatusTab>
               },
             ),
             RadioListTile<String>(
-              title: const Text('Minggu Ini'),
+              title: const Text('This Week'),
               value: 'week',
               groupValue: _selectedFilter,
               onChanged: (value) {
@@ -695,7 +710,7 @@ class _StatusTabState extends State<StatusTab>
               },
             ),
             RadioListTile<String>(
-              title: const Text('Bulan Ini'),
+              title: const Text('This Month'),
               value: 'month',
               groupValue: _selectedFilter,
               onChanged: (value) {
@@ -709,7 +724,7 @@ class _StatusTabState extends State<StatusTab>
         actions: [
           TextButton(
             onPressed: () => Navigator.pop(context),
-            child: const Text('Batal'),
+            child: const Text('Cancel'),
           )
         ],
       ),
@@ -938,7 +953,7 @@ class _StatusTabState extends State<StatusTab>
                   Icon(Icons.search, color: Colors.blue[700], size: 20),
                   const SizedBox(width: 8),
                   Text(
-                    'Hasil pencarian untuk "${_searchController.text}"',
+                    'Search results for "${_searchController.text}"',
                     style: TextStyle(
                       color: Colors.blue[700],
                       fontWeight: FontWeight.w600,
@@ -946,7 +961,7 @@ class _StatusTabState extends State<StatusTab>
                   ),
                   const Spacer(),
                   Text(
-                    '${_filteredList.length} hasil',
+                    '${_filteredList.length} results',
                     style: TextStyle(
                       color: Colors.blue[700],
                       fontSize: 12,
@@ -984,7 +999,7 @@ class _StatusTabState extends State<StatusTab>
                         child: ElevatedButton.icon(
                           onPressed: _loadMore,
                           icon: const Icon(Icons.expand_more),
-                          label: const Text('Lihat lebih banyak'),
+                          label: const Text('See More'),
                           style: ElevatedButton.styleFrom(
                             foregroundColor: Theme.of(context).primaryColor,
                             backgroundColor: Colors.white,
@@ -1110,7 +1125,7 @@ class _StatusTabState extends State<StatusTab>
             child: TextField(
               controller: _searchController,
               decoration: InputDecoration(
-                hintText: 'Cari status terbaru disini...',
+                hintText: 'Find the latest status here...',
                 prefixIcon: Icon(Icons.search, color: Colors.grey[600]),
                 suffixIcon: _searchQuery.isNotEmpty
                     ? IconButton(
@@ -1145,7 +1160,7 @@ class _StatusTabState extends State<StatusTab>
               Icons.filter_list,
               color: Theme.of(context).primaryColor,
             ),
-            tooltip: 'Filter Berdasarkan Waktu',
+            tooltip: 'Filter By Time',
           ),
         ),
       ],
@@ -1157,33 +1172,32 @@ class _StatusTabState extends State<StatusTab>
     final bool isTimeFilterActive = _selectedFilter != 'all';
 
     IconData icon = Icons.inbox_outlined;
-    String title = 'Tidak Ada Data';
-    String description = 'Tidak ada tugas dengan status ini saat ini.';
+    String title = 'Nothing Found';
+    String description = 'There are no tasks with this status at this time.';
     Widget? actionButton;
 
     if (isSearchActive) {
       icon = Icons.search_off;
-      title = 'Pencarian Tidak Ditemukan';
-      description =
-          'Tidak ada data yang cocok dengan kata kunci "${_searchController.text}".';
+      title = 'Search Not Found';
+      description = 'No data matches the keyword "${_searchController.text}".';
       actionButton = TextButton.icon(
         onPressed: _clearSearch,
-        icon: const Icon(Icons.clear, color: Colors.blue),
+        icon: const Icon(Icons.clear, color: Colors.red),
         label: const Text(
-          'Hapus Pencarian',
-          style: TextStyle(color: Colors.blue),
+          'Clear Search',
+          style: TextStyle(color: Colors.red),
         ),
       );
     } else if (isTimeFilterActive) {
       icon = Icons.filter_alt_off_outlined;
-      title = 'Data Tidak Ditemukan';
-      description = 'Tidak ada data pada rentang waktu yang dipilih.';
+      title = 'Data Not Found';
+      description = 'There is no data in the selected time range.';
       actionButton = TextButton.icon(
         onPressed: _clearTimeFilter,
-        icon: const Icon(Icons.clear, color: Colors.blue),
+        icon: const Icon(Icons.clear, color: Colors.red),
         label: const Text(
-          'Hapus Filter',
-          style: TextStyle(color: Colors.blue),
+          'Clear Filter',
+          style: TextStyle(color: Colors.red),
         ),
       );
     }
@@ -1387,7 +1401,7 @@ class _StatusTabState extends State<StatusTab>
                 ),
                 const SizedBox(height: 8),
                 Text(
-                  'Pelaporan:',
+                  'Report:',
                   style: TextStyle(
                     fontSize: 13,
                     fontWeight: FontWeight.w600,
@@ -1419,7 +1433,7 @@ class _StatusTabState extends State<StatusTab>
                     Icon(Icons.access_time, size: 14, color: Colors.grey[500]),
                     const SizedBox(width: 6),
                     Text(
-                      'Dibuat: ${DateFormat('dd MMM yyyy, HH:mm').format(report.createdAt)}',
+                      'Created at: ${DateFormat('dd MMM yyyy, HH:mm').format(report.createdAt)}',
                       style: TextStyle(fontSize: 12, color: Colors.grey[600]),
                     ),
                   ],
@@ -1547,7 +1561,7 @@ class _StatusTabState extends State<StatusTab>
                 ],
                 const SizedBox(height: 16),
                 Text(
-                  'Permintaan:',
+                  'Request:',
                   style: TextStyle(
                     fontSize: 13,
                     fontWeight: FontWeight.w600,
@@ -1595,7 +1609,7 @@ class _StatusTabState extends State<StatusTab>
                   ),
                 _buildInfoRow(
                   Icons.access_time,
-                  'Dibuat: ${DateFormat('dd MMM yyyy, HH:mm').format(request.createdAt)}',
+                  'Created at: ${DateFormat('dd MMM yyyy, HH:mm').format(request.createdAt)}',
                 ),
               ],
             ),
@@ -1666,16 +1680,16 @@ class _StatusTabState extends State<StatusTab>
                 const SizedBox(height: 16),
                 _buildInfoRow(
                   Icons.my_location,
-                  'Dari: ${request.pickupLocation}',
+                  'Pickup: ${request.pickupLocation}',
                 ),
                 const SizedBox(height: 8),
                 _buildInfoRow(
                   Icons.location_on_outlined,
-                  'Ke: ${request.dropoffLocation}',
+                  'Drop off: ${request.dropoffLocation}',
                 ),
                 const SizedBox(height: 12),
                 Text(
-                  'Permintaan:',
+                  'Request:',
                   style: TextStyle(
                     fontSize: 13,
                     fontWeight: FontWeight.w600,
@@ -1714,7 +1728,7 @@ class _StatusTabState extends State<StatusTab>
                 const SizedBox(height: 8),
                 _buildInfoRow(
                   Icons.access_time,
-                  'Dibuat: ${DateFormat('dd MMM yyyy, HH:mm').format(request.createdAt)}',
+                  'Created at: ${DateFormat('dd MMM yyyy, HH:mm').format(request.createdAt)}',
                 ),
               ],
             ),
@@ -1783,7 +1797,7 @@ class _StatusTabState extends State<StatusTab>
                 ),
                 const SizedBox(height: 16),
                 Text(
-                  'Agenda Acara:',
+                  'Event Agenda:',
                   style: TextStyle(
                     fontSize: 13,
                     fontWeight: FontWeight.w600,
@@ -1812,9 +1826,7 @@ class _StatusTabState extends State<StatusTab>
                 const SizedBox(height: 12),
                 _buildInfoRow(
                   Icons.meeting_room_outlined,
-                  booking.roomName.isEmpty
-                      ? 'Belum ditentukan'
-                      : booking.roomName,
+                  booking.roomName.isEmpty ? 'Not Specified' : booking.roomName,
                 ),
                 const SizedBox(height: 8),
                 _buildInfoRow(
@@ -1825,7 +1837,7 @@ class _StatusTabState extends State<StatusTab>
                 const SizedBox(height: 8),
                 _buildInfoRow(
                   Icons.access_time,
-                  'Dibuat: ${DateFormat('dd MMM yyyy, HH:mm').format(booking.createdAt)}',
+                  'Created at: ${DateFormat('dd MMM yyyy, HH:mm').format(booking.createdAt)}',
                 ),
               ],
             ),

@@ -228,7 +228,7 @@ class _OfficerDashboardResourceState extends State<OfficerDashboardResource>
                                 padding:
                                     const EdgeInsets.only(top: 16, left: 4),
                                 child: Text(
-                                  'Kelola dan setujui permintaan resource',
+                                  'Manage and approve resource requests',
                                   style: TextStyle(
                                     color: Colors.white.withOpacity(0.85),
                                     fontSize: 14,
@@ -249,7 +249,7 @@ class _OfficerDashboardResourceState extends State<OfficerDashboardResource>
                                       .length;
                                   if (requests.isEmpty) {
                                     return Text(
-                                      'Belum ada permintaan untuk ditinjau',
+                                      'There are no requests for review yet',
                                       style: TextStyle(
                                         color: Colors.white.withOpacity(0.7),
                                         fontSize: 12,
@@ -257,7 +257,7 @@ class _OfficerDashboardResourceState extends State<OfficerDashboardResource>
                                     );
                                   }
                                   return Text(
-                                    '${requests.length} total permintaan · $open terbuka · $inProgress diproses',
+                                    '${requests.length} total request · $open open · $inProgress in progress',
                                     style: TextStyle(
                                       color: Colors.white.withOpacity(0.7),
                                       fontSize: 12,
@@ -371,7 +371,7 @@ class _OfficerDashboardResourceState extends State<OfficerDashboardResource>
                       child: TextField(
                         controller: _searchController,
                         decoration: InputDecoration(
-                          hintText: 'Cari permintaan...',
+                          hintText: 'Search Request...',
                           prefixIcon:
                               Icon(Icons.search, color: Colors.grey[600]),
                           suffixIcon: _searchQuery.isNotEmpty
@@ -408,7 +408,7 @@ class _OfficerDashboardResourceState extends State<OfficerDashboardResource>
                         Icons.filter_list,
                         color: Theme.of(context).primaryColor,
                       ),
-                      tooltip: 'Filter Permintaan',
+                      tooltip: 'Request Filter',
                     ),
                   ),
                 ],
@@ -620,7 +620,7 @@ class _OfficerDashboardResourceState extends State<OfficerDashboardResource>
           ),
           SizedBox(height: 16),
           Text(
-            'Tidak ada laporan yang cocok',
+            'No matching reports',
             style: TextStyle(
               fontSize: 18,
               color: Colors.grey[600],
@@ -629,7 +629,7 @@ class _OfficerDashboardResourceState extends State<OfficerDashboardResource>
           ),
           SizedBox(height: 8),
           Text(
-            'Coba dengan kata kunci lain atau hapus filter pencarian',
+            'Try with another keyword or clear the search filter',
             style: TextStyle(
               color: Colors.grey[500],
               fontSize: 14,
@@ -639,9 +639,8 @@ class _OfficerDashboardResourceState extends State<OfficerDashboardResource>
           SizedBox(height: 16),
           TextButton.icon(
             onPressed: _clearSearch,
-            icon: Icon(Icons.clear, color: Colors.blue),
-            label:
-                Text('Hapus Pencarian', style: TextStyle(color: Colors.blue)),
+            icon: Icon(Icons.clear, color: Colors.red),
+            label: Text('Clear Search', style: TextStyle(color: Colors.red)),
           ),
         ],
       ),
@@ -680,7 +679,7 @@ class _OfficerDashboardResourceState extends State<OfficerDashboardResource>
                         const SizedBox(width: 6),
                         Flexible(
                           child: Text(
-                            'Kebutuhan: ${request.request[0].toUpperCase()}${request.request.substring(1)}',
+                            'Need: ${request.request[0].toUpperCase()}${request.request.substring(1)}',
                             style: TextStyle(
                               fontSize: 13,
                               color: Colors.grey[800],
@@ -725,7 +724,7 @@ class _OfficerDashboardResourceState extends State<OfficerDashboardResource>
               ],
               const SizedBox(height: 12),
               Text(
-                'Permintaan:',
+                'Request:',
                 style: TextStyle(
                   fontSize: 13,
                   fontWeight: FontWeight.w600,
@@ -756,7 +755,7 @@ class _OfficerDashboardResourceState extends State<OfficerDashboardResource>
                   Icon(Icons.person, size: 14, color: Colors.grey[500]),
                   const SizedBox(width: 8),
                   Text(
-                    'Oleh: ${request.employeeName}',
+                    'By: ${request.employeeName}',
                     style: TextStyle(fontSize: 12, color: Colors.grey[600]),
                   ),
                 ],
@@ -793,9 +792,9 @@ class _OfficerDashboardResourceState extends State<OfficerDashboardResource>
                     request.status == 'completed' &&
                             request.completionDate != null
                         // Jika selesai: tampilkan tanggal selesai
-                        ? 'Selesai: ${DateFormat('d MMM yyyy, HH:mm', 'id_ID').format(request.completionDate!)}'
+                        ? 'Completed on: ${DateFormat('d MMM yyyy, HH:mm', 'id_ID').format(request.completionDate!)}'
                         // Jika belum: tampilkan waktu yang lalu
-                        : 'Dibuat: ${_getTimeAgo(request.createdAt)}',
+                        : 'Created at: ${_getTimeAgo(request.createdAt)}',
                     style: TextStyle(
                       fontSize: 12,
                       color: request.status == 'completed'
@@ -818,8 +817,8 @@ class _OfficerDashboardResourceState extends State<OfficerDashboardResource>
                         onPressed: () => _navigateToAssignTechnician(request),
                         icon: const Icon(Icons.engineering, size: 16),
                         label: Text(request.assignedTechnicianId == null
-                            ? 'Tugaskan'
-                            : 'Ubah Teknisi'),
+                            ? 'Assign'
+                            : 'Change Technician'),
                         style: ElevatedButton.styleFrom(
                           backgroundColor: Colors.blue,
                           foregroundColor: Colors.white,
@@ -831,7 +830,7 @@ class _OfficerDashboardResourceState extends State<OfficerDashboardResource>
                       child: ElevatedButton.icon(
                         onPressed: () => _showCompleteDialog(request),
                         icon: const Icon(Icons.check_circle, size: 16),
-                        label: const Text('Selesaikan'),
+                        label: const Text('Complete'),
                         style: ElevatedButton.styleFrom(
                           backgroundColor: Colors.green,
                           foregroundColor: Colors.white,
@@ -1617,19 +1616,19 @@ class _OfficerDashboardResourceState extends State<OfficerDashboardResource>
     showDialog(
       context: context,
       builder: (context) => AlertDialog(
-        title: const Text('Keluar'),
-        content: const Text('Apakah Anda yakin ingin keluar?'),
+        title: const Text('Logout'),
+        content: const Text('Are you sure you want to logout??'),
         actions: [
           TextButton(
             onPressed: () => Navigator.pop(context),
-            child: const Text('Batal'),
+            child: const Text('Cancel'),
           ),
           TextButton(
             onPressed: () {
               Provider.of<AuthService>(context, listen: false).signOut();
               Navigator.of(context).popUntil((route) => route.isFirst);
             },
-            child: const Text('Keluar', style: TextStyle(color: Colors.red)),
+            child: const Text('Logout', style: TextStyle(color: Colors.red)),
           ),
         ],
       ),

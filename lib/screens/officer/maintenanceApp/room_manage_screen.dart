@@ -877,9 +877,9 @@ class _RoomManagementScreenState extends State<RoomManagementScreen> {
                 SizedBox(height: 16),
                 TextButton.icon(
                   onPressed: _clearRoomSearch,
-                  icon: Icon(Icons.clear, color: Colors.blue),
+                  icon: Icon(Icons.clear, color: Colors.red),
                   label: Text('Clear Search',
-                      style: TextStyle(color: Colors.blue)),
+                      style: TextStyle(color: Colors.red)),
                 ),
               ],
             ),

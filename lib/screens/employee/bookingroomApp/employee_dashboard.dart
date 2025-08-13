@@ -145,8 +145,7 @@ class _EmployeeDashboardBookingRoomState
           );
         },
         icon: const Icon(Icons.add, color: Colors.white),
-        label:
-            const Text('Booking Baru', style: TextStyle(color: Colors.white)),
+        label: const Text('New Booking', style: TextStyle(color: Colors.white)),
         backgroundColor: Theme.of(context).primaryColor,
       ),
     );
@@ -266,7 +265,7 @@ class _EmployeeDashboardBookingRoomState
                     ),
                     const Spacer(),
                     Text(
-                      'Kelola pemesanan ruangan Anda',
+                      'Manage your room bookings',
                       style: TextStyle(
                         color: Colors.white.withOpacity(0.85),
                         fontSize: 14,
@@ -389,7 +388,7 @@ class _EmployeeDashboardBookingRoomState
           child: TextField(
             controller: _searchController,
             decoration: InputDecoration(
-              hintText: 'Cari agenda atau ruangan...',
+              hintText: 'Search for an agenda or room...',
               prefixIcon: Icon(Icons.search, color: Colors.grey[600]),
               suffixIcon: _searchQuery.isNotEmpty
                   ? IconButton(
@@ -422,7 +421,7 @@ class _EmployeeDashboardBookingRoomState
             onPressed: _showFilterDialog,
             icon:
                 Icon(Icons.filter_list, color: Theme.of(context).primaryColor),
-            tooltip: 'Filter Waktu',
+            tooltip: 'Time Filter',
           ),
         ),
       ],
@@ -512,7 +511,7 @@ class _EmployeeDashboardBookingRoomState
           ),
           SizedBox(height: 16),
           Text(
-            'Tidak ada laporan yang cocok',
+            'No matching bookings',
             style: TextStyle(
               fontSize: 18,
               color: Colors.grey[600],
@@ -521,7 +520,7 @@ class _EmployeeDashboardBookingRoomState
           ),
           SizedBox(height: 8),
           Text(
-            'Coba dengan kata kunci lain atau hapus filter pencarian',
+            'Try with another keyword or clear the search filter',
             style: TextStyle(
               color: Colors.grey[500],
               fontSize: 14,
@@ -531,9 +530,8 @@ class _EmployeeDashboardBookingRoomState
           SizedBox(height: 16),
           TextButton.icon(
             onPressed: _clearSearch,
-            icon: Icon(Icons.clear, color: Colors.blue),
-            label:
-                Text('Hapus Pencarian', style: TextStyle(color: Colors.blue)),
+            icon: Icon(Icons.clear, color: Colors.red),
+            label: Text('Clear Search', style: TextStyle(color: Colors.red)),
           ),
         ],
       ),
@@ -568,7 +566,7 @@ class _EmployeeDashboardBookingRoomState
                             size: 16, color: Colors.grey[600]),
                         const SizedBox(width: 6),
                         Text(
-                          'Ruangan: ${booking.roomName}',
+                          'Room: ${booking.roomName}',
                           style: TextStyle(
                             fontSize: 13,
                             color: Colors.grey[800],
@@ -605,7 +603,7 @@ class _EmployeeDashboardBookingRoomState
                       const SizedBox(width: 8),
                       Expanded(
                         child: Text(
-                          'Acara telah selesai, Anda bisa mengisi penilaian kesiapan dan fasilitas ruangan.',
+                          'The event is over, you can fill out the assessment of the room readiness and facilities.',
                           style: TextStyle(
                             fontSize: 12,
                             color: Colors.amber[800],
@@ -619,7 +617,7 @@ class _EmployeeDashboardBookingRoomState
               ],
               const SizedBox(height: 12),
               Text(
-                'Agenda Acara:',
+                'Event Agenda:',
                 style: TextStyle(
                   fontSize: 13,
                   fontWeight: FontWeight.w600,
@@ -648,7 +646,7 @@ class _EmployeeDashboardBookingRoomState
                   const SizedBox(width: 6),
                   Expanded(
                     child: Text(
-                      'Waktu: ${_formatBookingDuration(booking.usageStartDate, booking.usageEndDate)}',
+                      'Time: ${_formatBookingDuration(booking.usageStartDate, booking.usageEndDate)}',
                       style: TextStyle(fontSize: 12, color: Colors.grey[700]),
                       overflow: TextOverflow.ellipsis,
                     ),
@@ -663,11 +661,11 @@ class _EmployeeDashboardBookingRoomState
                   Text(
                     booking.status == 'approved' &&
                             booking.completionDate != null
-                        ? 'Disetujui: ${DateFormat('d MMM yyyy, HH:mm', 'id_ID').format(booking.completionDate!)}'
+                        ? 'Approved: ${DateFormat('d MMM yyyy, HH:mm', 'id_ID').format(booking.completionDate!)}'
                         : booking.status == 'cancelled' &&
                                 booking.completionDate != null
-                            ? 'Dibatalkan: ${DateFormat('d MMM yyyy, HH:mm', 'id_ID').format(booking.completionDate!)}'
-                            : 'Dibuat: ${_getTimeAgo(booking.createdAt)}',
+                            ? 'Cancelled: ${DateFormat('d MMM yyyy, HH:mm', 'id_ID').format(booking.completionDate!)}'
+                            : 'Created at: ${_getTimeAgo(booking.createdAt)}',
                     style: TextStyle(
                       fontSize: 12,
                       color: booking.status == 'approved'
@@ -802,23 +800,23 @@ class _EmployeeDashboardBookingRoomState
 
     switch (status) {
       case 'open':
-        message = 'Tidak Ada Pemesanan Ruangan';
-        description = 'Anda tidak memiliki pemesanan ruangan yang terbuka';
+        message = 'No Room Bookings';
+        description = 'You do not have any open room bookings';
         icon = Icons.pending_actions;
         break;
       case 'approved':
-        message = 'Tidak Ada Pemesanan Yang Disetujui';
-        description = 'Tidak ada pemesanan Anda yang disetujui';
+        message = 'No Bookings Approved';
+        description = 'None of your bookings have been approved';
         icon = Icons.check_circle;
         break;
       case 'cancelled':
-        message = 'Tidak Ada Pemesanan Yang Dibatalkan';
-        description = 'Tidak ada pemesanan Anda yang dibatalkan';
+        message = 'No Bookings Canceled';
+        description = 'None of your bookings have been canceled';
         icon = Icons.cancel;
         break;
       default:
-        message = 'Belum Ada Pemesanan';
-        description = 'Buat Pemesanan Ruangan pertama Anda';
+        message = 'No Bookings Yet';
+        description = 'Make your first Room Booking';
         icon = Icons.assignment_outlined;
     }
 
@@ -878,13 +876,12 @@ class _EmployeeDashboardBookingRoomState
     showDialog(
       context: context,
       builder: (context) => AlertDialog(
-        title: const Text('Filter Berdasarkan Waktu',
-            style: TextStyle(fontSize: 16)),
+        title: const Text('Filter By Time', style: TextStyle(fontSize: 16)),
         content: Column(
           mainAxisSize: MainAxisSize.min,
           children: [
             RadioListTile<String>(
-              title: const Text('Semua'),
+              title: const Text('All'),
               value: 'all',
               groupValue: _selectedFilter,
               onChanged: (value) {
@@ -893,7 +890,7 @@ class _EmployeeDashboardBookingRoomState
               },
             ),
             RadioListTile<String>(
-              title: const Text('Hari Ini'),
+              title: const Text('Today'),
               value: 'today',
               groupValue: _selectedFilter,
               onChanged: (value) {
@@ -902,7 +899,7 @@ class _EmployeeDashboardBookingRoomState
               },
             ),
             RadioListTile<String>(
-              title: const Text('Minggu Ini'),
+              title: const Text('This Week'),
               value: 'week',
               groupValue: _selectedFilter,
               onChanged: (value) {
@@ -911,7 +908,7 @@ class _EmployeeDashboardBookingRoomState
               },
             ),
             RadioListTile<String>(
-              title: const Text('Bulan Ini'),
+              title: const Text('This Month'),
               value: 'month',
               groupValue: _selectedFilter,
               onChanged: (value) {
@@ -930,22 +927,22 @@ class _EmployeeDashboardBookingRoomState
     showDialog(
       context: context,
       builder: (context) => AlertDialog(
-        title: const Text('Informasi Profil'),
+        title: const Text('Profil Information'),
         content: Column(
           mainAxisSize: MainAxisSize.min,
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            _buildProfileItem('Nama', currentUser!.name),
+            _buildProfileItem('Name', currentUser!.name),
             _buildProfileItem('Email', currentUser!.email),
-            _buildProfileItem('Peran', currentUser!.role.toUpperCase()),
-            _buildProfileItem('Anggota Sejak',
+            _buildProfileItem('Role', currentUser!.role.toUpperCase()),
+            _buildProfileItem('Member since',
                 DateFormat('dd MMM yyyy').format(currentUser!.createdAt)),
           ],
         ),
         actions: [
           TextButton(
               onPressed: () => Navigator.pop(context),
-              child: const Text('Tutup')),
+              child: const Text('Close')),
         ],
       ),
     );
@@ -971,18 +968,18 @@ class _EmployeeDashboardBookingRoomState
     showDialog(
       context: context,
       builder: (context) => AlertDialog(
-        title: const Text('Keluar'),
-        content: const Text('Apakah Anda yakin ingin keluar?'),
+        title: const Text('Logout Confirmation'),
+        content: const Text('Are you sure you want to logout?'),
         actions: [
           TextButton(
               onPressed: () => Navigator.pop(context),
-              child: const Text('Batal')),
+              child: const Text('Cancel')),
           TextButton(
             onPressed: () {
               Provider.of<AuthService>(context, listen: false).signOut();
               Navigator.of(context).popUntil((route) => route.isFirst);
             },
-            child: const Text('Keluar', style: TextStyle(color: Colors.red)),
+            child: const Text('Logout', style: TextStyle(color: Colors.red)),
           ),
         ],
       ),

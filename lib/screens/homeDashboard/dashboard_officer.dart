@@ -175,7 +175,7 @@ class _HomeDashboardOfficerState extends State<HomeDashboardOfficer>
                             fontWeight: FontWeight.normal, fontSize: 16),
                         tabs: const [
                           Tab(text: 'Status'),
-                          Tab(text: 'Aplikasi'),
+                          Tab(text: 'Application'),
                           Tab(text: 'Rating'),
                         ],
                       ),
@@ -244,131 +244,145 @@ class _HomeDashboardOfficerState extends State<HomeDashboardOfficer>
           SafeArea(
             child: Padding(
               padding: const EdgeInsets.fromLTRB(20, 20, 20, 0),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Row(
-                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                    children: [
-                      Container(
-                        padding: const EdgeInsets.symmetric(
-                            horizontal: 16, vertical: 8),
-                        decoration: BoxDecoration(
-                          color: Colors.white.withOpacity(0.15),
-                          borderRadius: BorderRadius.circular(20),
-                          border: Border.all(
-                            color: Colors.white.withOpacity(0.2),
-                            width: 1,
-                          ),
-                        ),
-                        child: const Text(
-                          'Dashboard Officer',
-                          style: TextStyle(
-                            color: Colors.white,
-                            fontSize: 18,
-                            fontWeight: FontWeight.w600,
-                            letterSpacing: 0.5,
-                          ),
-                        ),
-                      ),
-                      Container(
-                        decoration: BoxDecoration(
-                          shape: BoxShape.circle,
-                          gradient: LinearGradient(
-                            colors: [
-                              Colors.white.withOpacity(0.2),
-                              Colors.white.withOpacity(0.1),
-                            ],
-                            begin: Alignment.topLeft,
-                            end: Alignment.bottomRight,
-                          ),
-                        ),
-                        child: _buildProfileMenu(),
-                      ),
-                    ],
-                  ),
-                  const SizedBox(height: 24),
-                  Container(
-                    padding: const EdgeInsets.all(20),
-                    decoration: BoxDecoration(
-                      gradient: LinearGradient(
-                        colors: [
-                          Colors.white.withOpacity(0.1),
-                          Colors.white.withOpacity(0.05),
-                        ],
-                        begin: Alignment.topLeft,
-                        end: Alignment.bottomRight,
-                      ),
-                      borderRadius: BorderRadius.circular(20),
-                      border: Border.all(
-                        color: Colors.white.withOpacity(0.15),
-                        width: 1,
-                      ),
-                    ),
+              child: LayoutBuilder(
+                builder: (context, constraints) {
+                  final settings = context.dependOnInheritedWidgetOfExactType<
+                      FlexibleSpaceBarSettings>()!;
+                  final delta = settings.maxExtent - settings.minExtent;
+                  final opacity =
+                      ((settings.currentExtent - settings.minExtent) / delta)
+                          .clamp(0.0, 1.0);
+
+                  return Opacity(
+                    opacity: opacity,
                     child: Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
-                      mainAxisSize: MainAxisSize.min,
                       children: [
                         Row(
+                          mainAxisAlignment: MainAxisAlignment.spaceBetween,
                           children: [
                             Container(
-                              padding: const EdgeInsets.all(8),
+                              padding: const EdgeInsets.symmetric(
+                                  horizontal: 16, vertical: 8),
                               decoration: BoxDecoration(
-                                color: Colors.white.withOpacity(0.2),
-                                borderRadius: BorderRadius.circular(12),
+                                color: Colors.white.withOpacity(0.15),
+                                borderRadius: BorderRadius.circular(20),
+                                border: Border.all(
+                                  color: Colors.white.withOpacity(0.2),
+                                  width: 1,
+                                ),
                               ),
-                              child: const Icon(
-                                Icons.waving_hand,
-                                color: Colors.white,
-                                size: 20,
+                              child: const Text(
+                                'Dashboard Officer',
+                                style: TextStyle(
+                                  color: Colors.white,
+                                  fontSize: 18,
+                                  fontWeight: FontWeight.w600,
+                                  letterSpacing: 0.5,
+                                ),
                               ),
                             ),
-                            const SizedBox(width: 12),
-                            Text(
-                              'Selamat Datang,',
-                              style: TextStyle(
-                                color: Colors.white.withOpacity(0.9),
-                                fontSize: 16,
-                                fontWeight: FontWeight.w500,
+                            Container(
+                              decoration: BoxDecoration(
+                                shape: BoxShape.circle,
+                                gradient: LinearGradient(
+                                  colors: [
+                                    Colors.white.withOpacity(0.2),
+                                    Colors.white.withOpacity(0.1),
+                                  ],
+                                  begin: Alignment.topLeft,
+                                  end: Alignment.bottomRight,
+                                ),
                               ),
+                              child: _buildProfileMenu(),
                             ),
                           ],
                         ),
-                        const SizedBox(height: 12),
-                        Text(
-                          currentUser!.name,
-                          style: const TextStyle(
-                            color: Colors.white,
-                            fontSize: 26,
-                            fontWeight: FontWeight.bold,
-                            letterSpacing: 0.5,
+                        const SizedBox(height: 24),
+                        Container(
+                          padding: const EdgeInsets.all(20),
+                          decoration: BoxDecoration(
+                            gradient: LinearGradient(
+                              colors: [
+                                Colors.white.withOpacity(0.1),
+                                Colors.white.withOpacity(0.05),
+                              ],
+                              begin: Alignment.topLeft,
+                              end: Alignment.bottomRight,
+                            ),
+                            borderRadius: BorderRadius.circular(20),
+                            border: Border.all(
+                              color: Colors.white.withOpacity(0.15),
+                              width: 1,
+                            ),
                           ),
-                          maxLines: 1,
-                          overflow: TextOverflow.ellipsis,
-                        ),
-                        const SizedBox(height: 8),
-                        Row(
-                          children: [
-                            Icon(
-                              Icons.calendar_today,
-                              size: 14,
-                              color: Colors.white.withOpacity(0.8),
-                            ),
-                            const SizedBox(width: 6),
-                            Text(
-                              'Officer Sejak ${DateFormat('dd MMM yyyy').format(currentUser!.createdAt)}',
-                              style: TextStyle(
-                                color: Colors.white.withOpacity(0.8),
-                                fontSize: 13,
-                                fontWeight: FontWeight.w500,
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            mainAxisSize: MainAxisSize.min,
+                            children: [
+                              Row(
+                                children: [
+                                  Container(
+                                    padding: const EdgeInsets.all(8),
+                                    decoration: BoxDecoration(
+                                      color: Colors.white.withOpacity(0.2),
+                                      borderRadius: BorderRadius.circular(12),
+                                    ),
+                                    child: const Icon(
+                                      Icons.waving_hand,
+                                      color: Colors.white,
+                                      size: 20,
+                                    ),
+                                  ),
+                                  const SizedBox(width: 12),
+                                  Text(
+                                    'Welcome back,',
+                                    style: TextStyle(
+                                      color: Colors.white.withOpacity(0.9),
+                                      fontSize: 16,
+                                      fontWeight: FontWeight.w500,
+                                    ),
+                                  ),
+                                ],
                               ),
-                            ),
-                          ],
+                              const SizedBox(height: 12),
+                              Text(
+                                currentUser!.name,
+                                style: const TextStyle(
+                                  color: Colors.white,
+                                  fontSize: 26,
+                                  fontWeight: FontWeight.bold,
+                                  letterSpacing: 0.5,
+                                ),
+                                maxLines: 1,
+                                overflow: TextOverflow.ellipsis,
+                              ),
+                              const SizedBox(height: 8),
+                              Row(
+                                children: [
+                                  Icon(
+                                    Icons.calendar_today,
+                                    size: 14,
+                                    color: Colors.white.withOpacity(0.8),
+                                  ),
+                                  const SizedBox(width: 6),
+                                  Text(
+                                    'Officer Since ${DateFormat('dd MMM yyyy').format(currentUser!.createdAt)}',
+                                    style: TextStyle(
+                                      color: Colors.white.withOpacity(0.8),
+                                      fontSize: 13,
+                                      fontWeight: FontWeight.w500,
+                                    ),
+                                  ),
+                                ],
+                              ),
+                            ],
+                          ),
                         ),
                       ],
                     ),
-                  ),
-                ],
+                  );
+                },
               ),
             ),
           ),
@@ -396,14 +410,14 @@ class _HomeDashboardOfficerState extends State<HomeDashboardOfficer>
           value: 'profile',
           child: ListTile(
             leading: Icon(Icons.person_outline),
-            title: Text('Profil Saya'),
+            title: Text('My Profile'),
           ),
         ),
         const PopupMenuItem(
           value: 'logout',
           child: ListTile(
             leading: Icon(Icons.logout, color: Colors.red),
-            title: Text('Keluar', style: TextStyle(color: Colors.red)),
+            title: Text('Logout', style: TextStyle(color: Colors.red)),
           ),
         ),
       ],
@@ -543,16 +557,16 @@ class _HomeDashboardOfficerState extends State<HomeDashboardOfficer>
       context: context,
       builder: (context) => AlertDialog(
         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
-        title: const Text('Informasi Profil'),
+        title: const Text('Profile Information'),
         content: Column(
           mainAxisSize: MainAxisSize.min,
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            _buildProfileItem('Nama', currentUser!.name),
+            _buildProfileItem('Name', currentUser!.name),
             _buildProfileItem('Email', currentUser!.email),
-            _buildProfileItem('Peran', currentUser!.role.toUpperCase()),
+            _buildProfileItem('Role', currentUser!.role.toUpperCase()),
             _buildProfileItem(
-              'Officer Sejak',
+              'Officer Since',
               DateFormat('dd MMMM yyyy').format(currentUser!.createdAt),
             ),
           ],
@@ -560,7 +574,7 @@ class _HomeDashboardOfficerState extends State<HomeDashboardOfficer>
         actions: [
           TextButton(
             onPressed: () => Navigator.pop(context),
-            child: const Text('Tutup'),
+            child: const Text('Close'),
           ),
         ],
       ),
@@ -593,19 +607,20 @@ class _HomeDashboardOfficerState extends State<HomeDashboardOfficer>
       context: context,
       builder: (context) => AlertDialog(
         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
-        title: const Text('Keluar'),
-        content: const Text('Apakah Anda yakin ingin keluar dari akun ini?'),
+        title: const Text('Logout Confirmation'),
+        content:
+            const Text('Are you sure you want to log out of this account?'),
         actions: [
           TextButton(
             onPressed: () => Navigator.pop(context),
-            child: const Text('Batal'),
+            child: const Text('Cancel'),
           ),
           TextButton(
             onPressed: () {
               Navigator.pop(context);
               Provider.of<AuthService>(context, listen: false).signOut();
             },
-            child: const Text('Keluar', style: TextStyle(color: Colors.red)),
+            child: const Text('Logout', style: TextStyle(color: Colors.red)),
           ),
         ],
       ),
@@ -684,13 +699,13 @@ class _OfficerStatusTabState extends State<OfficerStatusTab>
       context: context,
       builder: (context) => AlertDialog(
         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
-        title: const Text('Filter Berdasarkan Waktu',
+        title: const Text('Filter by Time',
             style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold)),
         content: Column(
           mainAxisSize: MainAxisSize.min,
           children: [
             RadioListTile<String>(
-              title: const Text('Semua Waktu'),
+              title: const Text('All Time'),
               value: 'all',
               groupValue: _selectedFilter,
               onChanged: (value) {
@@ -700,7 +715,7 @@ class _OfficerStatusTabState extends State<OfficerStatusTab>
               },
             ),
             RadioListTile<String>(
-              title: const Text('Hari Ini'),
+              title: const Text('Today'),
               value: 'today',
               groupValue: _selectedFilter,
               onChanged: (value) {
@@ -710,7 +725,7 @@ class _OfficerStatusTabState extends State<OfficerStatusTab>
               },
             ),
             RadioListTile<String>(
-              title: const Text('Minggu Ini'),
+              title: const Text('This Week'),
               value: 'week',
               groupValue: _selectedFilter,
               onChanged: (value) {
@@ -720,7 +735,7 @@ class _OfficerStatusTabState extends State<OfficerStatusTab>
               },
             ),
             RadioListTile<String>(
-              title: const Text('Bulan Ini'),
+              title: const Text('This Month'),
               value: 'month',
               groupValue: _selectedFilter,
               onChanged: (value) {
@@ -734,7 +749,7 @@ class _OfficerStatusTabState extends State<OfficerStatusTab>
         actions: [
           TextButton(
             onPressed: () => Navigator.pop(context),
-            child: const Text('Batal'),
+            child: const Text('Cancel'),
           )
         ],
       ),
@@ -927,7 +942,7 @@ class _OfficerStatusTabState extends State<OfficerStatusTab>
                   Icon(Icons.search, color: Colors.blue[700], size: 20),
                   const SizedBox(width: 8),
                   Text(
-                    'Hasil pencarian untuk "${_searchController.text}"',
+                    'Search results for "${_searchController.text}"',
                     style: TextStyle(
                       color: Colors.blue[700],
                       fontWeight: FontWeight.w600,
@@ -935,7 +950,7 @@ class _OfficerStatusTabState extends State<OfficerStatusTab>
                   ),
                   const Spacer(),
                   Text(
-                    '${_filteredList.length} hasil',
+                    '${_filteredList.length} results',
                     style: TextStyle(
                       color: Colors.blue[700],
                       fontSize: 12,
@@ -973,7 +988,7 @@ class _OfficerStatusTabState extends State<OfficerStatusTab>
                         child: ElevatedButton.icon(
                           onPressed: _loadMore,
                           icon: const Icon(Icons.expand_more),
-                          label: const Text('Lihat lebih banyak'),
+                          label: const Text('See more'),
                           style: ElevatedButton.styleFrom(
                             foregroundColor: Theme.of(context).primaryColor,
                             backgroundColor: Colors.white,
@@ -1099,7 +1114,7 @@ class _OfficerStatusTabState extends State<OfficerStatusTab>
             child: TextField(
               controller: _searchController,
               decoration: InputDecoration(
-                hintText: 'Cari status terbaru disini...',
+                hintText: 'Find the latest status here...',
                 prefixIcon: Icon(Icons.search, color: Colors.grey[600]),
                 suffixIcon: _searchQuery.isNotEmpty
                     ? IconButton(
@@ -1133,7 +1148,7 @@ class _OfficerStatusTabState extends State<OfficerStatusTab>
               Icons.filter_list,
               color: Theme.of(context).primaryColor,
             ),
-            tooltip: 'Filter Berdasarkan Waktu',
+            tooltip: 'Filter by Time',
           ),
         ),
       ],
@@ -1145,33 +1160,32 @@ class _OfficerStatusTabState extends State<OfficerStatusTab>
     final bool isTimeFilterActive = _selectedFilter != 'all';
 
     IconData icon = Icons.inbox_outlined;
-    String title = 'Tidak Ada Data';
-    String description = 'Tidak ada tugas dengan status ini saat ini.';
+    String title = 'Nothing Found';
+    String description = 'There are no tasks with this status at this time.';
     Widget? actionButton;
 
     if (isSearchActive) {
       icon = Icons.search_off;
-      title = 'Pencarian Tidak Ditemukan';
-      description =
-          'Tidak ada data yang cocok dengan kata kunci "${_searchController.text}".';
+      title = 'Search Not Found';
+      description = 'No data matches the keyword "${_searchController.text}".';
       actionButton = TextButton.icon(
         onPressed: _clearSearch,
-        icon: const Icon(Icons.clear, color: Colors.blue),
+        icon: const Icon(Icons.clear, color: Colors.red),
         label: const Text(
-          'Hapus Pencarian',
-          style: TextStyle(color: Colors.blue),
+          'Clear Search',
+          style: TextStyle(color: Colors.red),
         ),
       );
     } else if (isTimeFilterActive) {
       icon = Icons.filter_alt_off_outlined;
-      title = 'Data Tidak Ditemukan';
-      description = 'Tidak ada data pada rentang waktu yang dipilih.';
+      title = 'Data Not Found';
+      description = 'There is no data in the selected time range.';
       actionButton = TextButton.icon(
         onPressed: _clearTimeFilter,
-        icon: const Icon(Icons.clear, color: Colors.blue),
+        icon: const Icon(Icons.clear, color: Colors.red),
         label: const Text(
-          'Hapus Filter',
-          style: TextStyle(color: Colors.blue),
+          'Clear Filter',
+          style: TextStyle(color: Colors.red),
         ),
       );
     }
@@ -1242,7 +1256,7 @@ class _OfficerStatusTabState extends State<OfficerStatusTab>
           mainAxisAlignment: MainAxisAlignment.spaceBetween,
           children: [
             Text(value == null
-                ? 'Pilih tanggal'
+                ? 'Select Date'
                 : DateFormat('EEEE, d MMM yyyy', 'id_ID').format(value)),
             const Icon(Icons.calendar_month),
           ],
@@ -1260,7 +1274,7 @@ class _OfficerStatusTabState extends State<OfficerStatusTab>
       return TimeOfDay(hour: hour, minute: minute);
     });
 
-    if (label == 'Jam Mulai' && selectedDate != null) {
+    if (label == 'Start Time' && selectedDate != null) {
       final now = DateTime.now();
       final isToday = selectedDate.year == now.year &&
           selectedDate.month == now.month &&
@@ -1302,7 +1316,7 @@ class _OfficerStatusTabState extends State<OfficerStatusTab>
         helperText: ' ',
       ),
       menuMaxHeight: 200,
-      hint: times.isEmpty ? const Text('Pilih Jam Mulai') : null,
+      hint: times.isEmpty ? const Text('Start Time') : null,
       items: times.map((time) {
         return DropdownMenuItem<TimeOfDay>(
           value: time,
@@ -1314,7 +1328,7 @@ class _OfficerStatusTabState extends State<OfficerStatusTab>
       },
       validator: (val) {
         if (val == null) {
-          return 'Wajib diisi';
+          return 'Required fields';
         }
 
         if (selectedDate != null) {
@@ -1328,7 +1342,7 @@ class _OfficerStatusTabState extends State<OfficerStatusTab>
             final nowInMinutes = now.hour * 60 + now.minute;
 
             if (selectedTimeInMinutes < nowInMinutes) {
-              return 'Waktu yang dipilih sudah lewat';
+              return 'The selected time has passed';
             }
           }
         }
@@ -1436,7 +1450,7 @@ class _OfficerStatusTabState extends State<OfficerStatusTab>
                 ),
                 const SizedBox(height: 12),
                 Text(
-                  'Agenda Acara:',
+                  'Event Agenda:',
                   style: TextStyle(
                     fontSize: 13,
                     fontWeight: FontWeight.w600,
@@ -1459,11 +1473,11 @@ class _OfficerStatusTabState extends State<OfficerStatusTab>
                   ),
                 ),
                 const SizedBox(height: 12),
-                _buildInfoRow(Icons.meeting_room_outlined,
-                    'Ruangan: ${booking.roomName}'),
+                _buildInfoRow(
+                    Icons.meeting_room_outlined, 'Room: ${booking.roomName}'),
                 const SizedBox(height: 6),
                 _buildInfoRow(
-                    Icons.person_outline, 'Oleh: ${booking.employeeName}'),
+                    Icons.person_outline, 'By: ${booking.employeeName}'),
                 const SizedBox(height: 6),
                 _buildInfoRow(
                   Icons.calendar_today_outlined,
@@ -1472,7 +1486,7 @@ class _OfficerStatusTabState extends State<OfficerStatusTab>
                 ),
                 const SizedBox(height: 6),
                 _buildInfoRow(Icons.access_time,
-                    'Dibuat: ${_getTimeAgo(booking.createdAt)}'),
+                    'Created at: ${_getTimeAgo(booking.createdAt)}'),
                 if (booking.status == 'open') ...[
                   const Divider(height: 24),
                   Row(
@@ -1482,7 +1496,7 @@ class _OfficerStatusTabState extends State<OfficerStatusTab>
                           onPressed: () => _showManageBookingSheet(booking),
                           icon: const Icon(Icons.edit_calendar_outlined,
                               size: 16),
-                          label: const Text('Kelola Booking'),
+                          label: const Text('Manage Booking'),
                           style: ElevatedButton.styleFrom(
                             backgroundColor: Colors.blue,
                             foregroundColor: Colors.white,
@@ -1497,7 +1511,7 @@ class _OfficerStatusTabState extends State<OfficerStatusTab>
                         child: ElevatedButton.icon(
                           onPressed: () => _showRejectDialog(booking),
                           icon: const Icon(Icons.free_cancellation, size: 16),
-                          label: const Text('Tolak Booking'),
+                          label: const Text('Reject Booking'),
                           style: ElevatedButton.styleFrom(
                             backgroundColor: Colors.red,
                             foregroundColor: Colors.white,
@@ -2225,7 +2239,7 @@ class _OfficerStatusTabState extends State<OfficerStatusTab>
                 ],
                 const SizedBox(height: 12),
                 Text(
-                  'Permintaan:',
+                  'Request:',
                   style: TextStyle(
                     fontSize: 13,
                     fontWeight: FontWeight.w600,
@@ -2263,7 +2277,7 @@ class _OfficerStatusTabState extends State<OfficerStatusTab>
                     const SizedBox(width: 6),
                     Flexible(
                       child: Text(
-                        'Kebutuhan: ${request.request[0].toUpperCase()}${request.request.substring(1)}',
+                        'Need: ${request.request[0].toUpperCase()}${request.request.substring(1)}',
                         style: TextStyle(
                           fontSize: 13,
                           color: Colors.grey[600],
@@ -2280,7 +2294,7 @@ class _OfficerStatusTabState extends State<OfficerStatusTab>
                     Icon(Icons.person, size: 14, color: Colors.grey[500]),
                     const SizedBox(width: 8),
                     Text(
-                      'Oleh: ${request.employeeName}',
+                      'By: ${request.employeeName}',
                       style: TextStyle(fontSize: 12, color: Colors.grey[600]),
                     ),
                   ],
@@ -2316,8 +2330,8 @@ class _OfficerStatusTabState extends State<OfficerStatusTab>
                     Text(
                       request.status == 'completed' &&
                               request.completionDate != null
-                          ? 'Selesai: ${DateFormat('d MMM yyyy, HH:mm', 'id_ID').format(request.completionDate!)}'
-                          : 'Dibuat: ${_getTimeAgo(request.createdAt)}',
+                          ? 'Completed: ${DateFormat('d MMM yyyy, HH:mm', 'id_ID').format(request.completionDate!)}'
+                          : 'Created at: ${_getTimeAgo(request.createdAt)}',
                       style: TextStyle(
                         fontSize: 12,
                         color: request.status == 'completed'
@@ -2341,8 +2355,8 @@ class _OfficerStatusTabState extends State<OfficerStatusTab>
                               _navigateToAssignTechnicianRequest(request),
                           icon: const Icon(Icons.engineering, size: 16),
                           label: Text(request.assignedTechnicianId == null
-                              ? 'Tugaskan'
-                              : 'Ubah Teknisi'),
+                              ? 'Assign'
+                              : 'Change Technician'),
                           style: ElevatedButton.styleFrom(
                             backgroundColor: Colors.blue,
                             foregroundColor: Colors.white,
@@ -2356,7 +2370,7 @@ class _OfficerStatusTabState extends State<OfficerStatusTab>
                         child: ElevatedButton.icon(
                           onPressed: () => _showCompleteDialogResource(request),
                           icon: const Icon(Icons.check_circle, size: 16),
-                          label: const Text('Selesaikan'),
+                          label: const Text('Complete'),
                           style: ElevatedButton.styleFrom(
                             backgroundColor: Colors.green,
                             foregroundColor: Colors.white,
@@ -2845,7 +2859,7 @@ class _OfficerStatusTabState extends State<OfficerStatusTab>
       backgroundColor: Colors.transparent,
       builder: (context) {
         String? selectedRoomId =
-            booking.roomName == 'Belum Ditentukan' ? null : booking.roomId;
+            booking.roomName == 'Not Specified' ? null : booking.roomId;
 
         return StatefulBuilder(
           builder: (BuildContext context, StateSetter setModalState) {
@@ -2909,7 +2923,7 @@ class _OfficerStatusTabState extends State<OfficerStatusTab>
                           children: [
                             Icon(Icons.warning, color: Colors.red, size: 24),
                             SizedBox(width: 8),
-                            Text('Jadwal Bentrok!'),
+                            Text('Schedule Conflict!'),
                           ],
                         ),
                         content: Column(
@@ -2917,7 +2931,7 @@ class _OfficerStatusTabState extends State<OfficerStatusTab>
                           crossAxisAlignment: CrossAxisAlignment.start,
                           children: [
                             Text(
-                              'Tidak bisa menyetujui booking karena jadwal bentrok dengan agenda lain yang sudah disetujui:',
+                              'Unable to approve booking due to schedule conflict with other approved agenda:',
                               style: TextStyle(fontSize: 14),
                             ),
                             const SizedBox(height: 12),
@@ -2980,7 +2994,7 @@ class _OfficerStatusTabState extends State<OfficerStatusTab>
                                                     side: BorderSide.none,
                                                   ),
                                                   child: const Text(
-                                                      'Lihat Jadwal',
+                                                      'View Details',
                                                       style: TextStyle(
                                                           fontSize: 12)),
                                                 ),
@@ -2995,7 +3009,7 @@ class _OfficerStatusTabState extends State<OfficerStatusTab>
                                             ),
                                           ),
                                           Text(
-                                            '  Pemesan: ${conflictBooking.employeeName}',
+                                            '  Orderer: ${conflictBooking.employeeName}',
                                             style: TextStyle(
                                               fontSize: 12,
                                               color: Colors.grey[600],
@@ -3010,7 +3024,7 @@ class _OfficerStatusTabState extends State<OfficerStatusTab>
                             ),
                             SizedBox(height: 8),
                             Text(
-                              'Silakan pilih jadwal atau ruangan lain.',
+                              'Please select another schedule or room.',
                               style: TextStyle(
                                 fontSize: 12,
                                 fontStyle: FontStyle.italic,
@@ -3043,16 +3057,16 @@ class _OfficerStatusTabState extends State<OfficerStatusTab>
                 final bool? confirmed = await showDialog<bool>(
                   context: context,
                   builder: (ctx) => AlertDialog(
-                    title: const Text('Konfirmasi Persetujuan'),
+                    title: const Text('Confirmation of Approval'),
                     content: const Text(
-                        'Apakah Anda yakin ingin menyetujui pemesanan ini?'),
+                        'Are you sure you want to accept this booking?'),
                     actions: [
                       TextButton(
                           onPressed: () => Navigator.of(ctx).pop(false),
-                          child: const Text('Batal')),
+                          child: const Text('Cancel')),
                       TextButton(
                           onPressed: () => Navigator.of(ctx).pop(true),
-                          child: const Text('Ya, Setujui',
+                          child: const Text('Yes, agrree',
                               style: TextStyle(color: Colors.green))),
                     ],
                   ),
@@ -3083,7 +3097,7 @@ class _OfficerStatusTabState extends State<OfficerStatusTab>
                 Navigator.pop(context);
                 Navigator.pop(context);
                 ScaffoldMessenger.of(context).showSnackBar(const SnackBar(
-                  content: Text('Booking berhasil disetujui.'),
+                  content: Text('Booking successfully approved.'),
                   backgroundColor: Colors.green,
                 ));
                 _fetchData();
@@ -3097,7 +3111,7 @@ class _OfficerStatusTabState extends State<OfficerStatusTab>
                     context: context,
                     builder: (ctx) => AlertDialog(
                       title: Text('Error'),
-                      content: Text('Terjadi kesalahan: ${e.toString()}'),
+                      content: Text('There is an error: ${e.toString()}'),
                       actions: [
                         TextButton(
                           onPressed: () => Navigator.of(ctx).pop(),
@@ -3126,13 +3140,13 @@ class _OfficerStatusTabState extends State<OfficerStatusTab>
                     initialValue: currentDate,
                     validator: (value) {
                       if (value == null) {
-                        return 'Tanggal acara wajib diisi';
+                        return 'Event date is required';
                       }
                       return null;
                     },
                     builder: (FormFieldState<DateTime> state) {
                       return _buildDatePicker(
-                          context, 'Pilih Tanggal Acara', state.value, (date) {
+                          context, 'Select Event Date', state.value, (date) {
                         setState(() {
                           onDateChanged(date);
                           state.didChange(date);
@@ -3170,7 +3184,7 @@ class _OfficerStatusTabState extends State<OfficerStatusTab>
                     children: [
                       Expanded(
                           child: _buildTimePicker(
-                              context, 'Jam Mulai', currentTime,
+                              context, 'Start Time', currentTime,
                               (newStartTime) {
                         setState(() {
                           onStartTimeChanged(newStartTime);
@@ -3191,8 +3205,8 @@ class _OfficerStatusTabState extends State<OfficerStatusTab>
                       }, selectedDate: currentDate)),
                       const SizedBox(width: 16),
                       Expanded(
-                          child: _buildTimePicker(
-                              context, 'Jam Selesai', endTime, (newEndTime) {
+                          child: _buildTimePicker(context, 'End Time', endTime,
+                              (newEndTime) {
                         setState(() => onEndTimeChanged(newEndTime));
                       }, startTimeFilter: currentTime)),
                     ],
@@ -3215,17 +3229,18 @@ class _OfficerStatusTabState extends State<OfficerStatusTab>
                     initialValue: currentStartDate,
                     validator: (value) {
                       if (value == null) {
-                        return 'Tanggal mulai wajib diisi';
+                        return 'Start date is required';
                       }
                       if (currentEndDate != null &&
-                          value.isAfter(currentEndDate)) {
-                        return 'Tanggal mulai tidak boleh melebihi tanggal selesai!';
+                          (value.isAfter(currentEndDate) ||
+                              DateUtils.isSameDay(value, currentEndDate))) {
+                        return 'Start date must be before event end date!';
                       }
                       return null;
                     },
                     builder: (FormFieldState<DateTime> state) {
                       return _buildDatePicker(
-                          context, 'Tanggal Mulai', state.value, (date) {
+                          context, 'Start Time', state.value, (date) {
                         setState(() {
                           onStartDateChanged(date);
                           state.didChange(date);
@@ -3239,13 +3254,13 @@ class _OfficerStatusTabState extends State<OfficerStatusTab>
                     initialValue: currentEndDate,
                     validator: (value) {
                       if (value == null) {
-                        return 'Tanggal selesai wajib diisi';
+                        return 'The end date is required';
                       }
                       return null;
                     },
                     builder: (FormFieldState<DateTime> state) {
-                      return _buildDatePicker(
-                          context, 'Tanggal Selesai', state.value, (date) {
+                      return _buildDatePicker(context, 'End Date', state.value,
+                          (date) {
                         setState(() {
                           onEndDateChanged(date);
                           state.didChange(date);
@@ -3286,7 +3301,7 @@ class _OfficerStatusTabState extends State<OfficerStatusTab>
                       child: Row(
                         mainAxisAlignment: MainAxisAlignment.spaceBetween,
                         children: [
-                          const Text('Kelola Booking',
+                          const Text('Manage Booking',
                               style: TextStyle(
                                   fontSize: 20, fontWeight: FontWeight.bold)),
                           _buildStatusChip('open'),
@@ -3318,25 +3333,26 @@ class _OfficerStatusTabState extends State<OfficerStatusTab>
                                 child: Column(
                                   children: [
                                     _buildDetailItem(Icons.event_note,
-                                        'Agenda Acara', booking.eventAgenda),
+                                        'Event Agenda', booking.eventAgenda),
                                     _buildDetailItem(
                                         Icons.local_activity_outlined,
-                                        'Jenis Kegiatan',
+                                        'Activity Type',
                                         booking.activityType),
                                     _buildDetailItem(Icons.person_outline,
-                                        'Pemesan', booking.employeeName),
+                                        'Booker', booking.employeeName),
                                     _buildDetailItem(Icons.add_box_outlined,
-                                        'Kebutuhan', booking.needs),
+                                        'Needs', booking.needs),
                                     _buildDetailItem(
                                         Icons.groups_3_outlined,
-                                        'Jumlah Peserta',
+                                        'Number of Participants',
                                         booking.numberOfParticipants
                                             .toString()),
                                   ],
                                 ),
                               ),
                               const SizedBox(height: 24),
-                              _buildSectionTitle('Konfigurasi Ruangan & Waktu'),
+                              _buildSectionTitle('Room Configuration & Time'),
+                              const SizedBox(height: 12),
                               StreamBuilder<List<RoomModel>>(
                                 stream: _firestoreService.getRooms(),
                                 builder: (context, snapshot) {
@@ -3348,7 +3364,7 @@ class _OfficerStatusTabState extends State<OfficerStatusTab>
                                   if (!snapshot.hasData ||
                                       snapshot.data!.isEmpty) {
                                     return const Text(
-                                        'Error: Tidak ada ruangan tersedia.');
+                                        'Error: No rooms available.');
                                   }
                                   final rooms = snapshot.data!;
                                   if (selectedRoomId != null &&
@@ -3366,7 +3382,7 @@ class _OfficerStatusTabState extends State<OfficerStatusTab>
                                     value: selectedRoomId,
                                     menuMaxHeight: 300,
                                     decoration: const InputDecoration(
-                                      labelText: 'Pilih Ruangan',
+                                      labelText: 'Select Room',
                                       prefixIcon:
                                           Icon(Icons.meeting_room_outlined),
                                       border: OutlineInputBorder(),
@@ -3411,7 +3427,7 @@ class _OfficerStatusTabState extends State<OfficerStatusTab>
                                                   ),
                                                   const SizedBox(height: 4),
                                                   Text(
-                                                    'Kapasitas: ${room.capacity} orang',
+                                                    'Capacity: ${room.capacity} people',
                                                     style: TextStyle(
                                                       fontSize: 12,
                                                       color: Colors.grey[600],
@@ -3437,7 +3453,7 @@ class _OfficerStatusTabState extends State<OfficerStatusTab>
                                       });
                                     },
                                     validator: (value) => value == null
-                                        ? 'Ruangan harus dipilih'
+                                        ? 'A room must be selected'
                                         : null,
                                   );
                                 },
@@ -3448,24 +3464,22 @@ class _OfficerStatusTabState extends State<OfficerStatusTab>
                               if (isOutdated) ...[
                                 const SizedBox(height: 12),
                                 _buildWarningBox(
-                                    'Jadwal sudah terlewat, silakan input ulang.'),
+                                    'The schedule has passed, please re-enter.'),
                                 const SizedBox(height: 12),
                               ],
                               const SizedBox(height: 16),
                               SegmentedButton<BookingType>(
-                                segments: const [
+                                segments: const <ButtonSegment<BookingType>>[
                                   ButtonSegment(
-                                    value: BookingType.harian,
-                                    label: Text('Harian'),
-                                    icon: Icon(Icons.access_time),
-                                  ),
+                                      value: BookingType.harian,
+                                      label: Text('One-Day'),
+                                      icon: Icon(Icons.access_time)),
                                   ButtonSegment(
-                                    value: BookingType.beberapaHari,
-                                    label: Text('Beberapa Hari'),
-                                    icon: Icon(Icons.date_range),
-                                  ),
+                                      value: BookingType.beberapaHari,
+                                      label: Text('Multi-Day'),
+                                      icon: Icon(Icons.date_range)),
                                 ],
-                                selected: {bookingType},
+                                selected: <BookingType>{bookingType},
                                 onSelectionChanged:
                                     (Set<BookingType> newSelection) {
                                   setModalState(() {
@@ -3480,6 +3494,7 @@ class _OfficerStatusTabState extends State<OfficerStatusTab>
                                         newType == BookingType.harian &&
                                         startDateMulti != null) {
                                       selectedDate = startDateMulti;
+
                                       // Cek apakah tanggal sudah kadaluarsa
                                       final now = DateTime.now();
                                       final today = DateTime(
@@ -3491,32 +3506,19 @@ class _OfficerStatusTabState extends State<OfficerStatusTab>
                                         startTime = null;
                                         endTime = null;
                                       } else {
-                                        // Jika belum kadaluarsa, pertahankan waktu jika ada
-                                        if (startTime == null &&
-                                            endTime == null) {
-                                          // Jika belum ada waktu, ambil dari booking asli jika masih valid
-                                          final originalStart =
-                                              TimeOfDay.fromDateTime(
-                                                  booking.usageStartDate);
-                                          final originalEnd =
-                                              TimeOfDay.fromDateTime(
-                                                  booking.usageEndDate);
-
-                                          // Cek apakah waktu asli masih valid untuk hari ini
-                                          final isToday =
-                                              selectedDate!.year == now.year &&
-                                                  selectedDate!.month ==
-                                                      now.month &&
-                                                  selectedDate!.day == now.day;
-
-                                          if (!isToday ||
-                                              (originalStart.hour * 60 +
-                                                      originalStart.minute) >=
-                                                  (now.hour * 60 +
-                                                      now.minute)) {
-                                            startTime = originalStart;
-                                            endTime = originalEnd;
-                                          }
+                                        // Cek apakah booking asli adalah harian atau multi-day
+                                        if (DateUtils.isSameDay(
+                                            booking.usageStartDate,
+                                            booking.usageEndDate)) {
+                                          // Jika booking asli adalah harian, kembalikan jam dari booking asli
+                                          startTime = TimeOfDay.fromDateTime(
+                                              booking.usageStartDate);
+                                          endTime = TimeOfDay.fromDateTime(
+                                              booking.usageEndDate);
+                                        } else {
+                                          // Jika booking asli adalah multi-day, kosongkan jam
+                                          startTime = null;
+                                          endTime = null;
                                         }
                                       }
                                     }
@@ -3525,7 +3527,17 @@ class _OfficerStatusTabState extends State<OfficerStatusTab>
                                         newType == BookingType.beberapaHari &&
                                         selectedDate != null) {
                                       startDateMulti = selectedDate;
-                                      endDateMulti = null;
+
+                                      // Kembalikan endDateMulti jika sebelumnya ada data _buildMultiDayInputs
+                                      if (DateUtils.isSameDay(
+                                          booking.usageStartDate,
+                                          booking.usageEndDate)) {
+                                        // Jika booking asli adalah harian, kosongkan endDateMulti
+                                        endDateMulti = null;
+                                      } else {
+                                        // Jika booking asli adalah multi-day, kembalikan data endDateMulti
+                                        endDateMulti = booking.usageEndDate;
+                                      }
 
                                       // Cek apakah tanggal sudah kadaluarsa
                                       final now = DateTime.now();
@@ -3561,21 +3573,24 @@ class _OfficerStatusTabState extends State<OfficerStatusTab>
                                   endDateMulti,
                                   onStartDateChanged: (d) {
                                     startDateMulti = d;
+                                    startDateMulti = d;
                                     if (endDateMulti != null &&
-                                        d.isAfter(endDateMulti!)) {
+                                        (d.isAfter(endDateMulti!) ||
+                                            DateUtils.isSameDay(
+                                                d, endDateMulti!))) {
                                       endDateMulti = null;
                                     }
                                   },
                                   onEndDateChanged: (d) => endDateMulti = d,
                                 ),
                               const SizedBox(height: 24),
-                              _buildSectionTitle('Catatan Tambahan (Opsional)'),
+                              _buildSectionTitle('Additional Notes (Optional)'),
                               TextFormField(
                                 controller: notesController,
                                 decoration: const InputDecoration(
-                                  labelText: 'Catatan Tambahan',
+                                  labelText: 'Additional Notes',
                                   hintText:
-                                      'Tambahkan catatan untuk pemesan...',
+                                      'Add a note for the room orderer...',
                                   prefixIcon: Icon(Icons.note_alt_outlined),
                                   border: OutlineInputBorder(),
                                 ),
@@ -3594,7 +3609,7 @@ class _OfficerStatusTabState extends State<OfficerStatusTab>
                             child: ElevatedButton.icon(
                               onPressed: () => Navigator.pop(context),
                               icon: const Icon(Icons.cancel_outlined),
-                              label: const Text('Batal'),
+                              label: const Text('Cancel'),
                               style: ElevatedButton.styleFrom(
                                 backgroundColor: Colors.blueGrey,
                                 foregroundColor: Colors.white,
@@ -3606,7 +3621,7 @@ class _OfficerStatusTabState extends State<OfficerStatusTab>
                             child: ElevatedButton.icon(
                               onPressed: handleFinalApproval,
                               icon: const Icon(Icons.check_circle_outline),
-                              label: const Text('Setujui'),
+                              label: const Text('Approve'),
                               style: ElevatedButton.styleFrom(
                                 backgroundColor: Colors.green,
                                 foregroundColor: Colors.white,
@@ -3671,20 +3686,20 @@ class _OfficerStatusTabState extends State<OfficerStatusTab>
       context: context,
       builder: (dialogContext) => AlertDialog(
         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
-        title: const Text('Tolak Booking'),
+        title: const Text('Reject Booking'),
         content: Form(
           key: _formKey,
           child: TextFormField(
             controller: _rejectionReasonController,
             decoration: const InputDecoration(
-              labelText: 'Alasan Penolakan',
-              hintText: 'Berikan alasan penolakan booking...',
+              labelText: 'Reason for Rejection',
+              hintText: 'Please provide a reason for rejecting the booking',
               border: OutlineInputBorder(),
             ),
             maxLines: 3,
             validator: (value) {
               if (value == null || value.trim().isEmpty) {
-                return 'Alasan tidak boleh kosong';
+                return 'Reason cannot be empty';
               }
               return null;
             },
@@ -3693,7 +3708,7 @@ class _OfficerStatusTabState extends State<OfficerStatusTab>
         actions: [
           TextButton(
             onPressed: () => Navigator.pop(dialogContext),
-            child: const Text('Batal'),
+            child: const Text('Cancel'),
           ),
           ElevatedButton(
             onPressed: () async {
@@ -3714,7 +3729,7 @@ class _OfficerStatusTabState extends State<OfficerStatusTab>
                     booking.id,
                     'cancelled',
                     reason:
-                        'Ditolak: ${_rejectionReasonController.text.trim()}',
+                        'Rejected: ${_rejectionReasonController.text.trim()}',
                   );
 
                   // Pop loading dialog
@@ -3723,7 +3738,7 @@ class _OfficerStatusTabState extends State<OfficerStatusTab>
                   if (mounted) Navigator.pop(dialogContext);
 
                   ScaffoldMessenger.of(context).showSnackBar(const SnackBar(
-                    content: Text('Booking telah ditolak.'),
+                    content: Text('Booking successfully rejected.'),
                     backgroundColor: Colors.orange,
                   ));
 
@@ -3733,14 +3748,14 @@ class _OfficerStatusTabState extends State<OfficerStatusTab>
                   // Pop loading dialog on error
                   if (mounted) Navigator.pop(context);
                   ScaffoldMessenger.of(context).showSnackBar(SnackBar(
-                    content: Text('Gagal menolak booking: $e'),
+                    content: Text('Failed to reject booking: $e'),
                     backgroundColor: Colors.red,
                   ));
                 }
               }
             },
             style: ElevatedButton.styleFrom(backgroundColor: Colors.red),
-            child: const Text('Tolak Booking',
+            child: const Text('Reject Booking',
                 style: TextStyle(color: Colors.white)),
           ),
         ],
@@ -3833,17 +3848,17 @@ class _OfficerStatusTabState extends State<OfficerStatusTab>
     final difference = now.difference(date);
 
     if (difference.inDays > 365) {
-      return '${(difference.inDays / 365).floor()} tahun lalu';
+      return '${(difference.inDays / 365).floor()} last year';
     } else if (difference.inDays > 30) {
-      return '${(difference.inDays / 30).floor()} bulan lalu';
+      return '${(difference.inDays / 30).floor()} last month';
     } else if (difference.inDays > 0) {
-      return '${difference.inDays} hari lalu';
+      return '${difference.inDays} last days';
     } else if (difference.inHours > 0) {
-      return '${difference.inHours} jam lalu';
+      return '${difference.inHours} last hours';
     } else if (difference.inMinutes > 0) {
-      return '${difference.inMinutes} menit lalu';
+      return '${difference.inMinutes} last minutes';
     } else {
-      return 'Baru saja';
+      return 'just now';
     }
   }
 }
@@ -3896,8 +3911,6 @@ class _OfficerRatingTabState extends State<OfficerRatingTab>
 
   @override
   Widget build(BuildContext context) {
-    // DIHAPUS: Scaffold dan NestedScrollView agar tidak konflik
-    // DITAMBAHKAN: SingleChildScrollView agar bisa di-scroll jika layar kecil
     return SingleChildScrollView(
       child: Column(
         children: [
@@ -3919,21 +3932,18 @@ class _OfficerRatingTabState extends State<OfficerRatingTab>
                 fontSize: 16,
               ),
               tabs: const [
-                Tab(text: 'Teknisi'),
-                Tab(text: 'Kendaraan'),
-                Tab(text: 'Ruangan'),
+                Tab(text: 'Technician'),
+                Tab(text: 'Vehicle'),
+                Tab(text: 'Room'),
               ],
             ),
           ),
           const Divider(height: 1, thickness: 1, color: Color(0xFFE2E8F0)),
-          // DIBUNGKUS: dengan SizedBox untuk memberikan tinggi yang pasti
           SizedBox(
-            height: MediaQuery.of(context).size.height *
-                0.4, // Atur tinggi sesuai kebutuhan
+            height: MediaQuery.of(context).size.height * 0.4,
             child: TabBarView(
               controller: _ratingTabController,
               children: [
-                // DIUBAH: Konten tabbar dibuat kosong untuk sementara
                 _buildEmptyTabContent(
                     'Data Rating Teknisi akan ditampilkan di sini.'),
                 _buildEmptyTabContent(
@@ -3948,7 +3958,7 @@ class _OfficerRatingTabState extends State<OfficerRatingTab>
     );
   }
 
-  // WIDGET BARU: untuk menampilkan konten tab yang masih kosong
+  // Wuntuk menampilkan konten tab yang masih kosong
   Widget _buildEmptyTabContent(String message) {
     return Center(
       child: Padding(
@@ -4031,7 +4041,6 @@ class _OfficerRatingTabState extends State<OfficerRatingTab>
         children: [
           Icon(icon, color: color, size: 24),
           const SizedBox(width: 8),
-          // DITAMBAHKAN: Expanded untuk membuat kolom teks fleksibel
           Expanded(
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
@@ -4084,7 +4093,7 @@ class _OfficerRatingTabState extends State<OfficerRatingTab>
             child: TextField(
               controller: _searchController,
               decoration: InputDecoration(
-                hintText: 'Cari berdasarkan nama...',
+                hintText: 'Search...',
                 prefixIcon: Icon(Icons.search, color: Colors.grey[600]),
                 suffixIcon: _searchQuery.isNotEmpty
                     ? IconButton(
@@ -4118,7 +4127,7 @@ class _OfficerRatingTabState extends State<OfficerRatingTab>
               Icons.filter_list,
               color: Theme.of(context).primaryColor,
             ),
-            tooltip: 'Filter Berdasarkan Waktu',
+            tooltip: 'Filter By Time',
           ),
         ),
       ],
