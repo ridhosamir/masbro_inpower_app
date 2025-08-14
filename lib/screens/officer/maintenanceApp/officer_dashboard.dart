@@ -50,11 +50,13 @@ class _OfficerDashboardState extends State<OfficerDashboard>
 
   Future<void> _loadUserData() async {
     final authService = Provider.of<AuthService>(context, listen: false);
+
     final userService = Provider.of<UserService>(context, listen: false);
 
     if (authService.user != null) {
       try {
         final userData = await userService.getUserData(authService.user!.uid);
+
         if (mounted) {
           setState(() {
             currentUser = userData;
@@ -66,30 +68,31 @@ class _OfficerDashboardState extends State<OfficerDashboard>
     }
   }
 
-  // Fungsi baru untuk memuat daftar teknisi
   Future<void> _loadTechnicians() async {
     setState(() {
       _loadingTechnicians = true;
     });
 
     try {
-      // Ambil daftar teknisi dari UserService
       final technicians = await _userService.getTechnicians();
-      
+
+      final drivers = await _userService
+          .getDrivers(); 
+
       if (mounted) {
         setState(() {
-          // Filter teknisi yang tidak mengandung kata "driver" di nama atau email
+
           _technicians = technicians.where((tech) {
-            final nameContainsDriver = tech.name.toLowerCase().contains('driver');
-            final emailContainsDriver = tech.email.toLowerCase().contains('driver');
-            return !nameContainsDriver && !emailContainsDriver;
+
+            return !drivers.any((driver) => driver.uid == tech.uid);
           }).toList();
-          
+
           _loadingTechnicians = false;
         });
       }
     } catch (e) {
       print('Error loading technicians: $e');
+
       if (mounted) {
         setState(() {
           _loadingTechnicians = false;
@@ -97,6 +100,8 @@ class _OfficerDashboardState extends State<OfficerDashboard>
       }
     }
   }
+
+
 
   // Fungsi untuk mendapatkan data rating teknisi
 Future<Map<String, dynamic>> _getTechnicianRating(String technicianId) async {
@@ -308,59 +313,81 @@ Future<Map<String, dynamic>> _getTechnicianRating(String technicianId) async {
                   tooltip: 'Filter Reports',
                 ),
                 PopupMenuButton<String>(
-                  icon: Container(
-                    padding: EdgeInsets.all(4),
-                    decoration: BoxDecoration(
-                      color: Colors.white.withOpacity(0.2),
-                      shape: BoxShape.circle,
-                    ),
-                    child: Icon(Icons.more_vert, color: Colors.white, size: 18),
-                  ),
-                  offset: Offset(0, 50),
-                  shape: RoundedRectangleBorder(
-                    borderRadius: BorderRadius.circular(16),
-                  ),
-                  onSelected: (value) {
-                    switch (value) {
-                      case 'profile':
-                        _showProfileDialog();
-                        break;
-                      case 'technicians':
-                        _showTechniciansRatingDialog(); // Tampilkan dialog rating teknisi
-                        break;
-                      case 'back':
-                        Navigator.pop(context);
-                        break;
-                    }
-                  },
-                  itemBuilder: (context) => [
-                    PopupMenuItem(
-                      value: 'profile',
-                      child: ListTile(
-                        leading: Icon(Icons.person),
-                        title: Text('Profile'),
-                        contentPadding: EdgeInsets.zero,
-                      ),
-                    ),
-                    PopupMenuItem(
-                      value: 'technicians',
-                      child: ListTile(
-                        leading: Icon(Icons.star, color: Colors.amber),
-                        title: Text('Technician Ratings'),
-                        contentPadding: EdgeInsets.zero,
-                      ),
-                    ),
-                    PopupMenuItem(
-                      value: 'back',
-                      child: ListTile(
-                        leading: Icon(Icons.arrow_back, color: Colors.red),
-                        title: Text('Back to Home',
-                            style: TextStyle(color: Colors.red)),
-                        contentPadding: EdgeInsets.zero,
-                      ),
-                    ),
-                  ],
+      icon: CircleAvatar(
+        backgroundColor: Colors.white.withOpacity(0.25),
+        child: const Icon(Icons.supervisor_account, color: Colors.white),
+      ),
+      offset: const Offset(0, 50),
+      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+      onSelected: (value) {
+        switch (value) {
+          case 'profile':
+            _showProfileDialog();
+            break;
+          case 'technicians':
+            _showTechniciansRatingDialog();
+            break;
+          case 'back':
+            Navigator.pop(context);
+            break;
+        }
+      },
+      itemBuilder: (context) => [
+        PopupMenuItem(
+          value: 'profile',
+          child: Row(
+            children: [
+              Container(
+                padding: const EdgeInsets.all(8),
+                decoration: BoxDecoration(
+                  color: Colors.blue.withOpacity(0.1),
+                  shape: BoxShape.circle,
                 ),
+                child: Icon(Icons.person_outline,
+                    color: Colors.blue[700], size: 20),
+              ),
+              const SizedBox(width: 12),
+              const Text('Profile'),
+            ],
+          ),
+        ),
+        PopupMenuItem(
+          value: 'technicians',
+          child: Row(
+            children: [
+              Container(
+                padding: const EdgeInsets.all(8),
+                decoration: BoxDecoration(
+                  color: Colors.amber.withOpacity(0.1),
+                  shape: BoxShape.circle,
+                ),
+                child: Icon(Icons.star, color: Colors.amber[700], size: 20),
+              ),
+              const SizedBox(width: 12),
+              const Text('Technician Ratings'),
+            ],
+          ),
+        ),
+        PopupMenuItem(
+          value: 'back',
+          child: Row(
+            children: [
+              Container(
+                padding: const EdgeInsets.all(8),
+                decoration: BoxDecoration(
+                  color: Colors.red.withOpacity(0.1),
+                  shape: BoxShape.circle,
+                ),
+                child: Icon(Icons.arrow_back, color: Colors.red[700], size: 20),
+              ),
+              const SizedBox(width: 12),
+              const Text('Back to Home', style: TextStyle(color: Colors.red)),
+            ],
+          ),
+        ),
+      ],
+    ),
+
                 SizedBox(width: 8),
               ],
               bottom: TabBar(
@@ -751,11 +778,7 @@ Future<Map<String, dynamic>> _getTechnicianRating(String technicianId) async {
                 DateFormat('dd MMM yyyy').format(technician.createdAt),
                 Icons.date_range,
               ),
-              _buildInfoItem(
-                'Experience',
-                _getExperienceText(technician.createdAt),
-                Icons.work,
-              ),
+             
             ],
           ),
           actions: [
@@ -1846,47 +1869,101 @@ Widget _buildStatisticsCards() {
 
     showDialog(
       context: context,
-      builder: (context) => AlertDialog(
-        title: Text('Profile Information'),
-        content: Column(
-          mainAxisSize: MainAxisSize.min,
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            _buildProfileItem('Name', currentUser!.name),
-            _buildProfileItem('Email', currentUser!.email),
-            _buildProfileItem('Role', currentUser!.role.toUpperCase()),
-            _buildProfileItem(
-              'Member Since',
-              DateFormat('dd MMM yyyy').format(currentUser!.createdAt),
-            ),
-          ],
-        ),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(context),
-            child: Text('Close'),
+      builder: (context) => Dialog(
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
+        child: Padding(
+          padding: const EdgeInsets.all(24.0),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Container(
+                padding: const EdgeInsets.all(16),
+                decoration: BoxDecoration(
+                  color: Theme.of(context).primaryColor.withOpacity(0.1),
+                  shape: BoxShape.circle,
+                ),
+                child: Icon(
+                  Icons.person,
+                  size: 40,
+                  color: Theme.of(context).primaryColor,
+                ),
+              ),
+              const SizedBox(height: 24),
+              Text(
+                'Profile Information',
+                style: TextStyle(
+                  fontSize: 20,
+                  fontWeight: FontWeight.bold,
+                  color: Colors.grey[800],
+                ),
+              ),
+              const SizedBox(height: 20),
+              _buildProfileItem('Name', currentUser!.name),
+              _buildProfileItem('Email', currentUser!.email),
+              _buildProfileItem('Role', currentUser!.role.toUpperCase()),
+              _buildProfileItem(
+                'Member since',
+                DateFormat('dd MMMM yyyy').format(currentUser!.createdAt),
+              ),
+              const SizedBox(height: 24),
+              ElevatedButton(
+                onPressed: () => Navigator.pop(context),
+                style: ElevatedButton.styleFrom(
+                  backgroundColor: Theme.of(context).primaryColor,
+                  foregroundColor: Colors.white,
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 24,
+                    vertical: 12,
+                  ),
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(12),
+                  ),
+                ),
+                child: const Text('Close'),
+              ),
+            ],
           ),
-        ],
+        ),
       ),
     );
   }
 
   Widget _buildProfileItem(String label, String value) {
-    return Padding(
-      padding: EdgeInsets.symmetric(vertical: 4),
-      child: Row(
+    return Container(
+      width: double.infinity,
+      margin: const EdgeInsets.only(bottom: 16),
+      child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          SizedBox(
-            width: 80,
-            child: Text(
-              '$label:',
-              style: TextStyle(fontWeight: FontWeight.w600),
+          Text(
+            label,
+            style: TextStyle(
+              fontWeight: FontWeight.bold,
+              color: Colors.grey[600],
+              fontSize: 12,
             ),
           ),
-          Expanded(child: Text(value)),
+          const SizedBox(height: 4),
+          Container(
+            width: double.infinity,
+            padding: const EdgeInsets.symmetric(
+              horizontal: 16,
+              vertical: 12,
+            ),
+            decoration: BoxDecoration(
+              color: Colors.grey[100],
+              borderRadius: BorderRadius.circular(12),
+            ),
+            child: Text(
+              value,
+              style: TextStyle(
+                fontSize: 16,
+                color: Colors.grey[800],
+              ),
+            ),
+          ),
         ],
       ),
     );
   }
-}
+    }

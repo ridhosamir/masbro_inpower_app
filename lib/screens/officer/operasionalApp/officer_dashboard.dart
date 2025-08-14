@@ -319,17 +319,35 @@ class _OfficerDashboardState extends State<OfficerDashboardOprational>
                 ),
                 PopupMenuButton<String>(
                   icon: Container(
-                    padding: EdgeInsets.all(4),
+                    padding: EdgeInsets.all(8),
                     decoration: BoxDecoration(
-                      color: Colors.white.withOpacity(0.2),
+                      color: Colors.white.withOpacity(0.15),
                       shape: BoxShape.circle,
+                      border: Border.all(
+                        color: Colors.white.withOpacity(0.25),
+                        width: 1,
+                      ),
+                      boxShadow: [
+                        BoxShadow(
+                          color: Colors.black.withOpacity(0.1),
+                          blurRadius: 4,
+                          offset: Offset(0, 2),
+                        ),
+                      ],
                     ),
-                    child: Icon(Icons.more_vert, color: Colors.white, size: 18),
+                    child: Icon(
+                      Icons.more_vert,
+                      color: Colors.white,
+                      size: 18,
+                    ),
                   ),
                   offset: Offset(0, 50),
                   shape: RoundedRectangleBorder(
-                    borderRadius: BorderRadius.circular(16),
+                    borderRadius: BorderRadius.circular(20),
                   ),
+                  elevation: 20,
+                  color: Colors.white,
+                  shadowColor: Colors.black.withOpacity(0.2),
                   onSelected: (value) {
                     switch (value) {
                       case 'profile':
@@ -346,28 +364,101 @@ class _OfficerDashboardState extends State<OfficerDashboardOprational>
                   itemBuilder: (context) => [
                     PopupMenuItem(
                       value: 'profile',
-                      child: ListTile(
-                        leading: Icon(Icons.person),
-                        title: Text('Profile'),
-                        contentPadding: EdgeInsets.zero,
+                      child: Container(
+                        padding:
+                            EdgeInsets.symmetric(vertical: 8, horizontal: 4),
+                        child: Row(
+                          children: [
+                            Container(
+                              padding: EdgeInsets.all(8),
+                              decoration: BoxDecoration(
+                                color: Color.fromARGB(255, 25, 115, 184)
+                                    .withOpacity(0.1),
+                                borderRadius: BorderRadius.circular(10),
+                              ),
+                              child: Icon(
+                                Icons.person_outline,
+                                color: Color.fromARGB(255, 25, 115, 184),
+                                size: 20,
+                              ),
+                            ),
+                            SizedBox(width: 12),
+                            Text(
+                              'Profile',
+                              style: TextStyle(
+                                fontWeight: FontWeight.w500,
+                                color: Colors.grey[800],
+                                fontSize: 15,
+                              ),
+                            ),
+                          ],
+                        ),
                       ),
                     ),
                     PopupMenuItem(
                       value: 'sync',
-                      child: ListTile(
-                        leading: Icon(Icons.sync, color: Colors.blue),
-                        title: Text('Sync Driver/Vehicle Status',
-                            style: TextStyle(color: Colors.blue)),
-                        contentPadding: EdgeInsets.zero,
+                      child: Container(
+                        padding:
+                            EdgeInsets.symmetric(vertical: 8, horizontal: 4),
+                        child: Row(
+                          children: [
+                            Container(
+                              padding: EdgeInsets.all(8),
+                              decoration: BoxDecoration(
+                                color: Colors.blue.withOpacity(0.1),
+                                borderRadius: BorderRadius.circular(10),
+                              ),
+                              child: Icon(
+                                Icons.sync,
+                                color: Colors.blue[700],
+                                size: 20,
+                              ),
+                            ),
+                            SizedBox(width: 12),
+                            Expanded(
+                              child: Text(
+                                'Sync Driver/Vehicle Status',
+                                style: TextStyle(
+                                  fontWeight: FontWeight.w500,
+                                  color: Colors.blue[700],
+                                  fontSize: 15,
+                                ),
+                              ),
+                            ),
+                          ],
+                        ),
                       ),
                     ),
                     PopupMenuItem(
                       value: 'back',
-                      child: ListTile(
-                        leading: Icon(Icons.arrow_back, color: Colors.red),
-                        title: Text('Back to Home',
-                            style: TextStyle(color: Colors.red)),
-                        contentPadding: EdgeInsets.zero,
+                      child: Container(
+                        padding:
+                            EdgeInsets.symmetric(vertical: 8, horizontal: 4),
+                        child: Row(
+                          children: [
+                            Container(
+                              padding: EdgeInsets.all(8),
+                              decoration: BoxDecoration(
+                                color: Colors.red.withOpacity(0.1),
+                                borderRadius: BorderRadius.circular(10),
+                              ),
+                              child: Icon(
+                                Icons.arrow_back,
+                                color: Colors.red[600],
+                                size: 20,
+                              ),
+                            ),
+                            SizedBox(width: 12),
+                            Text(
+                              'Back to Home',
+                              style: TextStyle(
+                                fontWeight: FontWeight.w500,
+                                color: Colors.red[600],
+                                fontSize: 15,
+                              ),
+                            ),
+                          ],
+                        ),
                       ),
                     ),
                   ],
@@ -1889,52 +1980,105 @@ class _OfficerDashboardState extends State<OfficerDashboardOprational>
     );
   }
 
-  void _showProfileDialog() {
+   void _showProfileDialog() {
     if (currentUser == null) return;
 
     showDialog(
       context: context,
-      builder: (context) => AlertDialog(
-        title: Text('Profile Information'),
-        content: Column(
-          mainAxisSize: MainAxisSize.min,
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            _buildProfileItem('Name', currentUser!.name),
-            _buildProfileItem('Email', currentUser!.email),
-            _buildProfileItem('Role', currentUser!.role.toUpperCase()),
-            _buildProfileItem(
-              'Member Since',
-              DateFormat('dd MMM yyyy').format(currentUser!.createdAt),
-            ),
-          ],
-        ),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(context),
-            child: Text('Close'),
+      builder: (context) => Dialog(
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
+        child: Padding(
+          padding: const EdgeInsets.all(24.0),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Container(
+                padding: const EdgeInsets.all(16),
+                decoration: BoxDecoration(
+                  color: Theme.of(context).primaryColor.withOpacity(0.1),
+                  shape: BoxShape.circle,
+                ),
+                child: Icon(
+                  Icons.person,
+                  size: 40,
+                  color: Theme.of(context).primaryColor,
+                ),
+              ),
+              const SizedBox(height: 24),
+              Text(
+                'Profile Information',
+                style: TextStyle(
+                  fontSize: 20,
+                  fontWeight: FontWeight.bold,
+                  color: Colors.grey[800],
+                ),
+              ),
+              const SizedBox(height: 20),
+              _buildProfileItem('Name', currentUser!.name),
+              _buildProfileItem('Email', currentUser!.email),
+              _buildProfileItem('Role', currentUser!.role.toUpperCase()),
+              _buildProfileItem(
+                'Member since',
+                DateFormat('dd MMMM yyyy').format(currentUser!.createdAt),
+              ),
+              const SizedBox(height: 24),
+              ElevatedButton(
+                onPressed: () => Navigator.pop(context),
+                style: ElevatedButton.styleFrom(
+                  backgroundColor: Theme.of(context).primaryColor,
+                  foregroundColor: Colors.white,
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 24,
+                    vertical: 12,
+                  ),
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(12),
+                  ),
+                ),
+                child: const Text('Close'),
+              ),
+            ],
           ),
-        ],
+        ),
       ),
     );
   }
 
   Widget _buildProfileItem(String label, String value) {
-    return Padding(
-      padding: EdgeInsets.symmetric(vertical: 4),
-      child: Row(
+    return Container(
+      width: double.infinity,
+      margin: const EdgeInsets.only(bottom: 16),
+      child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          SizedBox(
-            width: 80,
-            child: Text(
-              '$label:',
-              style: TextStyle(fontWeight: FontWeight.w600),
+          Text(
+            label,
+            style: TextStyle(
+              fontWeight: FontWeight.bold,
+              color: Colors.grey[600],
+              fontSize: 12,
             ),
           ),
-          Expanded(child: Text(value)),
+          const SizedBox(height: 4),
+          Container(
+            width: double.infinity,
+            padding: const EdgeInsets.symmetric(
+              horizontal: 16,
+              vertical: 12,
+            ),
+            decoration: BoxDecoration(
+              color: Colors.grey[100],
+              borderRadius: BorderRadius.circular(12),
+            ),
+            child: Text(
+              value,
+              style: TextStyle(
+                fontSize: 16,
+                color: Colors.grey[800],
+              ),
+            ),
+          ),
         ],
       ),
     );
-  }
-}
+  }}
