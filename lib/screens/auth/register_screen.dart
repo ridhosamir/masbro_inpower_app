@@ -8,6 +8,7 @@ import 'package:masbro_inpower_app/screens/admin/admin_dashboard.dart';
 import 'package:masbro_inpower_app/widgets/custom_button.dart';
 import 'package:masbro_inpower_app/widgets/custom_text_field.dart';
 import 'package:masbro_inpower_app/utils/constants.dart';
+
 class RegisterScreen extends StatefulWidget {
   @override
   _RegisterScreenState createState() => _RegisterScreenState();
@@ -16,7 +17,8 @@ class RegisterScreen extends StatefulWidget {
 class _RegisterScreenState extends State<RegisterScreen> {
   final _formKey = GlobalKey<FormState>();
   final _nameController = TextEditingController();
-  final _emailController = TextEditingController();
+  final _emailController =
+      TextEditingController(); // Ini akan dimodifikasi untuk hanya menyimpan username
   final _passwordController = TextEditingController();
   final _confirmPasswordController = TextEditingController();
 
@@ -25,11 +27,36 @@ class _RegisterScreenState extends State<RegisterScreen> {
   bool _isAdmin = false;
   bool _isDriver = false; // Flag untuk driver option
 
+  // Suffix email yang akan otomatis ditambahkan
+  final String _emailSuffix = "@gmail.com";
+  // Controller untuk menampilkan email lengkap di UI
+  final TextEditingController _displayEmailController = TextEditingController();
+
   @override
   void initState() {
     super.initState();
     _checkAdminStatus();
     print('🚀 RegisterScreen initialized');
+
+    // Menambahkan listener ke controller untuk username
+    _displayEmailController.addListener(_onEmailChanged);
+  }
+
+  // Ketika email berubah, update _emailController
+  void _onEmailChanged() {
+    final username = _displayEmailController.text.trim();
+
+    // Jika teks sudah mengandung "@gmail.com", tidak perlu mengubah apa-apa
+    if (username.contains('@gmail.com')) {
+      _emailController.text = username;
+      return;
+    }
+
+    // Jika username mengandung @ lainnya, hapus bagian itu
+    final cleanUsername = username.split('@')[0];
+
+    // Update email controller dengan username saja (tanpa @gmail.com)
+    _emailController.text = cleanUsername;
   }
 
   Future<void> _checkAdminStatus() async {
@@ -53,8 +80,20 @@ class _RegisterScreenState extends State<RegisterScreen> {
     _emailController.dispose();
     _passwordController.dispose();
     _confirmPasswordController.dispose();
+    _displayEmailController.dispose(); // Jangan lupa dispose controller baru
     print('🧹 RegisterScreen disposed');
     super.dispose();
+  }
+
+  // Mendapatkan email lengkap dengan @gmail.com
+  String get _fullEmail {
+    final username = _emailController.text.trim();
+    // Jika username sudah berisi @gmail.com, kembalikan sebagaimana adanya
+    if (username.contains('@gmail.com')) {
+      return username;
+    }
+    // Jika tidak, tambahkan @gmail.com
+    return username + _emailSuffix;
   }
 
   Future<void> _register() async {
@@ -66,7 +105,7 @@ class _RegisterScreenState extends State<RegisterScreen> {
     setState(() => _isLoading = true);
 
     final authService = Provider.of<AuthService>(context, listen: false);
-    final email = _emailController.text.trim();
+    final email = _fullEmail; // Gunakan email lengkap
     final password = _passwordController.text;
     final name = _nameController.text.trim();
 
@@ -259,24 +298,51 @@ class _RegisterScreenState extends State<RegisterScreen> {
                         ),
                         SizedBox(height: 16),
 
-                        // Email Field
-                        CustomTextField(
-                          labelText: 'Email',
-                          hintText: 'Enter your email',
-                          controller: _emailController,
-                          prefixIcon: Icons.email,
-                          keyboardType: TextInputType.emailAddress,
-                          validator: (value) {
-                            if (value == null || value.isEmpty) {
-                              return 'Please enter your email';
-                            }
-                            if (!RegExp(r'^[\w-\.]+@([\w-]+\.)+[\w-]{2,4}'
-                )
-                                .hasMatch(value)) {
-                              return 'Please enter a valid email';
-                            }
-                            return null;
-                          },
+                        // Email Field (modified with @gmail.com display)
+                        Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            // Username Field
+                            CustomTextField(
+                              labelText: 'Username',
+                              hintText: 'Enter username (without @gmail.com)',
+                              controller: _displayEmailController,
+                              prefixIcon: Icons.email,
+                              keyboardType: TextInputType.text,
+                              validator: (value) {
+                                if (value == null || value.isEmpty) {
+                                  return 'Please enter your username';
+                                }
+
+                                // Cek apakah username valid
+                                final username = value.split(
+                                    '@')[0]; // Ambil bagian sebelum @ jika ada
+                                if (username.isEmpty) {
+                                  return 'Username cannot be empty';
+                                }
+
+                                // Validasi format username
+                                if (!RegExp(r'^[a-zA-Z0-9_.]+$')
+                                    .hasMatch(username)) {
+                                  return 'Username can only contain letters, numbers, underscores and dots';
+                                }
+
+                                return null;
+                              },
+                            ),
+                            // Display email preview
+                            Padding(
+                              padding: const EdgeInsets.only(left: 12, top: 4),
+                              child: Text(
+                                'Your email will be: ${_emailController.text.isNotEmpty ? _fullEmail : "username@gmail.com"}',
+                                style: TextStyle(
+                                  color: Colors.grey[600],
+                                  fontSize: 12,
+                                  fontStyle: FontStyle.italic,
+                                ),
+                              ),
+                            ),
+                          ],
                         ),
                         SizedBox(height: 16),
 
@@ -445,7 +511,8 @@ class _RegisterScreenState extends State<RegisterScreen> {
                                     setState(() {
                                       _isDriver = value;
                                     });
-                                    print('🚗 Driver flag changed to: $_isDriver');
+                                    print(
+                                        '🚗 Driver flag changed to: $_isDriver');
                                   },
                                   activeColor: Colors.green,
                                   contentPadding: EdgeInsets.zero,
@@ -544,7 +611,9 @@ class _RegisterScreenState extends State<RegisterScreen> {
                                     'Driver enabled: $_isDriver',
                                     style: TextStyle(
                                       fontSize: 10,
-                                      color: _isDriver ? Colors.green : Colors.grey[600],
+                                      color: _isDriver
+                                          ? Colors.green
+                                          : Colors.grey[600],
                                     ),
                                   ),
                               ],

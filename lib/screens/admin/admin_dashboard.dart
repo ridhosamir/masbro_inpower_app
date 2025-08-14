@@ -1,12 +1,13 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
+
+// Ganti path ini sesuai dengan struktur proyek Anda
 import '../../services/auth_service.dart';
 import '../../services/user_service.dart';
 import '../../utils/constants.dart';
 import '../auth/register_screen.dart';
 import '../auth/login_screen.dart';
-
 
 class AdminDashboard extends StatefulWidget {
   @override
@@ -14,6 +15,7 @@ class AdminDashboard extends StatefulWidget {
 }
 
 class _AdminDashboardState extends State<AdminDashboard> {
+  // State untuk filter berdasarkan peran
   String _selectedFilter = 'All';
   List<String> _filterOptions = [
     'All',
@@ -23,8 +25,30 @@ class _AdminDashboardState extends State<AdminDashboard> {
     'Admin'
   ];
 
+  // State baru untuk fungsionalitas pencarian
+  final TextEditingController _searchController = TextEditingController();
+  String _searchQuery = '';
+
+  @override
+  void initState() {
+    super.initState();
+    // Listener untuk memperbarui state query pencarian saat teks berubah
+    _searchController.addListener(() {
+      setState(() {
+        _searchQuery = _searchController.text;
+      });
+    });
+  }
+
+  @override
+  void dispose() {
+    // Hapus controller untuk membebaskan sumber daya
+    _searchController.dispose();
+    super.dispose();
+  }
+
   Future<void> _signOut() async {
-    // Show confirmation dialog
+    // Tampilkan dialog konfirmasi
     bool? confirmLogout = await showDialog<bool>(
       context: context,
       builder: (context) => AlertDialog(
@@ -61,10 +85,8 @@ class _AdminDashboardState extends State<AdminDashboard> {
     try {
       final authService = Provider.of<AuthService>(context, listen: false);
 
-      // PERBAIKAN: Logout tanpa loading dialog untuk menghindari stuck
       await authService.signOut();
 
-      // PERBAIKAN: Langsung navigate tanpa delay
       if (mounted) {
         Navigator.of(context).pushAndRemoveUntil(
           MaterialPageRoute(builder: (context) => LoginScreen()),
@@ -76,14 +98,12 @@ class _AdminDashboardState extends State<AdminDashboard> {
     } catch (e) {
       print('❌ Error during admin logout: $e');
 
-      // PERBAIKAN: Tetap navigate ke login meskipun ada error
       if (mounted) {
         Navigator.of(context).pushAndRemoveUntil(
           MaterialPageRoute(builder: (context) => LoginScreen()),
           (route) => false,
         );
 
-        // Show error after navigation
         Future.delayed(Duration(milliseconds: 500), () {
           if (mounted) {
             ScaffoldMessenger.of(context).showSnackBar(
@@ -109,28 +129,25 @@ class _AdminDashboardState extends State<AdminDashboard> {
   void _createNewUser() async {
     print('📝 Navigating to create new user...');
 
-    // Navigate and wait for result
     final result = await Navigator.push<bool>(
       context,
       MaterialPageRoute(builder: (context) => RegisterScreen()),
     );
 
-    // Refresh the dashboard if user was created successfully
     if (result == true && mounted) {
       print('🔄 Refreshing admin dashboard after user creation');
       setState(() {});
 
-      // Optional: Show success message
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
           content: Row(
             children: [
-              Icon(Icons.refresh, color: Colors.white),
+              Icon(Icons.check_circle, color: Colors.white),
               SizedBox(width: 8),
-              Text('Dashboard refreshed'),
+              Text('User created successfully!'),
             ],
           ),
-          backgroundColor: Colors.blue,
+          backgroundColor: Colors.green,
           duration: Duration(seconds: 2),
           behavior: SnackBarBehavior.floating,
         ),
@@ -260,11 +277,10 @@ class _AdminDashboardState extends State<AdminDashboard> {
     final TextEditingController emailController =
         TextEditingController(text: userData['email']);
     String selectedRole = userData['role'] ?? Constants.ROLE_EMPLOYEE;
-    bool isDriver = false; // Added for driver toggle
+    bool isDriver = false;
     bool isDriverNameOrEmail =
         _isDriverUser(userData['name'] ?? '', userData['email'] ?? '');
 
-    // Check if user is already a driver
     _checkIfUserIsDriver(userId).then((result) {
       if (result) {
         setState(() {
@@ -335,14 +351,12 @@ class _AdminDashboardState extends State<AdminDashboard> {
                   onChanged: (value) {
                     setState(() {
                       selectedRole = value!;
-                      // Reset driver status when changing to non-technician
                       if (value != Constants.ROLE_TECHNICIAN) {
                         isDriver = false;
                       }
                     });
                   },
                 ),
-                // Only show driver toggle for technicians
                 if (selectedRole == Constants.ROLE_TECHNICIAN) ...[
                   SizedBox(height: 16),
                   Container(
@@ -452,7 +466,6 @@ class _AdminDashboardState extends State<AdminDashboard> {
             ElevatedButton.icon(
               onPressed: () async {
                 try {
-                  // 1. Update user document in Firestore
                   await FirebaseFirestore.instance
                       .collection('users')
                       .doc(userId)
@@ -461,7 +474,6 @@ class _AdminDashboardState extends State<AdminDashboard> {
                     'role': selectedRole,
                   });
 
-                  // 2. Handle driver status changes
                   bool shouldBeDriver =
                       selectedRole == Constants.ROLE_TECHNICIAN &&
                           (isDriver ||
@@ -470,7 +482,6 @@ class _AdminDashboardState extends State<AdminDashboard> {
 
                   bool isCurrentlyDriver = await _checkIfUserIsDriver(userId);
 
-                  // If should be driver but isn't currently
                   if (shouldBeDriver && !isCurrentlyDriver) {
                     await FirebaseFirestore.instance
                         .collection('drivers')
@@ -486,13 +497,7 @@ class _AdminDashboardState extends State<AdminDashboard> {
                       'uid': userId,
                       'updatedAt': Timestamp.now(),
                     });
-                  }
-                  // If is currently driver but role changed to non-technician or driver toggle disabled
-                  else if (isCurrentlyDriver && !shouldBeDriver) {
-                    // Option 1: Remove driver document
-                    // await FirebaseFirestore.instance.collection('drivers').doc(userId).delete();
-
-                    // Option 2: Just mark as inactive (safer, prevents data loss)
+                  } else if (isCurrentlyDriver && !shouldBeDriver) {
                     await FirebaseFirestore.instance
                         .collection('drivers')
                         .doc(userId)
@@ -501,9 +506,7 @@ class _AdminDashboardState extends State<AdminDashboard> {
                       'status': 'inactive',
                       'updatedAt': Timestamp.now(),
                     });
-                  }
-                  // If already a driver and should stay a driver, just update the name
-                  else if (isCurrentlyDriver && shouldBeDriver) {
+                  } else if (isCurrentlyDriver && shouldBeDriver) {
                     await FirebaseFirestore.instance
                         .collection('drivers')
                         .doc(userId)
@@ -522,7 +525,6 @@ class _AdminDashboardState extends State<AdminDashboard> {
                     ),
                   );
 
-                  // Refresh the current state to show updated data
                   setState(() {});
                 } catch (e) {
                   ScaffoldMessenger.of(this.context).showSnackBar(
@@ -638,8 +640,6 @@ class _AdminDashboardState extends State<AdminDashboard> {
                     behavior: SnackBarBehavior.floating,
                   ),
                 );
-
-                // Refresh the UI
                 setState(() {});
               } catch (e) {
                 ScaffoldMessenger.of(this.context).showSnackBar(
@@ -665,16 +665,12 @@ class _AdminDashboardState extends State<AdminDashboard> {
 
   @override
   Widget build(BuildContext context) {
-    final authService = Provider.of<AuthService>(context);
-    final userService = Provider.of<UserService>(context);
-
     return Scaffold(
       appBar: AppBar(
         title: Text('Admin Dashboard'),
         backgroundColor: Theme.of(context).primaryColor,
         elevation: 0,
         actions: [
-          // Show current admin info
           Consumer<AuthService>(
             builder: (context, authService, child) {
               return FutureBuilder<Map<String, dynamic>?>(
@@ -797,6 +793,30 @@ class _AdminDashboardState extends State<AdminDashboard> {
               ],
             ),
           ),
+          // WIDGET BARU: Search Bar
+          Padding(
+            padding: const EdgeInsets.fromLTRB(16, 16, 16, 0),
+            child: TextField(
+              controller: _searchController,
+              decoration: InputDecoration(
+                hintText: 'Search by name or email...',
+                prefixIcon: Icon(Icons.search),
+                suffixIcon: _searchQuery.isNotEmpty
+                    ? IconButton(
+                        icon: Icon(Icons.clear),
+                        onPressed: () => _searchController.clear(),
+                      )
+                    : null,
+                border: OutlineInputBorder(
+                  borderRadius: BorderRadius.circular(12),
+                  borderSide: BorderSide.none,
+                ),
+                filled: true,
+                fillColor: Colors.grey[200],
+                contentPadding: EdgeInsets.symmetric(vertical: 10),
+              ),
+            ),
+          ),
           Padding(
             padding: EdgeInsets.all(16),
             child: Row(
@@ -856,11 +876,51 @@ class _AdminDashboardState extends State<AdminDashboard> {
                 }
 
                 var allUsers = snapshot.data!.docs;
-                var filteredUsers = allUsers.where((doc) {
-                  if (_selectedFilter == 'All') return true;
-                  var role = doc['role'] as String? ?? '';
-                  return role.toLowerCase() == _selectedFilter.toLowerCase();
+
+                // LOGIKA DIPERBARUI: Menggabungkan filter dan pencarian
+                final filteredUsers = allUsers.where((doc) {
+                  final data = doc.data() as Map<String, dynamic>;
+                  final role = (data['role'] as String? ?? '').toLowerCase();
+                  final name = (data['name'] as String? ?? '').toLowerCase();
+                  final email = (data['email'] as String? ?? '').toLowerCase();
+                  final lowerCaseQuery = _searchQuery.toLowerCase();
+
+                  // Logika filter peran
+                  final roleMatches = _selectedFilter == 'All' ||
+                      role == _selectedFilter.toLowerCase();
+
+                  // Logika filter pencarian
+                  final searchMatches = _searchQuery.isEmpty ||
+                      name.contains(lowerCaseQuery) ||
+                      email.contains(lowerCaseQuery);
+
+                  return roleMatches && searchMatches;
                 }).toList();
+
+                // BARU: Tampilkan pesan jika tidak ada pengguna yang cocok
+                if (filteredUsers.isEmpty) {
+                  return Center(
+                    child: Column(
+                      mainAxisAlignment: MainAxisAlignment.center,
+                      children: [
+                        Icon(Icons.search_off, size: 64, color: Colors.grey),
+                        SizedBox(height: 16),
+                        Text(
+                          'No Users Found',
+                          style: TextStyle(
+                            fontSize: 18,
+                            fontWeight: FontWeight.bold,
+                          ),
+                        ),
+                        SizedBox(height: 8),
+                        Text(
+                          'Try adjusting your search or filter.',
+                          style: TextStyle(color: Colors.grey[600]),
+                        ),
+                      ],
+                    ),
+                  );
+                }
 
                 return ListView.builder(
                   padding: EdgeInsets.symmetric(horizontal: 16, vertical: 8),

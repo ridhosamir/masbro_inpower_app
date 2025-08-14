@@ -1,3 +1,5 @@
+import 'dart:ui';
+
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
@@ -198,29 +200,46 @@ class _HomeDashboardOfficerState extends State<HomeDashboardOfficer>
             ),
     );
   }
+  Widget _buildProfileButton() {
+    return Container(
+      decoration: BoxDecoration(
+        shape: BoxShape.circle,
+        gradient: LinearGradient(
+          colors: [
+            Colors.white.withOpacity(0.2),
+            Colors.white.withOpacity(0.1),
+          ],
+          begin: Alignment.topLeft,
+          end: Alignment.bottomRight,
+        ),
+      ),
+      child: _buildProfileMenu(),
+    );
+  }
 
   Widget _buildHeader(BuildContext context) {
     return Container(
       decoration: const BoxDecoration(
         gradient: LinearGradient(
           colors: [
-            Color(0xFF4A90E2),
-            Color.fromARGB(255, 4, 117, 217),
+            Color.fromARGB(255, 25, 115, 184), // SAMA DENGAN USER: Darker blue
+            Color(0xFF0288D1), // SAMA DENGAN USER: Material blue
           ],
           begin: Alignment.topCenter,
           end: Alignment.bottomCenter,
-          stops: [0.0, 0.9],
+          stops: [0.0, 1.0], // SAMA DENGAN USER
         ),
       ),
       child: Stack(
         clipBehavior: Clip.none,
         children: [
+          // ELEMEN DEKORATIF LINGKARAN - SAMA DENGAN USER
           Positioned(
-            right: -40,
-            top: -60,
+            right: -60, // SAMA dengan User
+            top: -30, // SAMA dengan User
             child: Container(
-              width: 180,
-              height: 180,
+              width: 220, // SAMA dengan User
+              height: 220, // SAMA dengan User
               decoration: BoxDecoration(
                 gradient: RadialGradient(colors: [
                   Colors.white.withOpacity(0.1),
@@ -232,22 +251,43 @@ class _HomeDashboardOfficerState extends State<HomeDashboardOfficer>
             ),
           ),
           Positioned(
-            left: -50,
-            bottom: -80,
+            left: -80, // SAMA dengan User
+            bottom: -40, // SAMA dengan User
             child: Container(
-              width: 150,
-              height: 150,
+              width: 180, // SAMA dengan User
+              height: 180, // SAMA dengan User
               decoration: BoxDecoration(
                 gradient: RadialGradient(colors: [
+                  Colors.white.withOpacity(0.07),
                   Colors.white.withOpacity(0.03),
+                  Colors.transparent,
                 ]),
                 shape: BoxShape.circle,
               ),
             ),
           ),
+          Positioned(
+            right: 40, // SAMA dengan User
+            bottom: 100, // SAMA dengan User
+            child: Container(
+              width: 40, // SAMA dengan User
+              height: 40, // SAMA dengan User
+              decoration: BoxDecoration(
+                gradient: RadialGradient(colors: [
+                  Colors.white.withOpacity(0.15),
+                  Colors.white.withOpacity(0.05),
+                  Colors.transparent,
+                ]),
+                shape: BoxShape.circle,
+              ),
+            ),
+          ),
+
+          // CONTENT dengan glassmorphism effect - SAMA DENGAN USER
           SafeArea(
             child: Padding(
-              padding: const EdgeInsets.fromLTRB(20, 20, 20, 0),
+              padding:
+                  const EdgeInsets.fromLTRB(20, 10, 20, 0), // SAMA dengan User
               child: LayoutBuilder(
                 builder: (context, constraints) {
                   final settings = context.dependOnInheritedWidgetOfExactType<
@@ -262,6 +302,7 @@ class _HomeDashboardOfficerState extends State<HomeDashboardOfficer>
                     child: Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
+                        // Header dengan title dan profile - SAMA DENGAN USER
                         Row(
                           mainAxisAlignment: MainAxisAlignment.spaceBetween,
                           children: [
@@ -286,9 +327,19 @@ class _HomeDashboardOfficerState extends State<HomeDashboardOfficer>
                                 ),
                               ),
                             ),
-                            Container(
+                            _buildProfileButton(), // Gunakan method yang sudah ada
+                          ],
+                        ),
+                        const SizedBox(height: 30), // SAMA dengan User
+
+                        // GLASSMORPHISM WELCOME CARD - SAMA DENGAN USER
+                        ClipRRect(
+                          borderRadius: BorderRadius.circular(20),
+                          child: BackdropFilter(
+                            filter: ImageFilter.blur(sigmaX: 10, sigmaY: 10),
+                            child: Container(
+                              padding: const EdgeInsets.all(20),
                               decoration: BoxDecoration(
-                                shape: BoxShape.circle,
                                 gradient: LinearGradient(
                                   colors: [
                                     Colors.white.withOpacity(0.2),
@@ -297,90 +348,93 @@ class _HomeDashboardOfficerState extends State<HomeDashboardOfficer>
                                   begin: Alignment.topLeft,
                                   end: Alignment.bottomRight,
                                 ),
-                              ),
-                              child: _buildProfileMenu(),
-                            ),
-                          ],
-                        ),
-                        const SizedBox(height: 24),
-                        Container(
-                          padding: const EdgeInsets.all(20),
-                          decoration: BoxDecoration(
-                            gradient: LinearGradient(
-                              colors: [
-                                Colors.white.withOpacity(0.1),
-                                Colors.white.withOpacity(0.05),
-                              ],
-                              begin: Alignment.topLeft,
-                              end: Alignment.bottomRight,
-                            ),
-                            borderRadius: BorderRadius.circular(20),
-                            border: Border.all(
-                              color: Colors.white.withOpacity(0.15),
-                              width: 1,
-                            ),
-                          ),
-                          child: Column(
-                            crossAxisAlignment: CrossAxisAlignment.start,
-                            mainAxisSize: MainAxisSize.min,
-                            children: [
-                              Row(
-                                children: [
-                                  Container(
-                                    padding: const EdgeInsets.all(8),
-                                    decoration: BoxDecoration(
-                                      color: Colors.white.withOpacity(0.2),
-                                      borderRadius: BorderRadius.circular(12),
-                                    ),
-                                    child: const Icon(
-                                      Icons.waving_hand,
-                                      color: Colors.white,
-                                      size: 20,
-                                    ),
-                                  ),
-                                  const SizedBox(width: 12),
-                                  Text(
-                                    'Welcome back,',
-                                    style: TextStyle(
-                                      color: Colors.white.withOpacity(0.9),
-                                      fontSize: 16,
-                                      fontWeight: FontWeight.w500,
-                                    ),
-                                  ),
-                                ],
-                              ),
-                              const SizedBox(height: 12),
-                              Text(
-                                currentUser!.name,
-                                style: const TextStyle(
-                                  color: Colors.white,
-                                  fontSize: 26,
-                                  fontWeight: FontWeight.bold,
-                                  letterSpacing: 0.5,
+                                borderRadius: BorderRadius.circular(20),
+                                border: Border.all(
+                                  color: Colors.white.withOpacity(0.2),
+                                  width: 1.5,
                                 ),
-                                maxLines: 1,
-                                overflow: TextOverflow.ellipsis,
                               ),
-                              const SizedBox(height: 8),
-                              Row(
+                              child: Column(
+                                crossAxisAlignment: CrossAxisAlignment.start,
+                                mainAxisSize: MainAxisSize.min,
                                 children: [
-                                  Icon(
-                                    Icons.calendar_today,
-                                    size: 14,
-                                    color: Colors.white.withOpacity(0.8),
+                                  Row(
+                                    children: [
+                                      Container(
+                                        padding: const EdgeInsets.all(10),
+                                        decoration: BoxDecoration(
+                                          color: Colors.white.withOpacity(0.25),
+                                          borderRadius:
+                                              BorderRadius.circular(14),
+                                        ),
+                                        child: const Icon(
+                                          Icons.waving_hand,
+                                          color: Colors.white,
+                                          size: 22,
+                                        ),
+                                      ),
+                                      const SizedBox(width: 12),
+                                      Text(
+                                        'Welcome back,',
+                                        style: TextStyle(
+                                          color: Colors.white.withOpacity(0.9),
+                                          fontSize: 16,
+                                          fontWeight: FontWeight.w500,
+                                        ),
+                                      ),
+                                    ],
                                   ),
-                                  const SizedBox(width: 6),
+                                  const SizedBox(height: 16),
                                   Text(
-                                    'Officer Since ${DateFormat('dd MMM yyyy').format(currentUser!.createdAt)}',
-                                    style: TextStyle(
-                                      color: Colors.white.withOpacity(0.8),
-                                      fontSize: 13,
-                                      fontWeight: FontWeight.w500,
+                                    currentUser!.name,
+                                    style: const TextStyle(
+                                      color: Colors.white,
+                                      fontSize: 28, // SAMA dengan User
+                                      fontWeight: FontWeight.bold,
+                                      letterSpacing: 0.5,
+                                      shadows: [
+                                        Shadow(
+                                          blurRadius: 8.0,
+                                          color: Colors.black26,
+                                          offset: Offset(0, 3.0),
+                                        ),
+                                      ],
+                                    ),
+                                    maxLines: 1,
+                                    overflow: TextOverflow.ellipsis,
+                                  ),
+                                  const SizedBox(height: 10),
+                                  Container(
+                                    padding: const EdgeInsets.symmetric(
+                                        horizontal: 12, vertical: 6),
+                                    decoration: BoxDecoration(
+                                      color: Colors.white.withOpacity(0.15),
+                                      borderRadius: BorderRadius.circular(30),
+                                    ),
+                                    child: Row(
+                                      mainAxisSize: MainAxisSize.min,
+                                      children: [
+                                        Icon(
+                                          Icons.calendar_today,
+                                          size: 14,
+                                          color: Colors.white.withOpacity(0.9),
+                                        ),
+                                        const SizedBox(width: 6),
+                                        Text(
+                                          'Officer since ${DateFormat('dd MMM yyyy').format(currentUser!.createdAt)}',
+                                          style: TextStyle(
+                                            color:
+                                                Colors.white.withOpacity(0.9),
+                                            fontSize: 13,
+                                            fontWeight: FontWeight.w500,
+                                          ),
+                                        ),
+                                      ],
                                     ),
                                   ),
                                 ],
                               ),
-                            ],
+                            ),
                           ),
                         ),
                       ],
@@ -401,6 +455,8 @@ class _HomeDashboardOfficerState extends State<HomeDashboardOfficer>
         backgroundColor: Colors.white.withOpacity(0.25),
         child: const Icon(Icons.person, color: Colors.white),
       ),
+      offset: const Offset(0, 50),
+      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
       onSelected: (value) {
         if (value == 'profile') {
           _showProfileDialog();
@@ -408,91 +464,108 @@ class _HomeDashboardOfficerState extends State<HomeDashboardOfficer>
           _showLogoutDialog();
         }
       },
-      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
       itemBuilder: (context) => [
-        const PopupMenuItem(
+        PopupMenuItem(
           value: 'profile',
-          child: ListTile(
-            leading: Icon(Icons.person_outline),
-            title: Text('My Profile'),
+          child: Row(
+            children: [
+              Container(
+                padding: const EdgeInsets.all(8),
+                decoration: BoxDecoration(
+                  color: Colors.blue.withOpacity(0.1),
+                  shape: BoxShape.circle,
+                ),
+                child: Icon(Icons.person_outline,
+                    color: Colors.blue[700], size: 20),
+              ),
+              const SizedBox(width: 12),
+              const Text('My Profile'),
+            ],
           ),
         ),
-        const PopupMenuItem(
+        PopupMenuItem(
           value: 'logout',
-          child: ListTile(
-            leading: Icon(Icons.logout, color: Colors.red),
-            title: Text('Logout', style: TextStyle(color: Colors.red)),
+          child: Row(
+            children: [
+              Container(
+                padding: const EdgeInsets.all(8),
+                decoration: BoxDecoration(
+                  color: Colors.red.withOpacity(0.1),
+                  shape: BoxShape.circle,
+                ),
+                child: Icon(Icons.logout, color: Colors.red[700], size: 20),
+              ),
+              const SizedBox(width: 12),
+              const Text('Logout', style: TextStyle(color: Colors.red)),
+            ],
           ),
         ),
       ],
     );
   }
-
-  Widget _buildAppGrid(BuildContext context) {
-    return SingleChildScrollView(
+   Widget _buildAppGrid(BuildContext context) {
+    return Container(
+      color: const Color(0xFFF4F6F8),
       padding: const EdgeInsets.all(16.0),
-      child: Column(
+      child: GridView.count(
+        padding: const EdgeInsets.all(0),
+        crossAxisCount: 2,
+        crossAxisSpacing: 16,
+        mainAxisSpacing: 16,
+        childAspectRatio: 0.9,
+        shrinkWrap: true,
+        physics: const NeverScrollableScrollPhysics(),
         children: [
-          GridView.count(
-            padding: const EdgeInsets.only(top: 16.0),
-            crossAxisCount: 2,
-            crossAxisSpacing: 16,
-            mainAxisSpacing: 16,
-            shrinkWrap: true,
-            physics: const NeverScrollableScrollPhysics(),
-            children: [
-              _buildAppCard(
-                context: context,
-                title: 'Maintenance',
-                icon: Icons.construction,
-                color: Colors.orange,
-                onTap: () {
-                  Navigator.push(
-                    context,
-                    MaterialPageRoute(builder: (context) => OfficerDashboard()),
-                  );
-                },
-              ),
-              _buildAppCard(
-                context: context,
-                title: 'Resource/Item',
-                icon: Icons.people_alt_outlined,
-                color: Colors.cyan,
-                onTap: () {
-                  Navigator.push(
-                    context,
-                    MaterialPageRoute(
-                        builder: (context) => OfficerDashboardResource()),
-                  );
-                },
-              ),
-              _buildAppCard(
-                context: context,
-                title: 'Operational',
-                icon: Icons.directions_car,
-                color: Colors.red,
-                onTap: () {
-                  Navigator.push(
-                    context,
-                    MaterialPageRoute(
-                        builder: (context) => OfficerDashboardOprational()),
-                  );
-                },
-              ),
-              _buildAppCard(
-                context: context,
-                title: 'Booking Room',
-                icon: Icons.meeting_room,
-                color: Colors.teal,
-                onTap: () {
-                  Navigator.push(
-                    context,
-                    MaterialPageRoute(
-                        builder: (context) => OfficerDashboardBookingRoom()),
-                  );
-                },
-              ),
-            ],
+          _buildAppCard(
+            context: context,
+            title: 'Maintenance',
+            icon: Icons.construction,
+            color: Colors.orange[700]!,
+            onTap: () {
+              Navigator.push(
+                context,
+                MaterialPageRoute(builder: (context) => OfficerDashboard()),
+              );
+            },
+          ),
+          _buildAppCard(
+            context: context,
+            title: 'Resource/Item',
+            icon: Icons.people_alt_outlined,
+            color: Colors.cyan[700]!,
+            onTap: () {
+              Navigator.push(
+                context,
+                MaterialPageRoute(
+                    builder: (context) => OfficerDashboardResource()),
+              );
+            },
+          ),
+          _buildAppCard(
+            context: context,
+            title: 'Operational',
+            icon: Icons.directions_car,
+            color: Colors.red[700]!,
+            onTap: () {
+              Navigator.push(
+                context,
+                MaterialPageRoute(
+                    builder: (context) => OfficerDashboardOprational()),
+              );
+            },
+          ),
+          _buildAppCard(
+            context: context,
+            title: 'Booking Room',
+            icon: Icons.meeting_room,
+            color: Colors.teal[700]!,
+            onTap: () {
+              Navigator.push(
+                context,
+                MaterialPageRoute(
+                    builder: (context) => OfficerDashboardBookingRoom()),
+              );
+            },
           ),
         ],
       ),
@@ -506,24 +579,30 @@ class _HomeDashboardOfficerState extends State<HomeDashboardOfficer>
     required Color color,
     required VoidCallback onTap,
   }) {
+    // Create a lighter background color, same as in HomeDashboardUser
+    Color bgColor = Color.lerp(Colors.white, color, 0.30)!;
+
     return Card(
-      margin: EdgeInsets.zero,
-      elevation: 8,
-      shadowColor: color.withOpacity(0.3),
-      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
+      elevation: 0,
+      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(24)),
       child: InkWell(
         onTap: onTap,
-        borderRadius: BorderRadius.circular(20),
+        borderRadius: BorderRadius.circular(24),
         child: Container(
           decoration: BoxDecoration(
-            borderRadius: BorderRadius.circular(20),
-            gradient: LinearGradient(
-              colors: [
-                color.withOpacity(0.1),
-                color.withOpacity(0.05),
-              ],
-              begin: Alignment.topLeft,
-              end: Alignment.bottomRight,
+            borderRadius: BorderRadius.circular(24),
+            color: bgColor, // Use the light solid color
+            boxShadow: [
+              BoxShadow(
+                color: color.withOpacity(0.15),
+                blurRadius: 20,
+                spreadRadius: 0,
+                offset: const Offset(5, 10),
+              ),
+            ],
+            border: Border.all(
+              color: color.withOpacity(0.3),
+              width: 1.5,
             ),
           ),
           child: Column(
@@ -532,19 +611,46 @@ class _HomeDashboardOfficerState extends State<HomeDashboardOfficer>
               Container(
                 padding: const EdgeInsets.all(16),
                 decoration: BoxDecoration(
-                  color: color.withOpacity(0.2),
+                  // Semi-transparent white background for the icon
+                  color: Colors.white.withOpacity(0.7),
                   shape: BoxShape.circle,
+                  boxShadow: [
+                    BoxShadow(
+                      color: color.withOpacity(0.1),
+                      blurRadius: 10,
+                      spreadRadius: 0,
+                      offset: const Offset(0, 5),
+                    ),
+                  ],
                 ),
                 child: Icon(icon, size: 32, color: color),
               ),
-              const SizedBox(height: 12),
+              const SizedBox(height: 16),
               Text(
                 title,
                 textAlign: TextAlign.center,
                 style: TextStyle(
                   fontSize: 16,
                   fontWeight: FontWeight.w600,
-                  color: color,
+                  color: color.withOpacity(0.9),
+                  letterSpacing: 0.5,
+                ),
+              ),
+              const SizedBox(height: 8),
+              Container(
+                padding:
+                    const EdgeInsets.symmetric(horizontal: 12, vertical: 4),
+                decoration: BoxDecoration(
+                  color: Colors.white.withOpacity(0.5),
+                  borderRadius: BorderRadius.circular(12),
+                ),
+                child: Text(
+                  'Manage', 
+                  style: TextStyle(
+                    fontSize: 11,
+                    fontWeight: FontWeight.w600,
+                    color: color,
+                  ),
                 ),
               ),
             ],
@@ -559,35 +665,69 @@ class _HomeDashboardOfficerState extends State<HomeDashboardOfficer>
 
     showDialog(
       context: context,
-      builder: (context) => AlertDialog(
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
-        title: const Text('Profile Information'),
-        content: Column(
-          mainAxisSize: MainAxisSize.min,
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            _buildProfileItem('Name', currentUser!.name),
-            _buildProfileItem('Email', currentUser!.email),
-            _buildProfileItem('Role', currentUser!.role.toUpperCase()),
-            _buildProfileItem(
-              'Officer Since',
-              DateFormat('dd MMMM yyyy').format(currentUser!.createdAt),
-            ),
-          ],
-        ),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(context),
-            child: const Text('Close'),
+      builder: (context) => Dialog(
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
+        child: Padding(
+          padding: const EdgeInsets.all(24.0),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Container(
+                padding: const EdgeInsets.all(16),
+                decoration: BoxDecoration(
+                  color: Theme.of(context).primaryColor.withOpacity(0.1),
+                  shape: BoxShape.circle,
+                ),
+                child: Icon(
+                  Icons.person,
+                  size: 40,
+                  color: Theme.of(context).primaryColor,
+                ),
+              ),
+              const SizedBox(height: 24),
+              Text(
+                'Profile Information',
+                style: TextStyle(
+                  fontSize: 20,
+                  fontWeight: FontWeight.bold,
+                  color: Colors.grey[800],
+                ),
+              ),
+              const SizedBox(height: 20),
+              _buildProfileItem('Name', currentUser!.name),
+              _buildProfileItem('Email', currentUser!.email),
+              _buildProfileItem('Role', currentUser!.role.toUpperCase()),
+              _buildProfileItem(
+                'Member since',
+                DateFormat('dd MMMM yyyy').format(currentUser!.createdAt),
+              ),
+              const SizedBox(height: 24),
+              ElevatedButton(
+                onPressed: () => Navigator.pop(context),
+                style: ElevatedButton.styleFrom(
+                  backgroundColor: Theme.of(context).primaryColor,
+                  foregroundColor: Colors.white,
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 24,
+                    vertical: 12,
+                  ),
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(12),
+                  ),
+                ),
+                child: const Text('Close'),
+              ),
+            ],
           ),
-        ],
+        ),
       ),
     );
   }
 
   Widget _buildProfileItem(String label, String value) {
-    return Padding(
-      padding: const EdgeInsets.symmetric(vertical: 6),
+    return Container(
+      width: double.infinity,
+      margin: const EdgeInsets.only(bottom: 16),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
@@ -595,12 +735,29 @@ class _HomeDashboardOfficerState extends State<HomeDashboardOfficer>
             label,
             style: TextStyle(
               fontWeight: FontWeight.bold,
-              color: Colors.grey[700],
+              color: Colors.grey[600],
               fontSize: 12,
             ),
           ),
-          const SizedBox(height: 2),
-          Text(value, style: const TextStyle(fontSize: 16)),
+          const SizedBox(height: 4),
+          Container(
+            width: double.infinity,
+            padding: const EdgeInsets.symmetric(
+              horizontal: 16,
+              vertical: 12,
+            ),
+            decoration: BoxDecoration(
+              color: Colors.grey[100],
+              borderRadius: BorderRadius.circular(12),
+            ),
+            child: Text(
+              value,
+              style: TextStyle(
+                fontSize: 16,
+                color: Colors.grey[800],
+              ),
+            ),
+          ),
         ],
       ),
     );
@@ -1395,755 +1552,107 @@ class _OfficerStatusTabState extends State<OfficerStatusTab>
     );
   }
 
-  Widget _buildBookingCard(BookingModel booking) {
-    return Card(
-      margin: EdgeInsets.symmetric(horizontal: 8, vertical: 6),
-      elevation: 4,
-      shadowColor: Colors.teal.withOpacity(0.2),
-      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
-      child: InkWell(
-        onTap: () => _navigateToDetail(booking),
+  
+  Widget _buildReportCard(ReportModel report) {
+    return Container(
+      // Use Container to apply decoration
+      margin: const EdgeInsets.only(bottom: 16),
+      decoration: BoxDecoration(
         borderRadius: BorderRadius.circular(16),
-        child: Container(
-          decoration: BoxDecoration(
-            borderRadius: BorderRadius.circular(16),
-            gradient: LinearGradient(
-              colors: [
-                Colors.teal.withOpacity(0.05),
-                Colors.white,
-              ],
-              begin: Alignment.topLeft,
-              end: Alignment.bottomRight,
-            ),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.orangeAccent.withOpacity(0.1), 
+            blurRadius: 12,
+            spreadRadius: 2,
+            offset: const Offset(0, 2),
           ),
+        ],
+      ),
+      child: Card(
+        elevation: 0,
+        shape: RoundedRectangleBorder(
+          borderRadius: BorderRadius.circular(16),
+          side: BorderSide(color: Colors.orange.withOpacity(0.3), width: 1.5),
+        ),
+        margin: EdgeInsets.zero,
+        child: InkWell(
+          onTap: () => _navigateToDetail(report),
+          borderRadius: BorderRadius.circular(16),
           child: Padding(
             padding: const EdgeInsets.all(16.0),
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 Row(
-                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                  crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    Container(
-                      padding: const EdgeInsets.all(8),
-                      decoration: BoxDecoration(
-                        color: Colors.teal.withOpacity(0.1),
-                        borderRadius: BorderRadius.circular(8),
-                      ),
-                      child: Icon(Icons.meeting_room,
-                          color: Colors.teal[700], size: 20),
+                    CircleAvatar(
+                      backgroundColor: Colors.orange.withOpacity(0.1),
+                      child: Icon(Icons.construction,
+                          color: Colors.orange, size: 20),
                     ),
                     const SizedBox(width: 12),
                     Expanded(
                       child: Column(
                         crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
-                          const Text(
-                            'Booking Room',
-                            style: TextStyle(
-                                fontWeight: FontWeight.bold,
-                                fontSize: 16,
-                                color: Color(0xFF2D3748)),
-                          ),
-                        ],
-                      ),
-                    ),
-                    _buildStatusChip(booking.status),
-                  ],
-                ),
-                const SizedBox(height: 12),
-                Text(
-                  'Event Agenda:',
-                  style: TextStyle(
-                    fontSize: 13,
-                    fontWeight: FontWeight.w600,
-                    color: Colors.grey[800],
-                  ),
-                ),
-                const SizedBox(height: 6),
-                Container(
-                  width: double.infinity,
-                  padding: const EdgeInsets.all(12),
-                  decoration: BoxDecoration(
-                    color: Colors.grey[50],
-                    borderRadius: BorderRadius.circular(8),
-                  ),
-                  child: Text(
-                    '${booking.eventAgenda}',
-                    style: TextStyle(fontSize: 14, color: Colors.grey[700]),
-                    maxLines: 2,
-                    overflow: TextOverflow.ellipsis,
-                  ),
-                ),
-                const SizedBox(height: 12),
-                _buildInfoRow(
-                    Icons.meeting_room_outlined, 'Room: ${booking.roomName}'),
-                const SizedBox(height: 6),
-                _buildInfoRow(
-                    Icons.person_outline, 'By: ${booking.employeeName}'),
-                const SizedBox(height: 6),
-                _buildInfoRow(
-                  Icons.calendar_today_outlined,
-                  _formatBookingDuration(
-                      booking.usageStartDate, booking.usageEndDate),
-                ),
-                const SizedBox(height: 6),
-                _buildInfoRow(Icons.access_time,
-                    'Created at: ${_getTimeAgo(booking.createdAt)}'),
-                if (booking.status == 'open') ...[
-                  const Divider(height: 24),
-                  Row(
-                    children: [
-                      Expanded(
-                        child: ElevatedButton.icon(
-                          onPressed: () => _showManageBookingSheet(booking),
-                          icon: const Icon(Icons.edit_calendar_outlined,
-                              size: 16),
-                          label: const Text('Manage Booking'),
-                          style: ElevatedButton.styleFrom(
-                            backgroundColor: Colors.blue,
-                            foregroundColor: Colors.white,
-                            shape: RoundedRectangleBorder(
-                              borderRadius: BorderRadius.circular(8),
-                            ),
-                          ),
-                        ),
-                      ),
-                      const SizedBox(width: 12),
-                      Expanded(
-                        child: ElevatedButton.icon(
-                          onPressed: () => _showRejectDialog(booking),
-                          icon: const Icon(Icons.free_cancellation, size: 16),
-                          label: const Text('Reject Booking'),
-                          style: ElevatedButton.styleFrom(
-                            backgroundColor: Colors.red,
-                            foregroundColor: Colors.white,
-                            shape: RoundedRectangleBorder(
-                              borderRadius: BorderRadius.circular(8),
-                            ),
-                          ),
-                        ),
-                      ),
-                    ],
-                  ),
-                ],
-              ],
-            ),
-          ),
-        ),
-      ),
-    );
-  }
-
-  Widget _buildReportCard(ReportModel report) {
-    return Card(
-      margin: EdgeInsets.symmetric(horizontal: 8, vertical: 6),
-      elevation: 3,
-      shadowColor: Colors.orange.withOpacity(0.2),
-      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
-      child: InkWell(
-        onTap: () => _navigateToDetail(report),
-        borderRadius: BorderRadius.circular(16),
-        child: Container(
-          decoration: BoxDecoration(
-            borderRadius: BorderRadius.circular(16),
-            gradient: LinearGradient(
-              colors: [
-                Colors.orange.withOpacity(0.05),
-                Colors.white,
-              ],
-              begin: Alignment.topLeft,
-              end: Alignment.bottomRight,
-            ),
-          ),
-          child: Padding(
-            padding: const EdgeInsets.all(16.0),
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Row(
-                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                  children: [
-                    Expanded(
-                      child: Row(
-                        children: [
-                          Container(
-                            padding: EdgeInsets.all(8),
-                            decoration: BoxDecoration(
-                              color: Colors.orange.withOpacity(0.1),
-                              borderRadius: BorderRadius.circular(8),
-                            ),
-                            child: Icon(Icons.construction,
-                                color: Colors.orange[700], size: 20),
-                          ),
-                          SizedBox(width: 12),
-                          Expanded(
-                            child: Column(
-                              crossAxisAlignment: CrossAxisAlignment.start,
-                              children: [
-                                const Text(
-                                  'Report Maintenance',
-                                  style: TextStyle(
-                                    fontWeight: FontWeight.bold,
-                                    fontSize: 16,
-                                    color: Color(0xFF2D3748),
-                                  ),
-                                ),
-                                SizedBox(height: 4),
-                                Container(
-                                  padding: EdgeInsets.symmetric(
-                                      horizontal: 8, vertical: 2),
-                                  decoration: BoxDecoration(
-                                    color: Colors.blue[50],
-                                    borderRadius: BorderRadius.circular(12),
-                                  ),
-                                  child: Row(
-                                    mainAxisSize: MainAxisSize.min,
-                                    children: [
-                                      Icon(
-                                        Icons.business,
-                                        size: 12,
-                                        color: Colors.blue[700],
-                                      ),
-                                      SizedBox(width: 4),
-                                      Text(
-                                        report.buildingName,
-                                        style: TextStyle(
-                                          fontSize: 12,
-                                          color: Colors.blue[700],
-                                          fontWeight: FontWeight.w500,
-                                        ),
-                                      ),
-                                    ],
-                                  ),
-                                ),
-                              ],
-                            ),
-                          ),
+                          const Text('Maintenance Report',
+                              style: TextStyle(fontWeight: FontWeight.bold)),
+                          Text('by ${report.employeeName}',
+                              style:
+                                  TextStyle(fontSize: 12, color: Colors.grey)),
                         ],
                       ),
                     ),
                     _buildStatusChip(report.status),
                   ],
                 ),
-                SizedBox(height: 16),
+                const Divider(height: 24),
+                _buildInfoRow(Icons.location_on_outlined,
+                    '${report.buildingName} - ${report.roomName}',
+                    isBold: true),
+                const SizedBox(height: 6),
+                _buildInfoRow(Icons.notes_outlined, report.description,
+                    maxLines: 2),
+                const SizedBox(height: 12),
                 Row(
                   children: [
-                    Icon(Icons.person, size: 16, color: Colors.grey[500]),
-                    SizedBox(width: 8),
-                    Text(
-                      'By ${report.employeeName}',
-                      style: TextStyle(
-                        fontSize: 12,
-                        color: Colors.grey[600],
-                        fontWeight: FontWeight.w500,
-                      ),
-                    ),
-                    SizedBox(width: 16),
-                    Icon(Icons.access_time, size: 16, color: Colors.grey[500]),
-                    SizedBox(width: 8),
-                    Text(
-                      _getTimeAgo(report.createdAt),
-                      style: TextStyle(
-                        fontSize: 12,
-                        color: Colors.grey[600],
-                      ),
-                    ),
-                  ],
-                ),
-                SizedBox(height: 12),
-                if (report.imageUrl != null && report.hasValidImage()) ...[
-                  Container(
-                    height: 120,
-                    width: double.infinity,
-                    decoration: BoxDecoration(
-                      borderRadius: BorderRadius.circular(8),
-                    ),
-                    child: ClipRRect(
-                      borderRadius: BorderRadius.circular(8),
-                      child: Image.network(
-                        report.getNormalizedImageUrl()!,
-                        fit: BoxFit.cover,
-                        loadingBuilder: (context, child, loadingProgress) {
-                          if (loadingProgress == null) return child;
-                          return Center(
-                            child: CircularProgressIndicator(
-                              value: loadingProgress.expectedTotalBytes != null
-                                  ? loadingProgress.cumulativeBytesLoaded /
-                                      loadingProgress.expectedTotalBytes!
-                                  : null,
-                            ),
-                          );
-                        },
-                        errorBuilder: (context, error, stackTrace) {
-                          return Container(
-                            color: Colors.grey[200],
-                            child: Center(
-                              child: Icon(
-                                Icons.broken_image,
-                                size: 32,
-                                color: Colors.grey[400],
-                              ),
-                            ),
-                          );
-                        },
-                      ),
-                    ),
-                  ),
-                  SizedBox(height: 12),
-                ],
-                Container(
-                  width: double.infinity,
-                  padding: EdgeInsets.all(12),
-                  decoration: BoxDecoration(
-                    color: Colors.grey[50],
-                    borderRadius: BorderRadius.circular(8),
-                  ),
-                  child: Text(
-                    report.description,
-                    style: TextStyle(
-                      fontSize: 14,
-                      color: Colors.grey[700],
-                      height: 1.4,
-                    ),
-                    maxLines: 2,
-                    overflow: TextOverflow.ellipsis,
-                  ),
-                ),
-                if (report.status == 'open') ...[
-                  const Divider(height: 24),
-                  Row(
-                    children: [
-                      Expanded(
+                    _buildInfoChip(
+                        Icons.access_time, _getTimeAgo(report.createdAt)),
+                    const Spacer(),
+                    if (report.status == 'open')
+                      SizedBox(
+                        height: 32,
                         child: ElevatedButton.icon(
                           onPressed: () =>
                               _navigateToAssignTechnicianReport(report),
-                          icon: Icon(Icons.engineering, size: 16),
-                          label: Text('Assign'),
+                          icon:
+                              const Icon(Icons.engineering_outlined, size: 16),
+                          label: const Text('Assign'),
                           style: ElevatedButton.styleFrom(
-                            backgroundColor: Colors.blue,
+                            backgroundColor: Theme.of(context).primaryColor,
                             foregroundColor: Colors.white,
-                            padding: EdgeInsets.symmetric(vertical: 8),
-                            shape: RoundedRectangleBorder(
-                              borderRadius: BorderRadius.circular(8),
-                            ),
                           ),
                         ),
                       ),
-                      SizedBox(width: 12),
-                      Expanded(
-                        child: ElevatedButton.icon(
+                    if (report.status == 'inProgress')
+                      SizedBox(
+                        height: 32,
+                        child: OutlinedButton.icon(
                           onPressed: () =>
-                              _showCompleteDialogMaintenance(report),
-                          icon: Icon(Icons.check_circle, size: 16),
-                          label: Text('Complete'),
-                          style: ElevatedButton.styleFrom(
-                            backgroundColor: Colors.green,
-                            foregroundColor: Colors.white,
-                            padding: EdgeInsets.symmetric(vertical: 8),
-                            shape: RoundedRectangleBorder(
-                              borderRadius: BorderRadius.circular(8),
-                            ),
-                          ),
+                              _navigateToAssignTechnicianReport(report),
+                          icon:
+                              const Icon(Icons.engineering_outlined, size: 16),
+                          label: Text(report.technicianName ?? 'Assign'),
+                          style: OutlinedButton.styleFrom(
+                              foregroundColor: Theme.of(context).primaryColor,
+                              side: BorderSide(
+                                  color: Theme.of(context)
+                                      .primaryColor
+                                      .withOpacity(0.5))),
                         ),
                       ),
-                    ],
-                  ),
-                ],
-                if (report.status == 'inProgress') ...[
-                  SizedBox(height: 16),
-                  report.assignedTechnicianId == null
-                      ? SizedBox(
-                          width: double.infinity,
-                          child: ElevatedButton.icon(
-                            onPressed: () =>
-                                _navigateToAssignTechnicianReport(report),
-                            icon: Icon(Icons.engineering, size: 16),
-                            label: Text('Assign Technician'),
-                            style: ElevatedButton.styleFrom(
-                              backgroundColor: Colors.blue,
-                              foregroundColor: Colors.white,
-                              padding: EdgeInsets.symmetric(vertical: 8),
-                              shape: RoundedRectangleBorder(
-                                borderRadius: BorderRadius.circular(8),
-                              ),
-                            ),
-                          ),
-                        )
-                      : Container(
-                          width: double.infinity,
-                          padding:
-                              EdgeInsets.symmetric(vertical: 8, horizontal: 12),
-                          decoration: BoxDecoration(
-                            color: Colors.orange[50],
-                            borderRadius: BorderRadius.circular(8),
-                            border: Border.all(color: Colors.orange[200]!),
-                          ),
-                          child: Row(
-                            children: [
-                              Icon(Icons.engineering,
-                                  color: Colors.blue[700], size: 16),
-                              SizedBox(width: 8),
-                              Expanded(
-                                child: Text(
-                                  'Assigned to ${report.technicianName}',
-                                  style: TextStyle(
-                                    color: Colors.blue[700],
-                                    fontWeight: FontWeight.w500,
-                                  ),
-                                ),
-                              ),
-                              TextButton(
-                                onPressed: () =>
-                                    _showCompleteDialogMaintenance(report),
-                                child: Text('Complete'),
-                                style: TextButton.styleFrom(
-                                  foregroundColor: Colors.green,
-                                ),
-                              ),
-                            ],
-                          ),
-                        ),
-                ],
-                if (report.status == 'completed' &&
-                    report.completionReason != null) ...[
-                  SizedBox(height: 12),
-                  Container(
-                    width: double.infinity,
-                    padding: EdgeInsets.all(12),
-                    decoration: BoxDecoration(
-                      color: Colors.green[50],
-                      borderRadius: BorderRadius.circular(8),
-                      border: Border.all(color: Colors.green[200]!),
-                    ),
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        Text(
-                          'Completion Notes:',
-                          style: TextStyle(
-                            fontSize: 12,
-                            fontWeight: FontWeight.bold,
-                            color: Colors.green[700],
-                          ),
-                        ),
-                        SizedBox(height: 4),
-                        Text(
-                          report.completionReason!,
-                          style: TextStyle(
-                            fontSize: 12,
-                            color: Colors.green[600],
-                          ),
-                          maxLines: 2,
-                          overflow: TextOverflow.ellipsis,
-                        ),
-                      ],
-                    ),
-                  ),
-                ],
-              ],
-            ),
-          ),
-        ),
-      ),
-    );
-  }
-
-  Widget _buildRideRequestCard(RideRequestModel request) {
-    return Card(
-      margin: EdgeInsets.symmetric(horizontal: 8, vertical: 6),
-      elevation: 4,
-      shadowColor: Colors.red.withOpacity(0.2),
-      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
-      child: InkWell(
-        onTap: () => _navigateToDetail(request),
-        borderRadius: BorderRadius.circular(16),
-        child: Container(
-          decoration: BoxDecoration(
-            borderRadius: BorderRadius.circular(16),
-            gradient: LinearGradient(
-              colors: [
-                Colors.red.withOpacity(0.05),
-                Colors.white,
-              ],
-              begin: Alignment.topLeft,
-              end: Alignment.bottomRight,
-            ),
-          ),
-          child: Padding(
-            padding: EdgeInsets.all(16),
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Row(
-                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                  children: [
-                    Expanded(
-                      child: Row(
-                        children: [
-                          Container(
-                            padding: EdgeInsets.all(8),
-                            decoration: BoxDecoration(
-                              color: Colors.red.withOpacity(0.1),
-                              borderRadius: BorderRadius.circular(8),
-                            ),
-                            child: Icon(Icons.directions_car,
-                                color: Colors.red[700], size: 20),
-                          ),
-                          SizedBox(width: 12),
-                          Expanded(
-                            child: Column(
-                              crossAxisAlignment: CrossAxisAlignment.start,
-                              children: [
-                                const Text(
-                                  'Request Operasional',
-                                  style: TextStyle(
-                                    fontWeight: FontWeight.bold,
-                                    fontSize: 16,
-                                    color: Color(0xFF2D3748),
-                                  ),
-                                ),
-                              ],
-                            ),
-                          ),
-                        ],
-                      ),
-                    ),
-                    _buildStatusChip(request.status),
                   ],
-                ),
-                SizedBox(height: 16),
-                Row(
-                  children: [
-                    Icon(Icons.person, size: 16, color: Colors.grey[500]),
-                    SizedBox(width: 8),
-                    Text(
-                      'By ${request.employeeName}',
-                      style: TextStyle(
-                        fontSize: 12,
-                        color: Colors.grey[600],
-                        fontWeight: FontWeight.w500,
-                      ),
-                    ),
-                    SizedBox(width: 16),
-                    Icon(Icons.access_time, size: 16, color: Colors.grey[500]),
-                    SizedBox(width: 8),
-                    Text(
-                      _getTimeAgo(request.createdAt),
-                      style: TextStyle(
-                        fontSize: 12,
-                        color: Colors.grey[600],
-                      ),
-                    ),
-                  ],
-                ),
-                SizedBox(height: 12),
-                Row(
-                  children: [
-                    Icon(Icons.event, size: 16, color: Colors.grey[500]),
-                    SizedBox(width: 8),
-                    Text(
-                      'Pickup: ${DateFormat('MMM dd, HH:mm').format(request.pickupDateTime)}',
-                      style: TextStyle(
-                        fontSize: 12,
-                        color: Colors.grey[600],
-                      ),
-                    ),
-                    if (request.returnDateTime != null) ...[
-                      SizedBox(width: 16),
-                      Icon(Icons.event_available,
-                          size: 16, color: Colors.grey[500]),
-                      SizedBox(width: 8),
-                      Text(
-                        'Return: ${DateFormat('MMM dd, HH:mm').format(request.returnDateTime!)}',
-                        style: TextStyle(
-                          fontSize: 12,
-                          color: Colors.grey[600],
-                        ),
-                      ),
-                    ],
-                  ],
-                ),
-                SizedBox(height: 12),
-                Container(
-                  width: double.infinity,
-                  padding: EdgeInsets.all(12),
-                  decoration: BoxDecoration(
-                    color: Colors.grey[50],
-                    borderRadius: BorderRadius.circular(8),
-                  ),
-                  child: Text(
-                    request.description,
-                    style: TextStyle(
-                      fontSize: 14,
-                      color: Colors.grey[700],
-                      height: 1.4,
-                    ),
-                    maxLines: 2,
-                    overflow: TextOverflow.ellipsis,
-                  ),
-                ),
-                if (request.status == 'open') ...[
-                  const Divider(height: 24),
-                  Row(
-                    children: [
-                      Expanded(
-                        child: ElevatedButton.icon(
-                          onPressed: () =>
-                              _navigateToAssignDriverVehicle(request),
-                          icon: Icon(Icons.directions_car, size: 16),
-                          label: Text('Assign'),
-                          style: ElevatedButton.styleFrom(
-                            backgroundColor: Colors.blue,
-                            foregroundColor: Colors.white,
-                            padding: EdgeInsets.symmetric(vertical: 8),
-                            shape: RoundedRectangleBorder(
-                              borderRadius: BorderRadius.circular(8),
-                            ),
-                          ),
-                        ),
-                      ),
-                      SizedBox(width: 12),
-                      Expanded(
-                        child: ElevatedButton.icon(
-                          onPressed: () =>
-                              _showCompleteDialogOperasional(request),
-                          icon: Icon(Icons.check_circle, size: 16),
-                          label: Text('Complete'),
-                          style: ElevatedButton.styleFrom(
-                            backgroundColor: Colors.green,
-                            foregroundColor: Colors.white,
-                            padding: EdgeInsets.symmetric(vertical: 8),
-                            shape: RoundedRectangleBorder(
-                              borderRadius: BorderRadius.circular(8),
-                            ),
-                          ),
-                        ),
-                      ),
-                    ],
-                  ),
-                ],
-                if (request.status == 'inProgress') ...[
-                  SizedBox(height: 16),
-                  if (request.driverName != null && request.vehicleName != null)
-                    Container(
-                      width: double.infinity,
-                      padding:
-                          EdgeInsets.symmetric(vertical: 8, horizontal: 12),
-                      decoration: BoxDecoration(
-                        color: Colors.red[50],
-                        borderRadius: BorderRadius.circular(8),
-                        border: Border.all(color: Colors.redAccent[200]!),
-                      ),
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          Row(
-                            children: [
-                              Icon(Icons.person,
-                                  color: Colors.blue[700], size: 16),
-                              SizedBox(width: 8),
-                              Expanded(
-                                child: Text(
-                                  'Driver: ${request.driverName}',
-                                  style: TextStyle(
-                                    color: Colors.blue[700],
-                                    fontWeight: FontWeight.w500,
-                                  ),
-                                ),
-                              ),
-                            ],
-                          ),
-                          SizedBox(height: 4),
-                          Row(
-                            children: [
-                              Icon(Icons.directions_car,
-                                  color: Colors.blue[700], size: 16),
-                              SizedBox(width: 8),
-                              Expanded(
-                                child: Text(
-                                  'Vehicle: ${request.vehicleName}',
-                                  style: TextStyle(
-                                    color: Colors.blue[700],
-                                    fontWeight: FontWeight.w500,
-                                  ),
-                                ),
-                              ),
-                            ],
-                          ),
-                          SizedBox(height: 8),
-                          Row(
-                            mainAxisAlignment: MainAxisAlignment.end,
-                            children: [
-                              TextButton(
-                                onPressed: () =>
-                                    _showCompleteDialogOperasional(request),
-                                child: Text('Complete'),
-                                style: TextButton.styleFrom(
-                                  foregroundColor: Colors.green,
-                                ),
-                              ),
-                            ],
-                          ),
-                        ],
-                      ),
-                    )
-                  else
-                    SizedBox(
-                      width: double.infinity,
-                      child: ElevatedButton.icon(
-                        onPressed: () =>
-                            _navigateToAssignDriverVehicle(request),
-                        icon: Icon(Icons.directions_car, size: 16),
-                        label: Text('Assign Driver & Vehicle'),
-                        style: ElevatedButton.styleFrom(
-                          backgroundColor: Colors.blue,
-                          foregroundColor: Colors.white,
-                          padding: EdgeInsets.symmetric(vertical: 8),
-                          shape: RoundedRectangleBorder(
-                            borderRadius: BorderRadius.circular(8),
-                          ),
-                        ),
-                      ),
-                    ),
-                ],
-                if (request.status == 'completed' &&
-                    request.completionNote != null) ...[
-                  SizedBox(height: 12),
-                  Container(
-                    width: double.infinity,
-                    padding: EdgeInsets.all(12),
-                    decoration: BoxDecoration(
-                      color: Colors.green[50],
-                      borderRadius: BorderRadius.circular(8),
-                      border: Border.all(color: Colors.green[200]!),
-                    ),
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        Text(
-                          'Completion Notes:',
-                          style: TextStyle(
-                            fontSize: 12,
-                            fontWeight: FontWeight.bold,
-                            color: Colors.green[700],
-                          ),
-                        ),
-                        SizedBox(height: 4),
-                        Text(
-                          request.completionNote!,
-                          style: TextStyle(
-                            fontSize: 12,
-                            color: Colors.green[600],
-                          ),
-                          maxLines: 2,
-                          overflow: TextOverflow.ellipsis,
-                        ),
-                      ],
-                    ),
-                  ),
-                ],
+                )
               ],
             ),
           ),
@@ -2153,237 +1662,101 @@ class _OfficerStatusTabState extends State<OfficerStatusTab>
   }
 
   Widget _buildRequestCard(RequestModel request) {
-    final bool isResourceRequest = request.request == 'resource';
-
-    return Card(
-      margin: const EdgeInsets.symmetric(horizontal: 8, vertical: 6),
-      elevation: 3,
-      shadowColor: Colors.cyan.withOpacity(0.2),
-      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
-      child: InkWell(
-        onTap: () => _navigateToDetail(request),
+    return Container(
+      
+      margin: const EdgeInsets.only(bottom: 16),
+      decoration: BoxDecoration(
         borderRadius: BorderRadius.circular(16),
-        child: Container(
-          decoration: BoxDecoration(
-            borderRadius: BorderRadius.circular(16),
-            gradient: LinearGradient(
-              colors: [
-                Colors.cyan.withOpacity(0.05),
-                Colors.white,
-              ],
-              begin: Alignment.topLeft,
-              end: Alignment.bottomRight,
-            ),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.cyanAccent.withOpacity(0.1), 
+            blurRadius: 12,
+            spreadRadius: 2,
+            offset: const Offset(0, 2),
           ),
+        ],
+      ),
+      child: Card(
+        elevation: 0, 
+        shape: RoundedRectangleBorder(
+          borderRadius: BorderRadius.circular(16),
+          side: BorderSide(color: Colors.cyan.withOpacity(0.3), width: 1.5),
+        ),
+        margin: EdgeInsets.zero, 
+        child: InkWell(
+          onTap: () => _navigateToDetail(request),
+          borderRadius: BorderRadius.circular(16),
           child: Padding(
             padding: const EdgeInsets.all(16.0),
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 Row(
-                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                  crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    Container(
-                      padding: const EdgeInsets.all(8),
-                      decoration: BoxDecoration(
-                        color: Colors.cyan.withOpacity(0.1),
-                        borderRadius: BorderRadius.circular(8),
-                      ),
-                      child:
-                          Icon(Icons.groups, color: Colors.cyan[700], size: 20),
+                    CircleAvatar(
+                      backgroundColor: Colors.cyan.withOpacity(0.1),
+                      child: Icon(Icons.groups_outlined,
+                          color: Colors.cyan, size: 20),
                     ),
                     const SizedBox(width: 12),
                     Expanded(
                       child: Column(
                         crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
-                          const Text(
-                            'Request Resource',
-                            style: TextStyle(
-                              fontWeight: FontWeight.bold,
-                              fontSize: 16,
-                              color: Color(0xFF2D3748),
-                            ),
-                          ),
+                          const Text('Resource Request',
+                              style: TextStyle(fontWeight: FontWeight.bold)),
+                          Text('by ${request.employeeName}',
+                              style:
+                                  TextStyle(fontSize: 12, color: Colors.grey)),
                         ],
                       ),
                     ),
                     _buildStatusChip(request.status),
                   ],
                 ),
-                if (!isResourceRequest && request.hasValidImage()) ...[
-                  const SizedBox(height: 12),
-                  SizedBox(
-                    width: double.infinity,
-                    height: 150,
-                    child: ClipRRect(
-                      borderRadius: BorderRadius.circular(12),
-                      child: FirebaseStorageImage(
-                        imageUrl: request.getNormalizedImageUrl(),
-                        fit: BoxFit.cover,
-                        placeholder: Container(
-                          color: Colors.grey[200],
-                          child:
-                              const Center(child: CircularProgressIndicator()),
-                        ),
-                        errorWidget: Container(
-                          color: Colors.grey[200],
-                          child: Center(
-                            child: Icon(
-                              Icons.image_not_supported_outlined,
-                              color: Colors.grey[400],
-                              size: 40,
-                            ),
-                          ),
-                        ),
-                      ),
-                    ),
-                  ),
-                ],
-                const SizedBox(height: 12),
-                Text(
-                  'Request:',
-                  style: TextStyle(
-                    fontSize: 13,
-                    fontWeight: FontWeight.w600,
-                    color: Colors.grey[800],
-                  ),
-                ),
-                const SizedBox(height: 6),
-                Container(
-                  width: double.infinity,
-                  padding: const EdgeInsets.all(12),
-                  decoration: BoxDecoration(
-                    color: Colors.grey[50],
-                    borderRadius: BorderRadius.circular(8),
-                  ),
-                  child: Text(
-                    request.description,
-                    style: TextStyle(
-                      fontSize: 14,
-                      color: Colors.grey[700],
-                    ),
-                    maxLines: 1,
-                    overflow: TextOverflow.ellipsis,
-                  ),
-                ),
+                const Divider(height: 24),
+                _buildInfoRow(Icons.inventory_2_outlined, request.description,
+                    isBold: true, maxLines: 2),
                 const SizedBox(height: 12),
                 Row(
                   children: [
-                    Icon(
-                      isResourceRequest
-                          ? Icons.supervisor_account
-                          : Icons.inventory,
-                      size: 16,
-                      color: Colors.grey[500],
-                    ),
-                    const SizedBox(width: 6),
-                    Flexible(
-                      child: Text(
-                        'Need: ${request.request[0].toUpperCase()}${request.request.substring(1)}',
-                        style: TextStyle(
-                          fontSize: 13,
-                          color: Colors.grey[600],
-                          fontWeight: FontWeight.w500,
-                        ),
-                        overflow: TextOverflow.ellipsis,
-                      ),
-                    ),
-                  ],
-                ),
-                const SizedBox(height: 6),
-                Row(
-                  children: [
-                    Icon(Icons.person, size: 14, color: Colors.grey[500]),
-                    const SizedBox(width: 8),
-                    Text(
-                      'By: ${request.employeeName}',
-                      style: TextStyle(fontSize: 12, color: Colors.grey[600]),
-                    ),
-                  ],
-                ),
-                const SizedBox(height: 6),
-                if (request.timeRequired != null &&
-                    request.timeRequired!.isNotEmpty) ...[
-                  Row(
-                    children: [
-                      Icon(Icons.calendar_today,
-                          size: 14, color: Colors.grey[500]),
-                      const SizedBox(width: 8),
-                      Text(
-                        request.timeRequired!,
-                        style: TextStyle(fontSize: 12, color: Colors.grey[600]),
-                      ),
-                    ],
-                  ),
-                  const SizedBox(height: 6),
-                ],
-                Row(
-                  children: [
-                    Icon(
-                      request.status == 'completed'
-                          ? Icons.check_circle
-                          : Icons.access_time,
-                      size: 14,
-                      color: request.status == 'completed'
-                          ? Colors.green[700]
-                          : Colors.grey[500],
-                    ),
-                    const SizedBox(width: 8),
-                    Text(
-                      request.status == 'completed' &&
-                              request.completionDate != null
-                          ? 'Completed: ${DateFormat('d MMM yyyy, HH:mm', 'id_ID').format(request.completionDate!)}'
-                          : 'Created at: ${_getTimeAgo(request.createdAt)}',
-                      style: TextStyle(
-                        fontSize: 12,
-                        color: request.status == 'completed'
-                            ? Colors.green[800]
-                            : Colors.grey[600],
-                        fontWeight: request.status == 'completed'
-                            ? FontWeight.w500
-                            : FontWeight.normal,
-                      ),
-                    ),
-                  ],
-                ),
-                if (request.status == 'open' ||
-                    request.status == 'inProgress') ...[
-                  const Divider(height: 24),
-                  Row(
-                    children: [
-                      Expanded(
+                    _buildInfoChip(
+                        Icons.access_time, _getTimeAgo(request.createdAt)),
+                    const Spacer(),
+                    if (request.status == 'open')
+                      SizedBox(
+                        height: 32,
                         child: ElevatedButton.icon(
                           onPressed: () =>
                               _navigateToAssignTechnicianRequest(request),
-                          icon: const Icon(Icons.engineering, size: 16),
-                          label: Text(request.assignedTechnicianId == null
-                              ? 'Assign'
-                              : 'Change Technician'),
+                          icon:
+                              const Icon(Icons.engineering_outlined, size: 16),
+                          label: const Text('Assign'),
                           style: ElevatedButton.styleFrom(
-                            backgroundColor: Colors.blue,
-                            foregroundColor: Colors.white,
-                            padding: const EdgeInsets.symmetric(vertical: 12),
-                            minimumSize: const Size.fromHeight(40),
-                          ),
-                        ),
-                      ),
-                      const SizedBox(width: 12),
-                      Expanded(
-                        child: ElevatedButton.icon(
-                          onPressed: () => _showCompleteDialogResource(request),
-                          icon: const Icon(Icons.check_circle, size: 16),
-                          label: const Text('Complete'),
-                          style: ElevatedButton.styleFrom(
-                            backgroundColor: Colors.green,
+                            backgroundColor: Theme.of(context).primaryColor,
                             foregroundColor: Colors.white,
                           ),
                         ),
                       ),
-                    ],
-                  ),
-                ],
+                    if (request.status == 'inProgress')
+                      SizedBox(
+                        height: 32,
+                        child: OutlinedButton.icon(
+                          onPressed: () =>
+                              _navigateToAssignTechnicianRequest(request),
+                          icon:
+                              const Icon(Icons.engineering_outlined, size: 16),
+                          label: Text(request.technicianName ?? 'Assign'),
+                          style: OutlinedButton.styleFrom(
+                              foregroundColor: Theme.of(context).primaryColor,
+                              side: BorderSide(
+                                  color: Theme.of(context)
+                                      .primaryColor
+                                      .withOpacity(0.5))),
+                        ),
+                      ),
+                  ],
+                )
               ],
             ),
           ),
@@ -2392,7 +1765,231 @@ class _OfficerStatusTabState extends State<OfficerStatusTab>
     );
   }
 
-  Widget _buildInfoRow(IconData icon, String text, {bool isBold = false}) {
+
+Widget _buildRideRequestCard(RideRequestModel request) {
+    return Container(
+      
+      margin: const EdgeInsets.only(bottom: 16),
+      decoration: BoxDecoration(
+        borderRadius: BorderRadius.circular(16),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.redAccent.withOpacity(0.1), 
+            blurRadius: 12,
+            spreadRadius: 2,
+            offset: const Offset(0, 2),
+          ),
+        ],
+      ),
+      child: Card(
+        elevation: 0, 
+        shape: RoundedRectangleBorder(
+          borderRadius: BorderRadius.circular(16),
+          side: BorderSide(color: Colors.red.withOpacity(0.3), width: 1.5),
+        ),
+        margin: EdgeInsets.zero, 
+        child: InkWell(
+          onTap: () => _navigateToDetail(request),
+          borderRadius: BorderRadius.circular(16),
+          child: Padding(
+            padding: const EdgeInsets.all(16.0),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Row(
+                  children: [
+                    CircleAvatar(
+                      backgroundColor: Colors.red.withOpacity(0.1),
+                      child: Icon(Icons.directions_car_outlined,
+                          color: Colors.red, size: 20),
+                    ),
+                    const SizedBox(width: 12),
+                    Expanded(
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          const Text('Operational Request',
+                              style: TextStyle(fontWeight: FontWeight.bold)),
+                          Text('by ${request.employeeName}',
+                              style:
+                                  TextStyle(fontSize: 12, color: Colors.grey)),
+                        ],
+                      ),
+                    ),
+                    _buildStatusChip(request.status),
+                  ],
+                ),
+                const Divider(height: 24),
+                _buildInfoRow(
+                    Icons.my_location, 'From: ${request.pickupLocation}',
+                    isBold: true),
+                const SizedBox(height: 6),
+                _buildInfoRow(Icons.location_on_outlined,
+                    'To: ${request.dropoffLocation}',
+                    isBold: true),
+                const SizedBox(height: 12),
+                Row(
+                  children: [
+                    _buildInfoChip(
+                        Icons.event,
+                        DateFormat('d MMM, HH:mm')
+                            .format(request.pickupDateTime)),
+                    const Spacer(),
+                    if (request.status == 'open')
+                      SizedBox(
+                        height: 32,
+                        child: ElevatedButton.icon(
+                          onPressed: () =>
+                              _navigateToAssignDriverVehicle(request),
+                          icon: const Icon(Icons.assignment_ind_outlined,
+                              size: 16),
+                          label: const Text('Assign'),
+                          style: ElevatedButton.styleFrom(
+                            backgroundColor: Theme.of(context).primaryColor,
+                            foregroundColor: Colors.white,
+                          ),
+                        ),
+                      ),
+                    if (request.status == 'inProgress')
+                      SizedBox(
+                        height: 32,
+                        child: OutlinedButton.icon(
+                          onPressed: () =>
+                              _navigateToAssignDriverVehicle(request),
+                          icon: const Icon(Icons.assignment_ind_outlined,
+                              size: 16),
+                          label: Text(request.driverName ?? 'Assign'),
+                          style: OutlinedButton.styleFrom(
+                              foregroundColor: Theme.of(context).primaryColor,
+                              side: BorderSide(
+                                  color: Theme.of(context)
+                                      .primaryColor
+                                      .withOpacity(0.5))),
+                        ),
+                      ),
+                  ],
+                )
+              ],
+            ),
+          ),
+        ),
+      ),
+    );
+  }
+
+
+  Widget _buildBookingCard(BookingModel booking) {
+    return Container(
+      margin: const EdgeInsets.only(bottom: 16),
+      decoration: BoxDecoration(
+        borderRadius: BorderRadius.circular(16),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.tealAccent.withOpacity(0.1), 
+            blurRadius: 12,
+            spreadRadius: 2,
+            offset: const Offset(0, 2),
+          ),
+        ],
+      ),
+      child: Card(
+        elevation: 0, 
+        shape: RoundedRectangleBorder(
+          borderRadius: BorderRadius.circular(16),
+          side: BorderSide(color: Colors.teal.withOpacity(0.3), width: 1.5),
+        ),
+        margin: EdgeInsets.zero, 
+        child: InkWell(
+          onTap: () => _navigateToDetail(booking),
+          borderRadius: BorderRadius.circular(16),
+          child: Padding(
+            padding: const EdgeInsets.all(16.0),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Row(
+                  children: [
+                    CircleAvatar(
+                      backgroundColor: Colors.teal.withOpacity(0.1),
+                      child: Icon(Icons.meeting_room_outlined,
+                          color: Colors.teal, size: 20),
+                    ),
+                    const SizedBox(width: 12),
+                    Expanded(
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          const Text('Booking Request',
+                              style: TextStyle(fontWeight: FontWeight.bold)),
+                          Text('by ${booking.employeeName}',
+                              style:
+                                  TextStyle(fontSize: 12, color: Colors.grey)),
+                        ],
+                      ),
+                    ),
+                    _buildStatusChip(booking.status),
+                  ],
+                ),
+                const Divider(height: 24),
+                _buildInfoRow(Icons.push_pin_outlined, booking.eventAgenda,
+                    isBold: true),
+                const SizedBox(height: 6),
+                _buildInfoRow(
+                    Icons.calendar_today_outlined,
+                    _formatBookingDuration(
+                        booking.usageStartDate, booking.usageEndDate)),
+                const SizedBox(height: 12),
+                Row(
+                  children: [
+                    _buildInfoChip(
+                        Icons.access_time, _getTimeAgo(booking.createdAt)),
+                    const Spacer(),
+                    if (booking.status == 'open')
+                      SizedBox(
+                        height: 32,
+                        child: ElevatedButton.icon(
+                          onPressed: () => _showManageBookingSheet(booking),
+                          icon: const Icon(Icons.edit_calendar_outlined,
+                              size: 16),
+                          label: const Text('Manage'),
+                          style: ElevatedButton.styleFrom(
+                            backgroundColor: Theme.of(context).primaryColor,
+                            foregroundColor: Colors.white,
+                          ),
+                        ),
+                      ),
+                  ],
+                )
+              ],
+            ),
+          ),
+        ),
+      ),
+    );
+  }
+
+
+
+  Widget _buildInfoChip(IconData icon, String text) {
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+      decoration: BoxDecoration(
+        color: Colors.grey[100],
+        borderRadius: BorderRadius.circular(8),
+      ),
+      child: Row(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Icon(icon, size: 12, color: Colors.grey[600]),
+          const SizedBox(width: 6),
+          Text(text, style: TextStyle(fontSize: 11, color: Colors.grey[700])),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildInfoRow(IconData icon, String text,
+      {bool isBold = false, int maxLines = 1}) {
     return Row(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
@@ -2401,6 +1998,8 @@ class _OfficerStatusTabState extends State<OfficerStatusTab>
         Expanded(
           child: Text(
             text,
+            maxLines: maxLines, // Menggunakan parameter maxLines
+            overflow: TextOverflow.ellipsis, // Menambahkan overflow handling
             style: TextStyle(
               fontSize: isBold ? 14 : 12,
               color: isBold ? Colors.grey[800] : Colors.grey[600],
@@ -4543,134 +4142,147 @@ class _OfficerRatingTabState extends State<OfficerRatingTab>
     final avgRating = technician.averageRating ?? 0.0;
     final totalRatings = technician.totalRatings ?? 0;
 
-    return Card(
+    return Container(
       margin: const EdgeInsets.only(bottom: 12),
-      elevation: 2,
-      shadowColor: Colors.black.withOpacity(0.1),
-      shape: RoundedRectangleBorder(
+      decoration: BoxDecoration(
         borderRadius: BorderRadius.circular(12),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.orangeAccent.withOpacity(0.1),
+            blurRadius: 10,
+            spreadRadius: 1,
+          ),
+        ],
       ),
-      child: InkWell(
-        onTap: () {
-          Navigator.push(
-            context,
-            MaterialPageRoute(
-              builder: (context) => RatingDetailScreen(
-                entity: technician,
-                type: DetailRatingType.technician,
+      child: Card(
+        elevation: 0,
+        margin: EdgeInsets.zero,
+        shape: RoundedRectangleBorder(
+          borderRadius: BorderRadius.circular(12),
+          side: BorderSide(color: Colors.orange.withOpacity(0.3), width: 1.5),
+        ),
+        child: InkWell(
+          onTap: () {
+            Navigator.push(
+              context,
+              MaterialPageRoute(
+                builder: (context) => RatingDetailScreen(
+                  entity: technician,
+                  type: DetailRatingType.technician,
+                ),
               ),
-            ),
-          );
-        },
-        borderRadius: BorderRadius.circular(12),
-        child: Padding(
-          padding: const EdgeInsets.all(12.0),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Row(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Stack(
-                    clipBehavior: Clip.none,
-                    children: [
-                      CircleAvatar(
-                        radius: 28,
-                        backgroundColor: Colors.grey[200],
-                        child: Icon(Icons.engineering_outlined,
-                            size: 28, color: Colors.grey[600]),
-                      ),
-                      if (totalRatings > 0)
-                        Positioned(
-                          top: -4,
-                          left: -4,
-                          child: Container(
-                            padding: const EdgeInsets.symmetric(
-                                horizontal: 6, vertical: 2),
-                            decoration: BoxDecoration(
-                              color: _getRatingChipColor(avgRating)
-                                  .withOpacity(0.9),
-                              borderRadius: BorderRadius.circular(12),
-                              border:
-                                  Border.all(color: Colors.white, width: 1.5),
-                            ),
-                            child: Text(
-                              avgRating.toStringAsFixed(1),
-                              style: const TextStyle(
-                                  color: Colors.white,
-                                  fontSize: 11,
-                                  fontWeight: FontWeight.bold),
+            );
+          },
+          borderRadius: BorderRadius.circular(12),
+          child: Padding(
+            padding: const EdgeInsets.all(12.0),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Row(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Stack(
+                      clipBehavior: Clip.none,
+                      children: [
+                        CircleAvatar(
+                          radius: 28,
+                          backgroundColor: Colors.grey[200],
+                          child: Icon(Icons.engineering_outlined,
+                              size: 28, color: Colors.grey[600]),
+                        ),
+                        if (totalRatings > 0)
+                          Positioned(
+                            top: -4,
+                            left: -4,
+                            child: Container(
+                              padding: const EdgeInsets.symmetric(
+                                  horizontal: 6, vertical: 2),
+                              decoration: BoxDecoration(
+                                color: _getRatingChipColor(avgRating)
+                                    .withOpacity(0.9),
+                                borderRadius: BorderRadius.circular(12),
+                                border:
+                                    Border.all(color: Colors.white, width: 1.5),
+                              ),
+                              child: Text(
+                                avgRating.toStringAsFixed(1),
+                                style: const TextStyle(
+                                    color: Colors.white,
+                                    fontSize: 11,
+                                    fontWeight: FontWeight.bold),
+                              ),
                             ),
                           ),
-                        ),
-                    ],
-                  ),
-                  const SizedBox(width: 12),
-                  Expanded(
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        Text(
-                          technician.name,
-                          style: const TextStyle(
-                              fontSize: 16, fontWeight: FontWeight.bold),
-                          maxLines: 1,
-                          overflow: TextOverflow.ellipsis,
-                        ),
-                        const SizedBox(height: 2),
-                        Text(
-                          technician.email,
-                          style:
-                              TextStyle(fontSize: 13, color: Colors.grey[600]),
-                          maxLines: 1,
-                          overflow: TextOverflow.ellipsis,
-                        ),
                       ],
                     ),
-                  ),
-                ],
-              ),
-              const SizedBox(height: 10),
-              Row(
-                children: [
-                  _buildRatingStars(avgRating),
-                  const SizedBox(width: 4),
-                  Text(
-                    '${avgRating.toStringAsFixed(1)} (${totalRatings})',
-                    style: const TextStyle(
-                        fontWeight: FontWeight.bold, fontSize: 13),
-                  ),
-                  const SizedBox(width: 8),
-                  if (totalRatings > 0)
-                    Container(
-                      padding: const EdgeInsets.symmetric(
-                          horizontal: 8, vertical: 2),
-                      decoration: BoxDecoration(
-                        color: _getRatingChipColor(avgRating).withOpacity(0.15),
-                        borderRadius: BorderRadius.circular(6),
-                      ),
-                      child: Text(
-                        _getRatingText(avgRating),
-                        style: TextStyle(
-                          color: _getRatingChipColor(avgRating),
-                          fontSize: 11,
-                          fontWeight: FontWeight.bold,
-                        ),
+                    const SizedBox(width: 12),
+                    Expanded(
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Text(
+                            technician.name,
+                            style: const TextStyle(
+                                fontSize: 16, fontWeight: FontWeight.bold),
+                            maxLines: 1,
+                            overflow: TextOverflow.ellipsis,
+                          ),
+                          const SizedBox(height: 2),
+                          Text(
+                            technician.email,
+                            style: TextStyle(
+                                fontSize: 13, color: Colors.grey[600]),
+                            maxLines: 1,
+                            overflow: TextOverflow.ellipsis,
+                          ),
+                        ],
                       ),
                     ),
-                ],
-              ),
-              const Divider(height: 20),
-              Row(
-                mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                children: [
-                  _buildInfoChip(Icons.calendar_today_outlined,
-                      'Member since ${DateFormat('MMM yyyy').format(technician.createdAt)}'),
-                  _buildInfoChip(
-                      Icons.trending_up, _getSinceText(technician.createdAt)),
-                ],
-              ),
-            ],
+                  ],
+                ),
+                const SizedBox(height: 10),
+                Row(
+                  children: [
+                    _buildRatingStars(avgRating),
+                    const SizedBox(width: 4),
+                    Text(
+                      '${avgRating.toStringAsFixed(1)} ($totalRatings)',
+                      style: const TextStyle(
+                          fontWeight: FontWeight.bold, fontSize: 13),
+                    ),
+                    const SizedBox(width: 8),
+                    if (totalRatings > 0)
+                      Container(
+                        padding: const EdgeInsets.symmetric(
+                            horizontal: 8, vertical: 2),
+                        decoration: BoxDecoration(
+                          color:
+                              _getRatingChipColor(avgRating).withOpacity(0.15),
+                          borderRadius: BorderRadius.circular(6),
+                        ),
+                        child: Text(
+                          _getRatingText(avgRating),
+                          style: TextStyle(
+                              color: _getRatingChipColor(avgRating),
+                              fontSize: 11,
+                              fontWeight: FontWeight.bold),
+                        ),
+                      ),
+                  ],
+                ),
+                const Divider(height: 20),
+                Row(
+                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                  children: [
+                    _buildInfoChip(Icons.calendar_today_outlined,
+                        'Member since ${DateFormat('MMM yyyy').format(technician.createdAt)}'),
+                    _buildInfoChip(
+                        Icons.trending_up, _getSinceText(technician.createdAt)),
+                  ],
+                ),
+              ],
+            ),
           ),
         ),
       ),
@@ -4764,154 +4376,167 @@ class _OfficerRatingTabState extends State<OfficerRatingTab>
     final avgRating = driverUser.averageRating ?? 0.0;
     final totalRatings = driverUser.totalRatings ?? 0;
 
-    return Card(
+    return Container(
       margin: const EdgeInsets.only(bottom: 12),
-      elevation: 2,
-      shadowColor: Colors.black.withOpacity(0.1),
-      shape: RoundedRectangleBorder(
+      decoration: BoxDecoration(
         borderRadius: BorderRadius.circular(12),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.blueAccent.withOpacity(0.1),
+            blurRadius: 10,
+            spreadRadius: 1,
+          ),
+        ],
       ),
-      child: InkWell(
-        onTap: () {
-          Navigator.push(
-            context,
-            MaterialPageRoute(
-              builder: (context) => RatingDetailScreen(
-                entity: driverUser,
-                type: DetailRatingType.driver,
+      child: Card(
+        elevation: 0,
+        margin: EdgeInsets.zero,
+        shape: RoundedRectangleBorder(
+          borderRadius: BorderRadius.circular(12),
+          side: BorderSide(color: Colors.blue.withOpacity(0.3), width: 1.5),
+        ),
+        child: InkWell(
+          onTap: () {
+            Navigator.push(
+              context,
+              MaterialPageRoute(
+                builder: (context) => RatingDetailScreen(
+                  entity: driverUser,
+                  type: DetailRatingType.driver,
+                ),
               ),
-            ),
-          );
-        },
-        borderRadius: BorderRadius.circular(12),
-        child: Padding(
-          padding: const EdgeInsets.all(12.0),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Row(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Stack(
-                    clipBehavior: Clip.none,
-                    children: [
-                      CircleAvatar(
-                        radius: 28,
-                        backgroundColor: Colors.blue[100],
-                        child: Icon(Icons.person_outline,
-                            size: 28, color: Colors.blue[800]),
-                      ),
-                      if (totalRatings > 0)
-                        Positioned(
-                          top: -4,
-                          left: -4,
-                          child: Container(
-                            padding: const EdgeInsets.symmetric(
-                                horizontal: 6, vertical: 2),
-                            decoration: BoxDecoration(
-                              color: _getRatingChipColor(avgRating)
-                                  .withOpacity(0.9),
-                              borderRadius: BorderRadius.circular(12),
-                              border:
-                                  Border.all(color: Colors.white, width: 1.5),
+            );
+          },
+          borderRadius: BorderRadius.circular(12),
+          child: Padding(
+            padding: const EdgeInsets.all(12.0),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Row(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Stack(
+                      clipBehavior: Clip.none,
+                      children: [
+                        CircleAvatar(
+                          radius: 28,
+                          backgroundColor: Colors.blue[100],
+                          child: Icon(Icons.person_outline,
+                              size: 28, color: Colors.blue[800]),
+                        ),
+                        if (totalRatings > 0)
+                          Positioned(
+                            top: -4,
+                            left: -4,
+                            child: Container(
+                              padding: const EdgeInsets.symmetric(
+                                  horizontal: 6, vertical: 2),
+                              decoration: BoxDecoration(
+                                color: _getRatingChipColor(avgRating)
+                                    .withOpacity(0.9),
+                                borderRadius: BorderRadius.circular(12),
+                                border:
+                                    Border.all(color: Colors.white, width: 1.5),
+                              ),
+                              child: Text(avgRating.toStringAsFixed(1),
+                                  style: const TextStyle(
+                                      color: Colors.white,
+                                      fontSize: 11,
+                                      fontWeight: FontWeight.bold)),
                             ),
-                            child: Text(avgRating.toStringAsFixed(1),
-                                style: const TextStyle(
-                                    color: Colors.white,
-                                    fontSize: 11,
-                                    fontWeight: FontWeight.bold)),
                           ),
-                        ),
-                    ],
-                  ),
-                  const SizedBox(width: 12),
-                  Expanded(
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        Text(driverUser.name,
-                            style: const TextStyle(
-                                fontSize: 16, fontWeight: FontWeight.bold),
-                            maxLines: 1,
-                            overflow: TextOverflow.ellipsis),
-                        const SizedBox(height: 2),
-                        Text(driverUser.email,
-                            style: TextStyle(
-                                fontSize: 13, color: Colors.grey[600]),
-                            maxLines: 1,
-                            overflow: TextOverflow.ellipsis),
                       ],
                     ),
-                  ),
-                  // --- KETERANGAN STATUS isAvailable ---
-                  Container(
-                    padding:
-                        const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
-                    decoration: BoxDecoration(
-                        color: driverDetail.isAvailable
-                            ? Colors.green.withOpacity(0.1)
-                            : Colors.orange.withOpacity(0.1),
-                        borderRadius: BorderRadius.circular(12)),
-                    child: Row(
-                      mainAxisSize: MainAxisSize.min,
-                      children: [
-                        Icon(Icons.circle,
-                            size: 8,
-                            color: driverDetail.isAvailable
-                                ? Colors.green
-                                : Colors.orange),
-                        const SizedBox(width: 4),
-                        Text(
-                          driverDetail.isAvailable ? 'Available' : 'On Duty',
-                          style: TextStyle(
-                            fontSize: 11,
-                            fontWeight: FontWeight.bold,
-                            color: driverDetail.isAvailable
-                                ? Colors.green[800]
-                                : Colors.orange[800],
-                          ),
-                        ),
-                      ],
+                    const SizedBox(width: 12),
+                    Expanded(
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Text(driverUser.name,
+                              style: const TextStyle(
+                                  fontSize: 16, fontWeight: FontWeight.bold),
+                              maxLines: 1,
+                              overflow: TextOverflow.ellipsis),
+                          const SizedBox(height: 2),
+                          Text(driverUser.email,
+                              style: TextStyle(
+                                  fontSize: 13, color: Colors.grey[600]),
+                              maxLines: 1,
+                              overflow: TextOverflow.ellipsis),
+                        ],
+                      ),
                     ),
-                  )
-                ],
-              ),
-              const SizedBox(height: 10),
-              Row(
-                children: [
-                  _buildRatingStars(avgRating),
-                  const SizedBox(width: 4),
-                  Text('${avgRating.toStringAsFixed(1)} (${totalRatings})',
-                      style: const TextStyle(
-                          fontWeight: FontWeight.bold, fontSize: 13)),
-                  const SizedBox(width: 8),
-                  if (totalRatings > 0)
                     Container(
                       padding: const EdgeInsets.symmetric(
-                          horizontal: 8, vertical: 2),
+                          horizontal: 8, vertical: 4),
                       decoration: BoxDecoration(
-                        color: _getRatingChipColor(avgRating).withOpacity(0.15),
-                        borderRadius: BorderRadius.circular(6),
-                      ),
-                      child: Text(_getRatingText(avgRating),
-                          style: TextStyle(
-                              color: _getRatingChipColor(avgRating),
+                          color: driverDetail.isAvailable
+                              ? Colors.green.withOpacity(0.1)
+                              : Colors.orange.withOpacity(0.1),
+                          borderRadius: BorderRadius.circular(12)),
+                      child: Row(
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          Icon(Icons.circle,
+                              size: 8,
+                              color: driverDetail.isAvailable
+                                  ? Colors.green
+                                  : Colors.orange),
+                          const SizedBox(width: 4),
+                          Text(
+                            driverDetail.isAvailable ? 'Available' : 'On Duty',
+                            style: TextStyle(
                               fontSize: 11,
-                              fontWeight: FontWeight.bold)),
-                    ),
-                ],
-              ),
-              const Divider(height: 20),
-              Row(
-                mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                children: [
-                  _buildInfoChip(Icons.calendar_today_outlined,
-                      'Member since ${DateFormat('MMM yyyy').format(driverUser.createdAt)}'),
-                  _buildInfoChip(
-                      Icons.trending_up, _getSinceText(driverUser.createdAt)),
-                ],
-              ),
-            ],
+                              fontWeight: FontWeight.bold,
+                              color: driverDetail.isAvailable
+                                  ? Colors.green[800]
+                                  : Colors.orange[800],
+                            ),
+                          ),
+                        ],
+                      ),
+                    )
+                  ],
+                ),
+                const SizedBox(height: 10),
+                Row(
+                  children: [
+                    _buildRatingStars(avgRating),
+                    const SizedBox(width: 4),
+                    Text('${avgRating.toStringAsFixed(1)} (${totalRatings})',
+                        style: const TextStyle(
+                            fontWeight: FontWeight.bold, fontSize: 13)),
+                    const SizedBox(width: 8),
+                    if (totalRatings > 0)
+                      Container(
+                        padding: const EdgeInsets.symmetric(
+                            horizontal: 8, vertical: 2),
+                        decoration: BoxDecoration(
+                          color:
+                              _getRatingChipColor(avgRating).withOpacity(0.15),
+                          borderRadius: BorderRadius.circular(6),
+                        ),
+                        child: Text(_getRatingText(avgRating),
+                            style: TextStyle(
+                                color: _getRatingChipColor(avgRating),
+                                fontSize: 11,
+                                fontWeight: FontWeight.bold)),
+                      ),
+                  ],
+                ),
+                const Divider(height: 20),
+                Row(
+                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                  children: [
+                    _buildInfoChip(Icons.calendar_today_outlined,
+                        'Member since ${DateFormat('MMM yyyy').format(driverUser.createdAt)}'),
+                    _buildInfoChip(
+                        Icons.trending_up, _getSinceText(driverUser.createdAt)),
+                  ],
+                ),
+              ],
+            ),
           ),
         ),
       ),
@@ -4987,124 +4612,140 @@ class _OfficerRatingTabState extends State<OfficerRatingTab>
     final avgRating = ratingInfo['averageRating'] as double;
     final totalRatings = ratingInfo['totalRatings'] as int;
 
-    return Card(
+    return Container(
       margin: const EdgeInsets.only(bottom: 12),
-      elevation: 2,
-      shadowColor: Colors.black.withOpacity(0.1),
-      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-      child: InkWell(
-        onTap: () {
-          Navigator.push(
-            context,
-            MaterialPageRoute(
-              builder: (context) => RatingDetailScreen(
-                entity: vehicle,
-                entityRatingData: ratingInfo,
-                type: DetailRatingType.vehicle,
-              ),
-            ),
-          );
-        },
+      decoration: BoxDecoration(
         borderRadius: BorderRadius.circular(12),
-        child: Padding(
-          padding: const EdgeInsets.all(12.0),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Row(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  CircleAvatar(
-                    radius: 28,
-                    backgroundColor: Colors.red[100],
-                    child: Icon(Icons.directions_car_outlined,
-                        size: 28, color: Colors.red[800]),
-                  ),
-                  const SizedBox(width: 12),
-                  Expanded(
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        Text(
-                          '${vehicle.vehicleModel}',
-                          style: const TextStyle(
-                              fontSize: 16, fontWeight: FontWeight.bold),
-                          maxLines: 1,
-                          overflow: TextOverflow.ellipsis,
-                        ),
-                        const SizedBox(height: 2),
-                        Text(
-                          vehicle.licensePlate,
-                          style:
-                              TextStyle(fontSize: 13, color: Colors.grey[600]),
-                          maxLines: 1,
-                          overflow: TextOverflow.ellipsis,
-                        ),
-                      ],
-                    ),
-                  ),
-                  Container(
-                    padding:
-                        const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
-                    decoration: BoxDecoration(
-                        color: vehicle.isAvailable
-                            ? Colors.green.withOpacity(0.1)
-                            : Colors.orange.withOpacity(0.1),
-                        borderRadius: BorderRadius.circular(12)),
-                    child: Row(
-                      mainAxisSize: MainAxisSize.min,
-                      children: [
-                        Icon(Icons.circle,
-                            size: 8,
-                            color: vehicle.isAvailable
-                                ? Colors.green
-                                : Colors.orange),
-                        const SizedBox(width: 4),
-                        Text(
-                          vehicle.isAvailable ? 'Available' : 'In Use',
-                          style: TextStyle(
-                            fontSize: 11,
-                            fontWeight: FontWeight.bold,
-                            color: vehicle.isAvailable
-                                ? Colors.green[800]
-                                : Colors.orange[800],
-                          ),
-                        ),
-                      ],
-                    ),
-                  )
-                ],
+        boxShadow: [
+          BoxShadow(
+            color: Colors.redAccent.withOpacity(0.1), 
+            blurRadius: 10,
+            spreadRadius: 1,
+          ),
+        ],
+      ),
+      child: Card(
+        elevation: 0,
+        margin: EdgeInsets.zero,
+        shape: RoundedRectangleBorder(
+          borderRadius: BorderRadius.circular(12),
+          side: BorderSide(color: Colors.red.withOpacity(0.3), width: 1.5),
+        ),
+        child: InkWell(
+          onTap: () {
+            Navigator.push(
+              context,
+              MaterialPageRoute(
+                builder: (context) => RatingDetailScreen(
+                  entity: vehicle,
+                  entityRatingData: ratingInfo,
+                  type: DetailRatingType.vehicle,
+                ),
               ),
-              const SizedBox(height: 10),
-              Row(
-                children: [
-                  _buildRatingStars(avgRating),
-                  const SizedBox(width: 4),
-                  Text(
-                    '${avgRating.toStringAsFixed(1)} ($totalRatings)',
-                    style: const TextStyle(
-                        fontWeight: FontWeight.bold, fontSize: 13),
-                  ),
-                  const SizedBox(width: 8),
-                  if (totalRatings > 0)
+            );
+          },
+          borderRadius: BorderRadius.circular(12),
+          child: Padding(
+            padding: const EdgeInsets.all(12.0),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Row(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    CircleAvatar(
+                      radius: 28,
+                      backgroundColor: Colors.red[100],
+                      child: Icon(Icons.directions_car_outlined,
+                          size: 28, color: Colors.red[800]),
+                    ),
+                    const SizedBox(width: 12),
+                    Expanded(
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Text(
+                            '${vehicle.vehicleModel}',
+                            style: const TextStyle(
+                                fontSize: 16, fontWeight: FontWeight.bold),
+                            maxLines: 1,
+                            overflow: TextOverflow.ellipsis,
+                          ),
+                          const SizedBox(height: 2),
+                          Text(
+                            vehicle.licensePlate,
+                            style: TextStyle(
+                                fontSize: 13, color: Colors.grey[600]),
+                            maxLines: 1,
+                            overflow: TextOverflow.ellipsis,
+                          ),
+                        ],
+                      ),
+                    ),
                     Container(
                       padding: const EdgeInsets.symmetric(
-                          horizontal: 8, vertical: 2),
+                          horizontal: 8, vertical: 4),
                       decoration: BoxDecoration(
-                        color: _getRatingChipColor(avgRating).withOpacity(0.15),
-                        borderRadius: BorderRadius.circular(6),
+                          color: vehicle.isAvailable
+                              ? Colors.green.withOpacity(0.1)
+                              : Colors.orange.withOpacity(0.1),
+                          borderRadius: BorderRadius.circular(12)),
+                      child: Row(
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          Icon(Icons.circle,
+                              size: 8,
+                              color: vehicle.isAvailable
+                                  ? Colors.green
+                                  : Colors.orange),
+                          const SizedBox(width: 4),
+                          Text(
+                            vehicle.isAvailable ? 'Available' : 'In Use',
+                            style: TextStyle(
+                              fontSize: 11,
+                              fontWeight: FontWeight.bold,
+                              color: vehicle.isAvailable
+                                  ? Colors.green[800]
+                                  : Colors.orange[800],
+                            ),
+                          ),
+                        ],
                       ),
-                      child: Text(
-                        _getRatingText(avgRating),
-                        style: TextStyle(
-                            color: _getRatingChipColor(avgRating),
-                            fontSize: 11,
-                            fontWeight: FontWeight.bold),
-                      ),
+                    )
+                  ],
+                ),
+                const SizedBox(height: 10),
+                Row(
+                  children: [
+                    _buildRatingStars(avgRating),
+                    const SizedBox(width: 4),
+                    Text(
+                      '${avgRating.toStringAsFixed(1)} ($totalRatings)',
+                      style: const TextStyle(
+                          fontWeight: FontWeight.bold, fontSize: 13),
                     ),
-                ],
-              ),
-            ],
+                    const SizedBox(width: 8),
+                    if (totalRatings > 0)
+                      Container(
+                        padding: const EdgeInsets.symmetric(
+                            horizontal: 8, vertical: 2),
+                        decoration: BoxDecoration(
+                          color:
+                              _getRatingChipColor(avgRating).withOpacity(0.15),
+                          borderRadius: BorderRadius.circular(6),
+                        ),
+                        child: Text(
+                          _getRatingText(avgRating),
+                          style: TextStyle(
+                              color: _getRatingChipColor(avgRating),
+                              fontSize: 11,
+                              fontWeight: FontWeight.bold),
+                        ),
+                      ),
+                  ],
+                ),
+              ],
+            ),
           ),
         ),
       ),
@@ -5182,103 +4823,117 @@ class _OfficerRatingTabState extends State<OfficerRatingTab>
   Widget _buildRatedBookingCard(BookingModel booking) {
     final rating = booking.rating ?? 0.0;
 
-    return Card(
+    return Container(
       margin: const EdgeInsets.only(bottom: 12),
-      elevation: 2,
-      shadowColor: Colors.black.withOpacity(0.1),
-      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-      child: InkWell(
-        onTap: () {
-          // Navigasi ke detail booking (sesuai permintaan)
-          Navigator.push(
-            context,
-            MaterialPageRoute(
-              builder: (context) => BookingDetailScreen(booking: booking),
-            ),
-          );
-        },
+      decoration: BoxDecoration(
         borderRadius: BorderRadius.circular(12),
-        child: Padding(
-          padding: const EdgeInsets.all(12.0),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Row(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  CircleAvatar(
-                    radius: 28,
-                    backgroundColor: Colors.teal[100],
-                    child: Icon(Icons.meeting_room_outlined,
-                        size: 28, color: Colors.teal[800]),
-                  ),
-                  const SizedBox(width: 12),
-                  Expanded(
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        Text(
-                          booking.roomName,
-                          style: const TextStyle(
-                              fontSize: 16, fontWeight: FontWeight.bold),
-                          maxLines: 1,
-                          overflow: TextOverflow.ellipsis,
-                        ),
-                        const SizedBox(height: 2),
-                        Text(
-                          'Agenda: ${booking.eventAgenda}',
-                          style:
-                              TextStyle(fontSize: 13, color: Colors.grey[600]),
-                          maxLines: 1,
-                          overflow: TextOverflow.ellipsis,
-                        ),
-                      ],
-                    ),
-                  ),
-                ],
+        boxShadow: [
+          BoxShadow(
+            color: Colors.tealAccent.withOpacity(0.1),
+            blurRadius: 10,
+            spreadRadius: 1,
+          ),
+        ],
+      ),
+      child: Card(
+        elevation: 0,
+        margin: EdgeInsets.zero,
+        shape: RoundedRectangleBorder(
+          borderRadius: BorderRadius.circular(12),
+          side: BorderSide(color: Colors.teal.withOpacity(0.3), width: 1.5),
+        ),
+        child: InkWell(
+          onTap: () {
+            Navigator.push(
+              context,
+              MaterialPageRoute(
+                builder: (context) => BookingDetailScreen(booking: booking),
               ),
-              const SizedBox(height: 10),
-              Container(
-                padding:
-                    const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
-                decoration: BoxDecoration(
-                  color: _getRatingChipColor(rating).withOpacity(0.1),
-                  borderRadius: BorderRadius.circular(8),
-                ),
-                child: Row(
-                  children: [
-                    Text('Rated by ${booking.employeeName}',
-                        style:
-                            TextStyle(fontSize: 12, color: Colors.grey[700])),
-                    const Spacer(),
-                    _buildRatingStars(rating),
-                    const SizedBox(width: 4),
-                    Text(
-                      rating.toStringAsFixed(1),
-                      style: TextStyle(
-                          fontWeight: FontWeight.bold,
-                          fontSize: 13,
-                          color: _getRatingChipColor(rating)),
-                    ),
-                  ],
-                ),
-              ),
-              if (booking.ratingDate != null) ...[
-                const SizedBox(height: 8),
+            );
+          },
+          borderRadius: BorderRadius.circular(12),
+          child: Padding(
+            padding: const EdgeInsets.all(12.0),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
                 Row(
-                  mainAxisAlignment: MainAxisAlignment.end,
+                  crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    Icon(Icons.calendar_today_outlined,
-                        size: 12, color: Colors.grey[600]),
-                    const SizedBox(width: 4),
-                    Text(
-                      'Rated on: ${DateFormat('d MMM yyyy').format(booking.ratingDate!)}',
-                      style: TextStyle(fontSize: 11, color: Colors.grey[700]),
+                    CircleAvatar(
+                      radius: 28,
+                      backgroundColor: Colors.teal[100],
+                      child: Icon(Icons.meeting_room_outlined,
+                          size: 28, color: Colors.teal[800]),
+                    ),
+                    const SizedBox(width: 12),
+                    Expanded(
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Text(
+                            booking.roomName,
+                            style: const TextStyle(
+                                fontSize: 16, fontWeight: FontWeight.bold),
+                            maxLines: 1,
+                            overflow: TextOverflow.ellipsis,
+                          ),
+                          const SizedBox(height: 2),
+                          Text(
+                            'Agenda: ${booking.eventAgenda}',
+                            style: TextStyle(
+                                fontSize: 13, color: Colors.grey[600]),
+                            maxLines: 1,
+                            overflow: TextOverflow.ellipsis,
+                          ),
+                        ],
+                      ),
                     ),
                   ],
                 ),
-              ]
-            ],
+                const SizedBox(height: 10),
+                Container(
+                  padding:
+                      const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+                  decoration: BoxDecoration(
+                    color: _getRatingChipColor(rating).withOpacity(0.1),
+                    borderRadius: BorderRadius.circular(8),
+                  ),
+                  child: Row(
+                    children: [
+                      Text('Rated by ${booking.employeeName}',
+                          style:
+                              TextStyle(fontSize: 12, color: Colors.grey[700])),
+                      const Spacer(),
+                      _buildRatingStars(rating),
+                      const SizedBox(width: 4),
+                      Text(
+                        rating.toStringAsFixed(1),
+                        style: TextStyle(
+                            fontWeight: FontWeight.bold,
+                            fontSize: 13,
+                            color: _getRatingChipColor(rating)),
+                      ),
+                    ],
+                  ),
+                ),
+                if (booking.ratingDate != null) ...[
+                  const SizedBox(height: 8),
+                  Row(
+                    mainAxisAlignment: MainAxisAlignment.end,
+                    children: [
+                      Icon(Icons.calendar_today_outlined,
+                          size: 12, color: Colors.grey[600]),
+                      const SizedBox(width: 4),
+                      Text(
+                        'Rated on: ${DateFormat('d MMM yyyy').format(booking.ratingDate!)}',
+                        style: TextStyle(fontSize: 11, color: Colors.grey[700]),
+                      ),
+                    ],
+                  ),
+                ]
+              ],
+            ),
           ),
         ),
       ),

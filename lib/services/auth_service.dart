@@ -14,10 +14,6 @@ class AuthService extends ChangeNotifier {
   bool _isLoading = false;
   bool get isLoading => _isLoading;
 
-  // PERBAIKAN: Hapus cache credentials yang menyebabkan masalah
-  // String? _adminEmail;
-  // String? _adminPassword;
-
   AuthService() {
     _auth.authStateChanges().listen((User? user) {
       print(
@@ -26,14 +22,12 @@ class AuthService extends ChangeNotifier {
     });
   }
 
-  // Helper function untuk mengecek apakah user adalah driver
   bool _isDriverUser(String name, String email) {
     String nameLower = name.toLowerCase();
     String emailLower = email.toLowerCase();
     return nameLower.contains('driver') || emailLower.contains('driver');
   }
 
-  // Fungsi untuk membuat driver document via Cloud Function
   Future<void> _createDriverDocumentViaCloudFunction(
       String uid, String name, String email) async {
     try {
@@ -59,7 +53,6 @@ class AuthService extends ChangeNotifier {
     }
   }
 
-  // Sign up with email and password
   Future<String?> signUp(
       String email, String password, String name, String role,
       {bool isDriver = false}) async {
@@ -111,20 +104,16 @@ class AuthService extends ChangeNotifier {
     }
   }
 
-  // PERBAIKAN: Sign in yang lebih robust
+  // PERBAIKAN: Fungsi signIn yang tidak mengubah state _isLoading
   Future<String?> signIn(String email, String password) async {
     try {
-      _isLoading = true;
-      notifyListeners();
-
+      // Baris _isLoading dan notifyListeners() dihapus dari sini
       print('🚪 Attempting to sign in user: $email');
 
-      // PERBAIKAN: Pastikan logout sebelum login baru
       if (_auth.currentUser != null) {
         print('⚠️ User already signed in, signing out first...');
         await _auth.signOut();
-        // Tunggu sebentar untuk memastikan logout selesai
-        await Future.delayed(Duration(milliseconds: 500));
+        await Future.delayed(const Duration(milliseconds: 500));
       }
 
       UserCredential result = await _auth.signInWithEmailAndPassword(
@@ -135,15 +124,12 @@ class AuthService extends ChangeNotifier {
       print(
           '✅ Sign in successful for: ${result.user?.email} (UID: ${result.user?.uid})');
 
-      _isLoading = false;
-      notifyListeners();
+      // Baris _isLoading dan notifyListeners() dihapus dari sini
       return null;
     } catch (e) {
       print('❌ Sign in error: $e');
-      _isLoading = false;
-      notifyListeners();
+      // Baris _isLoading dan notifyListeners() dihapus dari sini
 
-      // PERBAIKAN: Lebih spesifik error handling
       if (e is FirebaseAuthException) {
         switch (e.code) {
           case 'user-not-found':
@@ -164,7 +150,6 @@ class AuthService extends ChangeNotifier {
     }
   }
 
-  // PERBAIKAN: Sign out yang lebih thorough
   Future<void> signOut() async {
     try {
       print('🚪 Starting sign out process...');
@@ -175,22 +160,17 @@ class AuthService extends ChangeNotifier {
       _isLoading = true;
       notifyListeners();
 
-      // PERBAIKAN: Force sign out
       await _auth.signOut();
+      await Future.delayed(const Duration(milliseconds: 500));
 
-      // PERBAIKAN: Tunggu untuk memastikan logout selesai
-      await Future.delayed(Duration(milliseconds: 500));
-
-      // Verify logout berhasil
       final userAfterLogout = _auth.currentUser;
       if (userAfterLogout == null) {
         print('✅ Sign out successful - no current user');
       } else {
         print(
             '⚠️ Sign out might not be complete - user still exists: ${userAfterLogout.email}');
-        // Force sign out lagi jika masih ada user
         await _auth.signOut();
-        await Future.delayed(Duration(milliseconds: 300));
+        await Future.delayed(const Duration(milliseconds: 300));
       }
 
       _isLoading = false;
@@ -201,11 +181,10 @@ class AuthService extends ChangeNotifier {
       print('❌ Error during sign out: $e');
       _isLoading = false;
       notifyListeners();
-      throw e;
+      rethrow;
     }
   }
 
-  // PERBAIKAN: Menggunakan Cloud Functions untuk admin create user
   Future<String?> createUserAsAdmin(
       String email, String password, String name, String role,
       {bool isDriver = false}) async {
@@ -216,7 +195,6 @@ class AuthService extends ChangeNotifier {
       print(
           '🚀 Admin creating user: $name ($email), role: $role, driver: $isDriver');
 
-      // Verify current user is admin
       if (_auth.currentUser == null) {
         _isLoading = false;
         notifyListeners();
@@ -230,12 +208,10 @@ class AuthService extends ChangeNotifier {
         return 'Only admins can create new users';
       }
 
-      // Save current admin info untuk verifikasi
       final currentAdminUid = _auth.currentUser!.uid;
       final currentAdminEmail = _auth.currentUser!.email;
       print('👨‍💼 Current admin: $currentAdminEmail ($currentAdminUid)');
 
-      // SOLUSI: Gunakan Cloud Functions untuk menghindari auth state change
       try {
         print('☁️ Attempting to create user via Cloud Function...');
         final callable = _functions.httpsCallable('createUserByAdmin');
@@ -263,7 +239,6 @@ class AuthService extends ChangeNotifier {
       } catch (cloudFunctionError) {
         print('⚠️ Cloud Function failed: $cloudFunctionError');
 
-        // FALLBACK: Manual creation with careful auth management
         return await _createUserManuallyAsAdmin(
           email,
           password,
@@ -282,7 +257,6 @@ class AuthService extends ChangeNotifier {
     }
   }
 
-  // PERBAIKAN: Manual creation method yang lebih aman
   Future<String?> _createUserManuallyAsAdmin(
     String email,
     String password,
@@ -295,13 +269,11 @@ class AuthService extends ChangeNotifier {
     try {
       print('🔧 Falling back to manual user creation...');
 
-      // CRITICAL: Simpan auth state admin saat ini
       final adminUser = _auth.currentUser;
       if (adminUser == null || adminUser.uid != adminUid) {
         return 'Admin authentication lost';
       }
 
-      // Create new user (ini akan mengubah auth state)
       print('👤 Creating new user account...');
       UserCredential result = await _auth.createUserWithEmailAndPassword(
         email: email,
@@ -311,7 +283,6 @@ class AuthService extends ChangeNotifier {
       String newUserUid = result.user!.uid;
       print('✅ New user created with UID: $newUserUid');
 
-      // Create user document
       UserModel userData = UserModel(
         uid: newUserUid,
         name: name,
@@ -328,7 +299,6 @@ class AuthService extends ChangeNotifier {
       await _firestore.collection('users').doc(newUserUid).set(userMap);
       print('✅ User document created in Firestore');
 
-      // Create driver document if needed
       if (role == 'technician' && (isDriver || _isDriverUser(name, email))) {
         print('🚗 Creating driver document...');
         try {
@@ -338,18 +308,15 @@ class AuthService extends ChangeNotifier {
         }
       }
 
-      // CRITICAL: Logout new user dan pastikan admin login kembali
       print('🔄 Logging out new user and restoring admin session...');
       await _auth.signOut();
-      await Future.delayed(Duration(milliseconds: 500));
+      await Future.delayed(const Duration(milliseconds: 500));
 
-      // Verify admin perlu login ulang
       print('⚠️ Admin needs to login again after manual user creation');
 
       _isLoading = false;
       notifyListeners();
 
-      // Return error yang meminta admin login ulang
       return 'User created successfully, but admin needs to login again due to authentication changes';
     } catch (e) {
       print('❌ Manual user creation error: $e');
@@ -359,7 +326,6 @@ class AuthService extends ChangeNotifier {
     }
   }
 
-  // Password reset
   Future<String?> resetPassword(String email) async {
     try {
       _isLoading = true;
@@ -377,7 +343,6 @@ class AuthService extends ChangeNotifier {
     }
   }
 
-  // Check if current user is admin
   Future<bool> isCurrentUserAdmin() async {
     if (_auth.currentUser == null) {
       print('🔍 No current user - not admin');
@@ -405,7 +370,6 @@ class AuthService extends ChangeNotifier {
     }
   }
 
-  // Get current user data
   Future<Map<String, dynamic>?> getCurrentUserData() async {
     if (_auth.currentUser == null) return null;
 
@@ -425,7 +389,6 @@ class AuthService extends ChangeNotifier {
     }
   }
 
-  // PERBAIKAN: Method untuk debug auth state
   void debugAuthState() {
     final user = _auth.currentUser;
     print('🔍 DEBUG AUTH STATE:');
