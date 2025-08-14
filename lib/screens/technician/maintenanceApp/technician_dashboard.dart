@@ -281,19 +281,67 @@ class _TechnicianDashboardState extends State<TechnicianDashboard>
                   itemBuilder: (context) => [
                     PopupMenuItem(
                       value: 'profile',
-                      child: ListTile(
-                        leading: Icon(Icons.person),
-                        title: Text('Profile'),
-                        contentPadding: EdgeInsets.zero,
+                      child: Container(
+                        padding:
+                            EdgeInsets.symmetric(vertical: 8, horizontal: 4),
+                        child: Row(
+                          children: [
+                            Container(
+                              padding: EdgeInsets.all(8),
+                              decoration: BoxDecoration(
+                                color: Color.fromARGB(255, 25, 115, 184)
+                                    .withOpacity(0.1),
+                                borderRadius: BorderRadius.circular(10),
+                              ),
+                              child: Icon(
+                                Icons.person_outline,
+                                color: Color.fromARGB(255, 25, 115, 184),
+                                size: 20,
+                              ),
+                            ),
+                            SizedBox(width: 12),
+                            Text(
+                              'Profile',
+                              style: TextStyle(
+                                fontWeight: FontWeight.w500,
+                                color: Colors.grey[800],
+                                fontSize: 15,
+                              ),
+                            ),
+                          ],
+                        ),
                       ),
                     ),
                     PopupMenuItem(
                       value: 'back',
-                      child: ListTile(
-                        leading: Icon(Icons.arrow_back, color: Colors.red),
-                        title: Text('Back to Home',
-                            style: TextStyle(color: Colors.red)),
-                        contentPadding: EdgeInsets.zero,
+                      child: Container(
+                        padding:
+                            EdgeInsets.symmetric(vertical: 8, horizontal: 4),
+                        child: Row(
+                          children: [
+                            Container(
+                              padding: EdgeInsets.all(8),
+                              decoration: BoxDecoration(
+                                color: Colors.blueGrey.withOpacity(0.1),
+                                borderRadius: BorderRadius.circular(10),
+                              ),
+                              child: Icon(
+                                Icons.arrow_back,
+                                color: Colors.blueGrey[600],
+                                size: 20,
+                              ),
+                            ),
+                            SizedBox(width: 12),
+                            Text(
+                              'Back to Home',
+                              style: TextStyle(
+                                fontWeight: FontWeight.w500,
+                                color: Colors.blueGrey[600],
+                                fontSize: 15,
+                              ),
+                            ),
+                          ],
+                        ),
                       ),
                     ),
                   ],
@@ -351,55 +399,104 @@ class _TechnicianDashboardState extends State<TechnicianDashboard>
   Widget _buildRatingSection() {
     if (currentUser == null) return SizedBox();
 
-    final hasRating = currentUser!.averageRating != null &&
-        currentUser!.totalRatings != null &&
-        currentUser!.totalRatings! > 0;
+    return FutureBuilder<Map<String, dynamic>>(
+      // Memanggil metode yang mengambil data rating khusus untuk maintenanceApp
+      future: _firestoreService.getTechnicianRatingData(currentUser!.uid),
+      builder: (context, snapshot) {
+        // Menangani berbagai state dari Future
+        if (snapshot.connectionState == ConnectionState.waiting) {
+          // Tampilan saat data sedang dimuat
+          return Row(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Icon(Icons.star, color: Colors.amber[300], size: 18),
+              const SizedBox(width: 6),
+              Text(
+                'Loading rating...',
+                style: TextStyle(
+                  color: Colors.white.withOpacity(0.8),
+                  fontSize: 13,
+                  fontStyle: FontStyle.italic,
+                ),
+              ),
+            ],
+          );
+        }
 
-    return Container(
-      padding: EdgeInsets.symmetric(horizontal: 12, vertical: 8),
-      decoration: BoxDecoration(
-        color: Colors.white.withOpacity(0.15),
-        borderRadius: BorderRadius.circular(12),
-        border: Border.all(color: Colors.white.withOpacity(0.3)),
-      ),
-      child: Row(
-        mainAxisSize: MainAxisSize.min,
-        children: [
-          Icon(
-            Icons.star,
-            color: Colors.amber[300],
-            size: 18,
+        if (snapshot.hasError || !snapshot.hasData) {
+          // Tampilan jika terjadi error atau tidak ada data
+          return Row(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Icon(Icons.star_border,
+                  color: Colors.white.withOpacity(0.5), size: 18),
+              const SizedBox(width: 6),
+              Text(
+                'Rating not available',
+                style: TextStyle(
+                  color: Colors.white.withOpacity(0.8),
+                  fontSize: 13,
+                  fontStyle: FontStyle.italic,
+                ),
+              ),
+            ],
+          );
+        }
+
+        // Jika data berhasil didapat
+        final ratingData = snapshot.data!;
+        final double averageRating = ratingData['averageRating'] ?? 0.0;
+        final int totalRatings = ratingData['totalRatings'] ?? 0;
+        final bool hasRating = totalRatings > 0;
+
+        // UI yang sama seperti sebelumnya, namun dengan data yang sudah spesifik
+        return Container(
+          padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+          decoration: BoxDecoration(
+            color: Colors.white.withOpacity(0.15),
+            borderRadius: BorderRadius.circular(12),
+            border: Border.all(color: Colors.white.withOpacity(0.3)),
           ),
-          SizedBox(width: 6),
-          if (hasRating) ...[
-            Text(
-              '${currentUser!.averageRating!.toStringAsFixed(1)}',
-              style: TextStyle(
-                color: Colors.white,
-                fontSize: 15,
-                fontWeight: FontWeight.bold,
+          child: Row(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Icon(
+                Icons.star,
+                color: Colors.amber[300],
+                size: 18,
               ),
-            ),
-            SizedBox(width: 4),
-            Text(
-              '(${currentUser!.totalRatings} ${currentUser!.totalRatings! > 1 ? 'ratings' : 'rating'})',
-              style: TextStyle(
-                color: Colors.white.withOpacity(0.9),
-                fontSize: 12,
-              ),
-            ),
-          ] else ...[
-            Text(
-              'No ratings yet',
-              style: TextStyle(
-                color: Colors.white.withOpacity(0.8),
-                fontSize: 13,
-                fontStyle: FontStyle.italic,
-              ),
-            ),
-          ],
-        ],
-      ),
+              const SizedBox(width: 6),
+              if (hasRating) ...[
+                Text(
+                  averageRating.toStringAsFixed(1),
+                  style: const TextStyle(
+                    color: Colors.white,
+                    fontSize: 15,
+                    fontWeight: FontWeight.bold,
+                  ),
+                ),
+                const SizedBox(width: 4),
+                Text(
+                  '($totalRatings ${totalRatings > 1 ? 'ratings' : 'rating'})',
+                  style: TextStyle(
+                    color: Colors.white.withOpacity(0.9),
+                    fontSize: 12,
+                  ),
+                ),
+              ] else ...[
+                Text(
+                  'No ratings yet',
+                  style: TextStyle(
+                    color: Colors.white.withOpacity(0.8),
+                    fontSize: 13,
+                    fontStyle: FontStyle.italic,
+                  ),
+                ),
+              ],
+            ],
+          ),
+        );
+      },
     );
   }
 
@@ -2008,118 +2105,99 @@ class _TechnicianDashboardState extends State<TechnicianDashboard>
 
     showDialog(
       context: context,
-      builder: (context) => AlertDialog(
-        title: Text('Profile Information'),
-        content: Column(
-          mainAxisSize: MainAxisSize.min,
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            _buildProfileItem('Name', currentUser!.name),
-            _buildProfileItem('Email', currentUser!.email),
-            _buildProfileItem('Role', currentUser!.role.toUpperCase()),
-            _buildProfileItem(
-              'Member Since',
-              DateFormat('dd MMM yyyy').format(currentUser!.createdAt),
-            ),
-            // Add rating information to profile
-            if (currentUser!.averageRating != null &&
-                currentUser!.totalRatings != null &&
-                currentUser!.totalRatings! > 0) ...[
-              Divider(height: 20),
+      builder: (context) => Dialog(
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
+        child: Padding(
+          padding: const EdgeInsets.all(24.0),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Container(
+                padding: const EdgeInsets.all(16),
+                decoration: BoxDecoration(
+                  color: Theme.of(context).primaryColor.withOpacity(0.1),
+                  shape: BoxShape.circle,
+                ),
+                child: Icon(
+                  Icons.person,
+                  size: 40,
+                  color: Theme.of(context).primaryColor,
+                ),
+              ),
+              const SizedBox(height: 24),
               Text(
-                'Performance Rating',
+                'Profile Information',
                 style: TextStyle(
+                  fontSize: 20,
                   fontWeight: FontWeight.bold,
-                  fontSize: 16,
-                  color: Colors.amber[800],
+                  color: Colors.grey[800],
                 ),
               ),
-              SizedBox(height: 8),
-              Row(
-                children: [
-                  // Star rating display
-                  Row(
-                    children: List.generate(5, (index) {
-                      return Icon(
-                        index < (currentUser!.averageRating ?? 0).floor()
-                            ? Icons.star
-                            : index <
-                                        (currentUser!.averageRating ?? 0)
-                                            .ceil() &&
-                                    (currentUser!.averageRating ?? 0).floor() !=
-                                        (currentUser!.averageRating ?? 0).ceil()
-                                ? Icons.star_half
-                                : Icons.star_border,
-                        color: Colors.amber,
-                        size: 20,
-                      );
-                    }),
+              const SizedBox(height: 20),
+              _buildProfileItem('Name', currentUser!.name),
+              _buildProfileItem('Email', currentUser!.email),
+              _buildProfileItem('Role', currentUser!.role.toUpperCase()),
+              _buildProfileItem(
+                'Member since',
+                DateFormat('dd MMMM yyyy').format(currentUser!.createdAt),
+              ),
+              const SizedBox(height: 24),
+              ElevatedButton(
+                onPressed: () => Navigator.pop(context),
+                style: ElevatedButton.styleFrom(
+                  backgroundColor: Theme.of(context).primaryColor,
+                  foregroundColor: Colors.white,
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 24,
+                    vertical: 12,
                   ),
-                  SizedBox(width: 8),
-                  Text(
-                    '${currentUser!.averageRating!.toStringAsFixed(1)}',
-                    style: TextStyle(
-                      fontSize: 16,
-                      fontWeight: FontWeight.bold,
-                      color: Colors.amber[800],
-                    ),
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(12),
                   ),
-                ],
-              ),
-              SizedBox(height: 4),
-              Text(
-                'Based on ${currentUser!.totalRatings} ${currentUser!.totalRatings! > 1 ? 'ratings' : 'rating'}',
-                style: TextStyle(
-                  fontSize: 12,
-                  color: Colors.grey[600],
                 ),
-              ),
-            ] else ...[
-              Divider(height: 20),
-              Text(
-                'Performance Rating',
-                style: TextStyle(
-                  fontWeight: FontWeight.bold,
-                  fontSize: 16,
-                  color: Colors.grey[600],
-                ),
-              ),
-              SizedBox(height: 8),
-              Text(
-                'No ratings received yet',
-                style: TextStyle(
-                  fontSize: 14,
-                  color: Colors.grey[500],
-                  fontStyle: FontStyle.italic,
-                ),
+                child: const Text('Close'),
               ),
             ],
-          ],
-        ),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(context),
-            child: Text('Close'),
           ),
-        ],
+        ),
       ),
     );
   }
 
   Widget _buildProfileItem(String label, String value) {
-    return Padding(
-      padding: EdgeInsets.symmetric(vertical: 4),
-      child: Row(
+    return Container(
+      width: double.infinity,
+      margin: const EdgeInsets.only(bottom: 16),
+      child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          SizedBox(
-            width: 80,
-            child: Text(
-              '$label:',
-              style: TextStyle(fontWeight: FontWeight.w600),
+          Text(
+            label,
+            style: TextStyle(
+              fontWeight: FontWeight.bold,
+              color: Colors.grey[600],
+              fontSize: 12,
             ),
           ),
-          Expanded(child: Text(value)),
+          const SizedBox(height: 4),
+          Container(
+            width: double.infinity,
+            padding: const EdgeInsets.symmetric(
+              horizontal: 16,
+              vertical: 12,
+            ),
+            decoration: BoxDecoration(
+              color: Colors.grey[100],
+              borderRadius: BorderRadius.circular(12),
+            ),
+            child: Text(
+              value,
+              style: TextStyle(
+                fontSize: 16,
+                color: Colors.grey[800],
+              ),
+            ),
+          ),
         ],
       ),
     );

@@ -254,36 +254,46 @@ class _EmployeeDashboardResourceState extends State<EmployeeDashboardResource>
                   ),
                   onSelected: (value) {
                     if (value == 'profile') _showProfileDialog();
-                    if (value == 'logout') _showLogoutDialog();
+                    // if (value == 'logout') _showLogoutDialog();
                     if (value == 'back') {
                       Navigator.of(context).pop();
                     }
                   },
                   itemBuilder: (context) => [
-                    const PopupMenuItem(
+                    PopupMenuItem(
                       value: 'profile',
-                      child: ListTile(
-                        leading: Icon(Icons.person),
-                        title: Text('Profil'),
-                        contentPadding: EdgeInsets.zero,
+                      child: Row(
+                        children: [
+                          Container(
+                            padding: const EdgeInsets.all(8),
+                            decoration: BoxDecoration(
+                              color: Colors.blue.withOpacity(0.1),
+                              shape: BoxShape.circle,
+                            ),
+                            child: Icon(Icons.person_outline,
+                                color: Colors.blue[700], size: 20),
+                          ),
+                          const SizedBox(width: 12),
+                          const Text('My Profile'),
+                        ],
                       ),
                     ),
                     PopupMenuItem(
                       value: 'back',
-                      child: ListTile(
-                        leading: Icon(Icons.arrow_back, color: Colors.blueGrey),
-                        title: Text('Back to Home',
-                            style: TextStyle(color: Colors.blueGrey)),
-                        contentPadding: EdgeInsets.zero,
-                      ),
-                    ),
-                    const PopupMenuItem(
-                      value: 'logout',
-                      child: ListTile(
-                        leading: Icon(Icons.logout, color: Colors.red),
-                        title:
-                            Text('Logout', style: TextStyle(color: Colors.red)),
-                        contentPadding: EdgeInsets.zero,
+                      child: Row(
+                        children: [
+                          Container(
+                            padding: const EdgeInsets.all(8),
+                            decoration: BoxDecoration(
+                              color: Colors.blueGrey.withOpacity(0.1),
+                              shape: BoxShape.circle,
+                            ),
+                            child: Icon(Icons.arrow_back,
+                                color: Colors.blueGrey[700], size: 20),
+                          ),
+                          const SizedBox(width: 12),
+                          const Text('Back to Home'),
+                        ],
                       ),
                     ),
                   ],
@@ -1089,45 +1099,99 @@ class _EmployeeDashboardResourceState extends State<EmployeeDashboardResource>
 
     showDialog(
       context: context,
-      builder: (context) => AlertDialog(
-        title: const Text('Profil Information'),
-        content: Column(
-          mainAxisSize: MainAxisSize.min,
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            _buildProfileItem('Name', currentUser!.name),
-            _buildProfileItem('Email', currentUser!.email),
-            _buildProfileItem('Role', currentUser!.role.toUpperCase()),
-            _buildProfileItem(
-              'Member since',
-              DateFormat('dd MMM yyyy').format(currentUser!.createdAt),
-            ),
-          ],
-        ),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(context),
-            child: const Text('Close'),
+      builder: (context) => Dialog(
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
+        child: Padding(
+          padding: const EdgeInsets.all(24.0),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Container(
+                padding: const EdgeInsets.all(16),
+                decoration: BoxDecoration(
+                  color: Theme.of(context).primaryColor.withOpacity(0.1),
+                  shape: BoxShape.circle,
+                ),
+                child: Icon(
+                  Icons.person,
+                  size: 40,
+                  color: Theme.of(context).primaryColor,
+                ),
+              ),
+              const SizedBox(height: 24),
+              Text(
+                'Profile Information',
+                style: TextStyle(
+                  fontSize: 20,
+                  fontWeight: FontWeight.bold,
+                  color: Colors.grey[800],
+                ),
+              ),
+              const SizedBox(height: 20),
+              _buildProfileItem('Name', currentUser!.name),
+              _buildProfileItem('Email', currentUser!.email),
+              _buildProfileItem('Role', currentUser!.role.toUpperCase()),
+              _buildProfileItem(
+                'Member since',
+                DateFormat('dd MMMM yyyy').format(currentUser!.createdAt),
+              ),
+              const SizedBox(height: 24),
+              ElevatedButton(
+                onPressed: () => Navigator.pop(context),
+                style: ElevatedButton.styleFrom(
+                  backgroundColor: Theme.of(context).primaryColor,
+                  foregroundColor: Colors.white,
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 24,
+                    vertical: 12,
+                  ),
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(12),
+                  ),
+                ),
+                child: const Text('Close'),
+              ),
+            ],
           ),
-        ],
+        ),
       ),
     );
   }
 
   Widget _buildProfileItem(String label, String value) {
-    return Padding(
-      padding: const EdgeInsets.symmetric(vertical: 4),
-      child: Row(
+    return Container(
+      width: double.infinity,
+      margin: const EdgeInsets.only(bottom: 16),
+      child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          SizedBox(
-            width: 80,
-            child: Text(
-              '$label:',
-              style: const TextStyle(fontWeight: FontWeight.w600),
+          Text(
+            label,
+            style: TextStyle(
+              fontWeight: FontWeight.bold,
+              color: Colors.grey[600],
+              fontSize: 12,
             ),
           ),
-          Expanded(child: Text(value)),
+          const SizedBox(height: 4),
+          Container(
+            width: double.infinity,
+            padding: const EdgeInsets.symmetric(
+              horizontal: 16,
+              vertical: 12,
+            ),
+            decoration: BoxDecoration(
+              color: Colors.grey[100],
+              borderRadius: BorderRadius.circular(12),
+            ),
+            child: Text(
+              value,
+              style: TextStyle(
+                fontSize: 16,
+                color: Colors.grey[800],
+              ),
+            ),
+          ),
         ],
       ),
     );
