@@ -27,7 +27,7 @@ class _OfficerDashboardState extends State<OfficerDashboard>
   final _searchController = TextEditingController();
   final _completionReasonController = TextEditingController();
   bool _isCompleting = false;
-  
+
   // Variabel untuk menyimpan daftar teknisi
   List<UserModel> _technicians = [];
   bool _loadingTechnicians = false;
@@ -76,14 +76,11 @@ class _OfficerDashboardState extends State<OfficerDashboard>
     try {
       final technicians = await _userService.getTechnicians();
 
-      final drivers = await _userService
-          .getDrivers(); 
+      final drivers = await _userService.getDrivers();
 
       if (mounted) {
         setState(() {
-
           _technicians = technicians.where((tech) {
-
             return !drivers.any((driver) => driver.uid == tech.uid);
           }).toList();
 
@@ -101,10 +98,8 @@ class _OfficerDashboardState extends State<OfficerDashboard>
     }
   }
 
-
-
   // Fungsi untuk mendapatkan data rating teknisi
-Future<Map<String, dynamic>> _getTechnicianRating(String technicianId) async {
+  Future<Map<String, dynamic>> _getTechnicianRating(String technicianId) async {
     try {
       return await _firestoreService.getTechnicianRatingData(technicianId);
     } catch (e) {
@@ -313,81 +308,85 @@ Future<Map<String, dynamic>> _getTechnicianRating(String technicianId) async {
                   tooltip: 'Filter Reports',
                 ),
                 PopupMenuButton<String>(
-      icon: CircleAvatar(
-        backgroundColor: Colors.white.withOpacity(0.25),
-        child: const Icon(Icons.supervisor_account, color: Colors.white),
-      ),
-      offset: const Offset(0, 50),
-      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
-      onSelected: (value) {
-        switch (value) {
-          case 'profile':
-            _showProfileDialog();
-            break;
-          case 'technicians':
-            _showTechniciansRatingDialog();
-            break;
-          case 'back':
-            Navigator.pop(context);
-            break;
-        }
-      },
-      itemBuilder: (context) => [
-        PopupMenuItem(
-          value: 'profile',
-          child: Row(
-            children: [
-              Container(
-                padding: const EdgeInsets.all(8),
-                decoration: BoxDecoration(
-                  color: Colors.blue.withOpacity(0.1),
-                  shape: BoxShape.circle,
+                  icon: CircleAvatar(
+                    backgroundColor: Colors.white.withOpacity(0.25),
+                    child: const Icon(Icons.supervisor_account,
+                        color: Colors.white),
+                  ),
+                  offset: const Offset(0, 50),
+                  shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(16)),
+                  onSelected: (value) {
+                    switch (value) {
+                      case 'profile':
+                        _showProfileDialog();
+                        break;
+                      case 'technicians':
+                        _showTechniciansRatingDialog();
+                        break;
+                      case 'back':
+                        Navigator.pop(context);
+                        break;
+                    }
+                  },
+                  itemBuilder: (context) => [
+                    PopupMenuItem(
+                      value: 'profile',
+                      child: Row(
+                        children: [
+                          Container(
+                            padding: const EdgeInsets.all(8),
+                            decoration: BoxDecoration(
+                              color: Colors.blue.withOpacity(0.1),
+                              shape: BoxShape.circle,
+                            ),
+                            child: Icon(Icons.person_outline,
+                                color: Colors.blue[700], size: 20),
+                          ),
+                          const SizedBox(width: 12),
+                          const Text('Profile'),
+                        ],
+                      ),
+                    ),
+                    PopupMenuItem(
+                      value: 'technicians',
+                      child: Row(
+                        children: [
+                          Container(
+                            padding: const EdgeInsets.all(8),
+                            decoration: BoxDecoration(
+                              color: Colors.amber.withOpacity(0.1),
+                              shape: BoxShape.circle,
+                            ),
+                            child: Icon(Icons.star,
+                                color: Colors.amber[700], size: 20),
+                          ),
+                          const SizedBox(width: 12),
+                          const Text('Technician Ratings'),
+                        ],
+                      ),
+                    ),
+                    PopupMenuItem(
+                      value: 'back',
+                      child: Row(
+                        children: [
+                          Container(
+                            padding: const EdgeInsets.all(8),
+                            decoration: BoxDecoration(
+                              color: Colors.blueGrey.withOpacity(0.1),
+                              shape: BoxShape.circle,
+                            ),
+                            child: Icon(Icons.arrow_back,
+                                color: Colors.blueGrey[700], size: 20),
+                          ),
+                          const SizedBox(width: 12),
+                          const Text('Back to Home',
+                              style: TextStyle(color: Colors.blueGrey)),
+                        ],
+                      ),
+                    ),
+                  ],
                 ),
-                child: Icon(Icons.person_outline,
-                    color: Colors.blue[700], size: 20),
-              ),
-              const SizedBox(width: 12),
-              const Text('Profile'),
-            ],
-          ),
-        ),
-        PopupMenuItem(
-          value: 'technicians',
-          child: Row(
-            children: [
-              Container(
-                padding: const EdgeInsets.all(8),
-                decoration: BoxDecoration(
-                  color: Colors.amber.withOpacity(0.1),
-                  shape: BoxShape.circle,
-                ),
-                child: Icon(Icons.star, color: Colors.amber[700], size: 20),
-              ),
-              const SizedBox(width: 12),
-              const Text('Technician Ratings'),
-            ],
-          ),
-        ),
-        PopupMenuItem(
-          value: 'back',
-          child: Row(
-            children: [
-              Container(
-                padding: const EdgeInsets.all(8),
-                decoration: BoxDecoration(
-                  color: Colors.red.withOpacity(0.1),
-                  shape: BoxShape.circle,
-                ),
-                child: Icon(Icons.arrow_back, color: Colors.red[700], size: 20),
-              ),
-              const SizedBox(width: 12),
-              const Text('Back to Home', style: TextStyle(color: Colors.red)),
-            ],
-          ),
-        ),
-      ],
-    ),
-
                 SizedBox(width: 8),
               ],
               bottom: TabBar(
@@ -573,7 +572,6 @@ Future<Map<String, dynamic>> _getTechnicianRating(String technicianId) async {
               },
               child: Text('Close'),
             ),
-            
           ],
         );
       },
@@ -587,12 +585,12 @@ Future<Map<String, dynamic>> _getTechnicianRating(String technicianId) async {
       builder: (context, snapshot) {
         double averageRating = 0.0;
         int totalRatings = 0;
-        
+
         if (snapshot.hasData) {
           averageRating = snapshot.data!['averageRating'] ?? 0.0;
           totalRatings = snapshot.data!['totalRatings'] ?? 0;
         }
-        
+
         return Card(
           margin: EdgeInsets.symmetric(vertical: 6),
           child: ListTile(
@@ -643,7 +641,8 @@ Future<Map<String, dynamic>> _getTechnicianRating(String technicianId) async {
               ],
             ),
             onTap: () {
-              _showTechnicianDetailDialog(technician, averageRating, totalRatings);
+              _showTechnicianDetailDialog(
+                  technician, averageRating, totalRatings);
             },
           ),
         );
@@ -652,7 +651,8 @@ Future<Map<String, dynamic>> _getTechnicianRating(String technicianId) async {
   }
 
   // Dialog untuk detail teknisi
-  void _showTechnicianDetailDialog(UserModel technician, double averageRating, int totalRatings) {
+  void _showTechnicianDetailDialog(
+      UserModel technician, double averageRating, int totalRatings) {
     showDialog(
       context: context,
       builder: (context) {
@@ -696,7 +696,7 @@ Future<Map<String, dynamic>> _getTechnicianRating(String technicianId) async {
                 ),
               ),
               SizedBox(height: 24),
-              
+
               // Rating display
               Center(
                 child: Container(
@@ -752,7 +752,8 @@ Future<Map<String, dynamic>> _getTechnicianRating(String technicianId) async {
                       if (totalRatings > 0) ...[
                         SizedBox(height: 8),
                         Container(
-                          padding: EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                          padding:
+                              EdgeInsets.symmetric(horizontal: 8, vertical: 4),
                           decoration: BoxDecoration(
                             color: _getRatingColor(averageRating),
                             borderRadius: BorderRadius.circular(4),
@@ -771,14 +772,13 @@ Future<Map<String, dynamic>> _getTechnicianRating(String technicianId) async {
                   ),
                 ),
               ),
-              
+
               SizedBox(height: 16),
               _buildInfoItem(
                 'Member Since',
                 DateFormat('dd MMM yyyy').format(technician.createdAt),
                 Icons.date_range,
               ),
-             
             ],
           ),
           actions: [
@@ -943,7 +943,7 @@ Future<Map<String, dynamic>> _getTechnicianRating(String technicianId) async {
     );
   }
 
-Widget _buildStatisticsCards() {
+  Widget _buildStatisticsCards() {
     return StreamBuilder<List<ReportModel>>(
       stream: _firestoreService.getReports(),
       builder: (context, snapshot) {
@@ -1467,10 +1467,10 @@ Widget _buildStatisticsCards() {
                   ),
                 ),
               ],
-              
+
               // Show technician rating if completed and has rating
-              if (report.status == 'completed' && 
-                  report.technicianRating != null && 
+              if (report.status == 'completed' &&
+                  report.technicianRating != null &&
                   report.assignedTechnicianId != null) ...[
                 SizedBox(height: 8),
                 Container(
@@ -1966,4 +1966,4 @@ Widget _buildStatisticsCards() {
       ),
     );
   }
-    }
+}

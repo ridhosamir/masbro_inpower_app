@@ -439,12 +439,12 @@ class _OfficerDashboardState extends State<OfficerDashboardOprational>
                             Container(
                               padding: EdgeInsets.all(8),
                               decoration: BoxDecoration(
-                                color: Colors.red.withOpacity(0.1),
+                                color: Colors.blueGrey.withOpacity(0.1),
                                 borderRadius: BorderRadius.circular(10),
                               ),
                               child: Icon(
                                 Icons.arrow_back,
-                                color: Colors.red[600],
+                                color: Colors.blueGrey[600],
                                 size: 20,
                               ),
                             ),
@@ -453,7 +453,7 @@ class _OfficerDashboardState extends State<OfficerDashboardOprational>
                               'Back to Home',
                               style: TextStyle(
                                 fontWeight: FontWeight.w500,
-                                color: Colors.red[600],
+                                color: Colors.blueGrey[600],
                                 fontSize: 15,
                               ),
                             ),
@@ -1980,7 +1980,7 @@ class _OfficerDashboardState extends State<OfficerDashboardOprational>
     );
   }
 
-   void _showProfileDialog() {
+  void _showProfileDialog() {
     if (currentUser == null) return;
 
     showDialog(
@@ -2081,4 +2081,5 @@ class _OfficerDashboardState extends State<OfficerDashboardOprational>
         ],
       ),
     );
-  }}
+  }
+}
