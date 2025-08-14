@@ -418,7 +418,7 @@ class _AssignTechnicianScreenResourceState
                     mainAxisAlignment: MainAxisAlignment.spaceBetween,
                     children: [
                       Text(
-                        'Select a Technician',
+                        'Select Technician',
                         style: TextStyle(
                           fontSize: 18,
                           fontWeight: FontWeight.bold,
