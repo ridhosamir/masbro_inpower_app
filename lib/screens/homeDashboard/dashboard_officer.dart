@@ -1,6 +1,9 @@
+import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
 import 'package:masbro_inpower_app/models/maintenanceApp/report_model.dart';
+import 'package:masbro_inpower_app/models/operasionalApp/driver_model.dart';
+import 'package:masbro_inpower_app/models/operasionalApp/vehicle_model.dart';
 import 'package:masbro_inpower_app/models/resourceApp/request_model.dart';
 import 'package:masbro_inpower_app/models/operasionalApp/ride_request_model.dart';
 import 'package:masbro_inpower_app/models/bookingroomApp/booking_model.dart';
@@ -9,6 +12,7 @@ import 'package:masbro_inpower_app/models/user_model.dart';
 import 'package:masbro_inpower_app/screens/employee/maintenanceApp/report_detail_screen.dart';
 import 'package:masbro_inpower_app/screens/employee/operasionalApp/ride_request_detail_screen.dart';
 import 'package:masbro_inpower_app/screens/employee/resourceApp/request_detail_screen.dart';
+import 'package:masbro_inpower_app/screens/homeDashboard/detailRating/rating_detail_screen.dart';
 import 'package:masbro_inpower_app/screens/officer/bookingroomApp/booking_detail_screen.dart';
 import 'package:masbro_inpower_app/screens/officer/bookingroomApp/officer_dahboard.dart';
 import 'package:masbro_inpower_app/screens/officer/maintenanceApp/assign_technician_screen.dart';
@@ -3874,16 +3878,62 @@ class OfficerRatingTab extends StatefulWidget {
 
 class _OfficerRatingTabState extends State<OfficerRatingTab>
     with TickerProviderStateMixin {
-  // DIUBAH: dari SingleTickerProviderStateMixin
   late TabController _ratingTabController;
   final TextEditingController _searchController = TextEditingController();
   String _searchQuery = '';
 
+  final UserService _userService = UserService();
+  bool _isLoading = true;
+  List<UserModel> _allTechnicians = [];
+  List<UserModel> _filteredTechnicians = [];
+  String _technicianSortBy = 'rating';
+  String _driverSortBy = 'rating';
+  String _vehicleSortBy = 'rating';
+  String _roomSortBy = 'ratingDate';
+
+  final operasional_service.OperasionalFirestoreService _operasionalService =
+      operasional_service.OperasionalFirestoreService();
+  List<UserModel> _allDrivers = [];
+  List<DriverModel> _driverDetails = [];
+  List<UserModel> _filteredDrivers = [];
+
+  List<VehicleModel> _allVehicles = [];
+  List<VehicleModel> _filteredVehicles = [];
+  Map<String, Map<String, dynamic>> _vehicleRatings = {};
+
+  final booking_service.FirestoreService _bookingService =
+      booking_service.FirestoreService();
+  List<RoomModel> _allRooms = [];
+  List<BookingModel> _allRatedBookings = [];
+  List<BookingModel> _filteredRatedBookings = [];
+
+  final FirebaseFirestore _firestore = FirebaseFirestore.instance;
+
   @override
   void initState() {
     super.initState();
-    _ratingTabController = TabController(length: 3, vsync: this);
+    _ratingTabController = TabController(length: 4, vsync: this);
     _searchController.addListener(_onSearchChanged);
+    _ratingTabController.addListener(() {
+      if (mounted) {
+        setState(() {
+          // Panggil filter yang sesuai saat tab diganti
+          if (_ratingTabController.index == 0) {
+            _filterAndSortTechnicians();
+          } else if (_ratingTabController.index == 1) {
+            _filterAndSortDrivers();
+          } else if (_ratingTabController.index == 2) {
+            _filterAndSortVehicles();
+          } else if (_ratingTabController.index == 3) {
+            _filterAndSortRatedBookings();
+          }
+        });
+      }
+    });
+    _fetchTechnicianData();
+    _fetchDriverData();
+    _fetchVehicleData();
+    _fetchRoomData();
   }
 
   @override
@@ -3896,6 +3946,15 @@ class _OfficerRatingTabState extends State<OfficerRatingTab>
   void _onSearchChanged() {
     setState(() {
       _searchQuery = _searchController.text.toLowerCase();
+      if (_ratingTabController.index == 0) {
+        _filterAndSortTechnicians();
+      } else if (_ratingTabController.index == 1) {
+        _filterAndSortDrivers();
+      } else if (_ratingTabController.index == 2) {
+        _filterAndSortVehicles();
+      } else if (_ratingTabController.index == 3) {
+        _filterAndSortRatedBookings();
+      }
     });
   }
 
@@ -3903,62 +3962,386 @@ class _OfficerRatingTabState extends State<OfficerRatingTab>
     _searchController.clear();
   }
 
-  void _showFilterDialog() {
-    ScaffoldMessenger.of(context).showSnackBar(
-      const SnackBar(content: Text('Fitur filter akan datang!')),
-    );
+  Future<void> _fetchTechnicianData() async {
+    if (!mounted) return;
+    setState(() {
+      _isLoading = true;
+    });
+
+    try {
+      // 1. Ambil semua user dengan role 'technician'
+      final allTechnicianUsers = await _userService.getTechnicians();
+
+      // 2. Ambil SEMUA driver dari koleksi 'drivers' (bukan hanya yg available)
+      final driverDocs = await _userService.getAllDrivers();
+      final driverUids = driverDocs.map((d) => d['uid']).toSet();
+
+      // 3. Filter untuk mendapatkan teknisi murni (yang UID-nya TIDAK ADA di koleksi drivers)
+      // Ini memperbaiki bug di mana driver masih muncul di list teknisi
+      final pureTechnicians = allTechnicianUsers.where((tech) {
+        return !driverUids.contains(tech.uid);
+      }).toList();
+
+      if (mounted) {
+        setState(() {
+          _allTechnicians = pureTechnicians;
+          _filterAndSortTechnicians();
+          _isLoading = false;
+        });
+      }
+    } catch (e) {
+      if (mounted) {
+        setState(() {
+          _isLoading = false;
+        });
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('Error fetching technicians: $e')),
+        );
+      }
+    }
+  }
+
+  void _filterAndSortTechnicians() {
+    List<UserModel> tempTechnicians = List.from(_allTechnicians);
+
+    // Filter berdasarkan pencarian
+    if (_searchQuery.isNotEmpty) {
+      tempTechnicians = tempTechnicians.where((tech) {
+        final nameLower = tech.name.toLowerCase();
+        final emailLower = tech.email.toLowerCase();
+        return nameLower.contains(_searchQuery) ||
+            emailLower.contains(_searchQuery);
+      }).toList();
+    }
+
+    // Urutkan berdasarkan pilihan
+    switch (_technicianSortBy) {
+      case 'rating':
+        tempTechnicians.sort((a, b) =>
+            (b.averageRating ?? 0.0).compareTo(a.averageRating ?? 0.0));
+        break;
+      case 'name':
+        tempTechnicians.sort((a, b) => a.name.compareTo(b.name));
+        break;
+      case 'since':
+        tempTechnicians.sort((a, b) => a.createdAt.compareTo(b.createdAt));
+        break;
+    }
+
+    setState(() {
+      _filteredTechnicians = tempTechnicians;
+    });
+  }
+
+  Future<void> _fetchDriverData() async {
+    if (!mounted) return;
+    setState(() {
+      _isLoading = true;
+    });
+
+    try {
+      // 1. Ambil semua dokumen dari koleksi 'drivers' secara langsung
+      final driverSnapshot = await _firestore.collection('drivers').get();
+
+      if (driverSnapshot.docs.isEmpty) {
+        if (mounted) {
+          setState(() {
+            _allDrivers = [];
+            _filteredDrivers = [];
+            _isLoading = false;
+          });
+        }
+        return;
+      }
+
+      // Simpan detail driver (termasuk isAvailable, averageRating, totalRatings)
+      // dari koleksi 'drivers' ke dalam sebuah Map untuk akses cepat.
+      final Map<String, Map<String, dynamic>> driverDataMap = {
+        for (var doc in driverSnapshot.docs) doc.id: doc.data(),
+      };
+
+      _driverDetails = driverSnapshot.docs
+          .map((doc) => DriverModel.fromSnapshot(doc))
+          .toList();
+
+      final driverUids = driverSnapshot.docs.map((doc) => doc.id).toList();
+
+      // 2. Ambil data user yang sesuai dengan UID driver dari koleksi 'users'
+      final userSnapshot = await _firestore
+          .collection('users')
+          .where(FieldPath.documentId, whereIn: driverUids)
+          .get();
+
+      final baseUserModels =
+          userSnapshot.docs.map((doc) => UserModel.fromFirestore(doc)).toList();
+
+      // 3. Gabungkan data dari 'users' dan 'drivers'
+      List<UserModel> mergedDrivers = [];
+      for (var user in baseUserModels) {
+        final driverData = driverDataMap[user.uid];
+        if (driverData != null) {
+          mergedDrivers.add(
+            user.copyWith(
+              // Ambil rating dari data driver, bukan dari data user
+              averageRating:
+                  (driverData['averageRating'] as num?)?.toDouble() ?? 0.0,
+              totalRatings: driverData['totalRatings'] as int? ?? 0,
+            ),
+          );
+        }
+      }
+
+      if (mounted) {
+        setState(() {
+          _allDrivers = mergedDrivers;
+          _filterAndSortDrivers();
+          _isLoading = false;
+        });
+      }
+    } catch (e) {
+      if (mounted) {
+        setState(() {
+          _isLoading = false;
+        });
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('Error fetching drivers: $e')),
+        );
+      }
+    }
+  }
+
+  void _filterAndSortDrivers() {
+    List<UserModel> tempDrivers = List.from(_allDrivers);
+
+    // Filter berdasarkan pencarian
+    if (_searchQuery.isNotEmpty) {
+      tempDrivers = tempDrivers.where((driver) {
+        final nameLower = driver.name.toLowerCase();
+        final emailLower = driver.email.toLowerCase();
+        return nameLower.contains(_searchQuery) ||
+            emailLower.contains(_searchQuery);
+      }).toList();
+    }
+
+    // Urutkan berdasarkan pilihan (menggunakan _sortBy yang sama dengan teknisi)
+    switch (_driverSortBy) {
+      case 'rating':
+        tempDrivers.sort((a, b) =>
+            (b.averageRating ?? 0.0).compareTo(a.averageRating ?? 0.0));
+        break;
+      case 'name':
+        tempDrivers.sort((a, b) => a.name.compareTo(b.name));
+        break;
+      case 'since':
+        tempDrivers.sort((a, b) => a.createdAt.compareTo(b.createdAt));
+        break;
+    }
+
+    setState(() {
+      _filteredDrivers = tempDrivers;
+    });
+  }
+
+  Future<void> _fetchVehicleData() async {
+    if (!mounted) return;
+    setState(() {
+      _isLoading = true;
+    });
+
+    try {
+      // 1. Ambil semua dokumen dari koleksi 'vehicles'
+      final vehicleDocs = await _operasionalService.getVehicles().first;
+
+      // 2. Ambil semua data rating dari 'vehicle_ratings'
+      final ratingSnapshot =
+          await _firestore.collection('vehicle_ratings').get();
+
+      // 3. Proses dan kelompokkan rating berdasarkan vehicleId
+      final Map<String, List<double>> ratingsMap = {};
+      for (var doc in ratingSnapshot.docs) {
+        final data = doc.data();
+        final vehicleId = data['vehicleId'] as String?;
+        final rating = (data['rating'] as num?)?.toDouble();
+        if (vehicleId != null && rating != null) {
+          ratingsMap.putIfAbsent(vehicleId, () => []).add(rating);
+        }
+      }
+
+      // 4. Hitung rata-rata dan total rating untuk setiap kendaraan
+      _vehicleRatings.clear();
+      ratingsMap.forEach((vehicleId, ratings) {
+        final double average = ratings.reduce((a, b) => a + b) / ratings.length;
+        _vehicleRatings[vehicleId] = {
+          'averageRating': average,
+          'totalRatings': ratings.length,
+        };
+      });
+
+      if (mounted) {
+        setState(() {
+          _allVehicles = vehicleDocs;
+          _filterAndSortVehicles();
+          _isLoading = false;
+        });
+      }
+    } catch (e) {
+      if (mounted) {
+        setState(() {
+          _isLoading = false;
+        });
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('Error fetching vehicles: $e')),
+        );
+      }
+    }
+  }
+
+  void _filterAndSortVehicles() {
+    List<VehicleModel> tempVehicles = List.from(_allVehicles);
+
+    if (_searchQuery.isNotEmpty) {
+      tempVehicles = tempVehicles.where((v) {
+        return v.displayName.toLowerCase().contains(_searchQuery);
+      }).toList();
+    }
+
+    // Urutkan berdasarkan pilihan (_sortBy yang sama)
+    switch (_vehicleSortBy) {
+      case 'rating':
+        tempVehicles.sort((a, b) {
+          final ratingA =
+              (_vehicleRatings[a.id]?['averageRating'] as double?) ?? 0.0;
+          final ratingB =
+              (_vehicleRatings[b.id]?['averageRating'] as double?) ?? 0.0;
+          return ratingB.compareTo(ratingA);
+        });
+        break;
+      case 'name':
+        tempVehicles.sort((a, b) => a.vehicleModel.compareTo(b.vehicleModel));
+        break;
+    }
+
+    setState(() {
+      _filteredVehicles = tempVehicles;
+    });
+  }
+
+  Future<void> _fetchRoomData() async {
+    if (!mounted) return;
+    setState(() {
+      _isLoading = true;
+    });
+
+    try {
+      // 1. Ambil semua data ruangan untuk statistik jumlah ruangan
+      final roomDocs = await _bookingService.getRooms().first;
+
+      // 2. Ambil semua data booking untuk mencari yang sudah diberi rating
+      final allBookings = await _bookingService.getBookings().first;
+
+      // 3. Filter booking: status harus 'approved' dan sudah memiliki rating
+      final ratedBookings = allBookings.where((booking) {
+        return booking.status == 'approved' && booking.rating != null;
+      }).toList();
+
+      if (mounted) {
+        setState(() {
+          _allRooms = roomDocs; // Untuk statistik
+          _allRatedBookings = ratedBookings; // Untuk daftar
+          _filterAndSortRatedBookings(); // Panggil fungsi filter dan sort
+          _isLoading = false;
+        });
+      }
+    } catch (e) {
+      if (mounted) {
+        setState(() {
+          _isLoading = false;
+        });
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('Error fetching room data: $e')),
+        );
+      }
+    }
+  }
+
+  void _filterAndSortRatedBookings() {
+    List<BookingModel> tempBookings = List.from(_allRatedBookings);
+
+    if (_searchQuery.isNotEmpty) {
+      tempBookings = tempBookings.where((b) {
+        final query = _searchQuery.toLowerCase();
+        return b.eventAgenda.toLowerCase().contains(query) ||
+            b.roomName.toLowerCase().contains(query) ||
+            b.employeeName.toLowerCase().contains(query);
+      }).toList();
+    }
+
+    // Urutkan berdasarkan pilihan (_sortBy yang sama, namun dengan logika berbeda)
+    switch (_roomSortBy) {
+      case 'rating': // Rating tertinggi
+        tempBookings
+            .sort((a, b) => (b.rating ?? 0.0).compareTo(a.rating ?? 0.0));
+        break;
+      case 'name': // Nama ruangan A-Z
+        tempBookings.sort((a, b) => a.roomName.compareTo(b.roomName));
+        break;
+      case 'ratingDate': // Rating terbaru
+        tempBookings.sort((a, b) => (b.ratingDate ?? b.createdAt)
+            .compareTo(a.ratingDate ?? a.createdAt));
+        break;
+    }
+
+    setState(() {
+      _filteredRatedBookings = tempBookings;
+    });
   }
 
   @override
   Widget build(BuildContext context) {
-    return SingleChildScrollView(
-      child: Column(
-        children: [
-          _buildStatisticsCards(),
-          Padding(
-            padding: const EdgeInsets.fromLTRB(16, 16, 16, 16),
-            child: _buildSearchAndFilterBar(),
-          ),
-          Container(
-            color: Colors.white,
-            child: TabBar(
-              controller: _ratingTabController,
-              labelColor: Theme.of(context).primaryColor,
-              unselectedLabelColor: Colors.grey[600],
-              indicatorColor: Theme.of(context).primaryColor,
-              indicatorWeight: 3,
-              labelStyle: const TextStyle(
-                fontWeight: FontWeight.bold,
-                fontSize: 16,
-              ),
-              tabs: const [
-                Tab(text: 'Technician'),
-                Tab(text: 'Vehicle'),
-                Tab(text: 'Room'),
-              ],
+    return ListView(
+      padding: EdgeInsets.zero, // Hapus padding default dari ListView
+      children: [
+        _buildStatisticsCards(),
+        Padding(
+          padding: const EdgeInsets.all(16.0),
+          child: _buildSearchAndFilterBar(),
+        ),
+        Container(
+          color: Colors.white,
+          child: TabBar(
+            controller: _ratingTabController,
+            isScrollable: false, // Membuat tab simetris
+            indicatorSize:
+                TabBarIndicatorSize.tab, // Indikator sesuai lebar tab
+            labelColor: Theme.of(context).primaryColor,
+            unselectedLabelColor: Colors.grey[600],
+            indicatorColor: Theme.of(context).primaryColor,
+            indicatorWeight: 3,
+            labelStyle: const TextStyle(
+              fontWeight: FontWeight.bold,
+              fontSize: 16,
             ),
+            tabs: const [
+              Tab(text: 'Technician'),
+              Tab(text: 'Driver'),
+              Tab(text: 'Vehicle'),
+              Tab(text: 'Room'),
+            ],
           ),
-          const Divider(height: 1, thickness: 1, color: Color(0xFFE2E8F0)),
-          SizedBox(
-            height: MediaQuery.of(context).size.height * 0.4,
-            child: TabBarView(
-              controller: _ratingTabController,
-              children: [
-                _buildEmptyTabContent(
-                    'Data Rating Teknisi akan ditampilkan di sini.'),
-                _buildEmptyTabContent(
-                    'Data Rating Kendaraan akan ditampilkan di sini.'),
-                _buildEmptyTabContent(
-                    'Data Rating Ruangan akan ditampilkan di sini.'),
-              ],
-            ),
-          ),
-        ],
-      ),
+        ),
+        const Divider(height: 1, thickness: 1, color: Color(0xFFE2E8F0)),
+
+        // Konten Tab akan ditampilkan di sini
+        [
+          _buildTechnicianTabContent(),
+          _buildDriverTabContent(),
+          _buildVehicleTabContent(),
+          _buildRoomTabContent(),
+        ][_ratingTabController.index]
+      ],
     );
   }
 
-  // Wuntuk menampilkan konten tab yang masih kosong
   Widget _buildEmptyTabContent(String message) {
     return Center(
       child: Padding(
@@ -3972,7 +4355,6 @@ class _OfficerRatingTabState extends State<OfficerRatingTab>
     );
   }
 
-  // DIUBAH: Tata letak kartu statistik disesuaikan
   Widget _buildStatisticsCards() {
     return Padding(
       padding: const EdgeInsets.fromLTRB(16, 16, 16, 0),
@@ -3983,7 +4365,7 @@ class _OfficerRatingTabState extends State<OfficerRatingTab>
               Expanded(
                 child: _buildStatCard(
                   title: 'Technician',
-                  rating: 10,
+                  rating: _allTechnicians.length.toDouble(),
                   icon: Icons.engineering,
                   color: Colors.orange.shade800,
                   backgroundColor: Colors.orange.shade50,
@@ -3992,8 +4374,22 @@ class _OfficerRatingTabState extends State<OfficerRatingTab>
               const SizedBox(width: 12),
               Expanded(
                 child: _buildStatCard(
+                  title: 'Driver',
+                  rating: _allDrivers.length.toDouble(),
+                  icon: Icons.person_3,
+                  color: Colors.blue.shade800,
+                  backgroundColor: Colors.blue.shade50,
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: 12),
+          Row(
+            children: [
+              Expanded(
+                child: _buildStatCard(
                   title: 'Vehicle',
-                  rating: 10,
+                  rating: _allVehicles.length.toDouble(),
                   icon: Icons.directions_car,
                   color: Colors.red.shade800,
                   backgroundColor: Colors.red.shade50,
@@ -4003,7 +4399,7 @@ class _OfficerRatingTabState extends State<OfficerRatingTab>
               Expanded(
                 child: _buildStatCard(
                   title: 'Room',
-                  rating: 12,
+                  rating: _allRooms.length.toDouble(),
                   icon: Icons.meeting_room,
                   color: Colors.teal.shade800,
                   backgroundColor: Colors.teal.shade50,
@@ -4016,7 +4412,6 @@ class _OfficerRatingTabState extends State<OfficerRatingTab>
     );
   }
 
-  // DIUBAH: untuk mengatasi Right Overflowed
   Widget _buildStatCard({
     required String title,
     required double rating,
@@ -4040,36 +4435,960 @@ class _OfficerRatingTabState extends State<OfficerRatingTab>
       child: Row(
         children: [
           Icon(icon, color: color, size: 24),
-          const SizedBox(width: 8),
+          const SizedBox(width: 12),
           Expanded(
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
+              mainAxisAlignment: MainAxisAlignment.center,
               children: [
-                Row(
-                  children: [
-                    Text(
-                      rating.toStringAsFixed(0),
-                      style: TextStyle(
-                        fontSize: 20,
-                        fontWeight: FontWeight.bold,
-                        color: color,
-                      ),
-                    ),
-                    const SizedBox(width: 2),
-                  ],
-                ),
                 Text(
-                  '$title',
+                  rating.toStringAsFixed(0),
                   style: TextStyle(
-                    fontSize: 13,
-                    color: color.withOpacity(0.8),
+                    fontSize: 20,
+                    fontWeight: FontWeight.bold,
+                    color: color,
                   ),
+                ),
+                const SizedBox(height: 2),
+                Text(
+                  title,
+                  style: TextStyle(
+                      fontSize: 13,
+                      color: color.withOpacity(0.8),
+                      fontWeight: FontWeight.w500),
                   overflow: TextOverflow.ellipsis,
                 ),
               ],
             ),
           ),
         ],
+      ),
+    );
+  }
+
+  Widget _buildTechnicianTabContent() {
+    if (_isLoading) {
+      return const Center(
+        child: Padding(
+          padding: EdgeInsets.all(32.0),
+          child: CircularProgressIndicator(),
+        ),
+      );
+    }
+
+    return Column(
+      children: [
+        // --- Header dengan Judul dan Tombol Sort ---
+        Padding(
+          padding: const EdgeInsets.fromLTRB(16, 16, 16, 8),
+          child: Row(
+            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+            children: [
+              Text(
+                'All Technicians (${_filteredTechnicians.length})',
+                style: TextStyle(
+                  fontSize: 18,
+                  fontWeight: FontWeight.bold,
+                  color: Colors.grey[800],
+                ),
+              ),
+              PopupMenuButton<String>(
+                onSelected: (String newValue) {
+                  setState(() {
+                    _technicianSortBy = newValue;
+                  });
+                  _filterAndSortTechnicians();
+                },
+                icon: Icon(Icons.filter_list, color: Colors.grey[800]),
+                tooltip: 'Sort By',
+                itemBuilder: (BuildContext context) => <PopupMenuEntry<String>>[
+                  const PopupMenuItem<String>(
+                    value: 'rating',
+                    child: Text('Rating'),
+                  ),
+                  const PopupMenuItem<String>(
+                    value: 'name',
+                    child: Text('Name'),
+                  ),
+                  const PopupMenuItem<String>(
+                    value: 'since',
+                    child: Text('Since'),
+                  ),
+                ],
+              ),
+            ],
+          ),
+        ),
+
+        // --- Daftar Teknisi atau Pesan Kosong ---
+        _filteredTechnicians.isEmpty
+            ? _buildEmptyStateForList()
+            : ListView.builder(
+                shrinkWrap: true,
+                physics: const NeverScrollableScrollPhysics(),
+                itemCount: _filteredTechnicians.length,
+                padding:
+                    const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+                itemBuilder: (context, index) {
+                  final technician = _filteredTechnicians[index];
+                  return _buildTechnicianCard(technician);
+                },
+              ),
+      ],
+    );
+  }
+
+  /// Widget untuk setiap kartu teknisi, sesuai desain
+  Widget _buildTechnicianCard(UserModel technician) {
+    final avgRating = technician.averageRating ?? 0.0;
+    final totalRatings = technician.totalRatings ?? 0;
+
+    return Card(
+      margin: const EdgeInsets.only(bottom: 12),
+      elevation: 2,
+      shadowColor: Colors.black.withOpacity(0.1),
+      shape: RoundedRectangleBorder(
+        borderRadius: BorderRadius.circular(12),
+      ),
+      child: InkWell(
+        onTap: () {
+          Navigator.push(
+            context,
+            MaterialPageRoute(
+              builder: (context) => RatingDetailScreen(
+                entity: technician,
+                type: DetailRatingType.technician,
+              ),
+            ),
+          );
+        },
+        borderRadius: BorderRadius.circular(12),
+        child: Padding(
+          padding: const EdgeInsets.all(12.0),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Row(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Stack(
+                    clipBehavior: Clip.none,
+                    children: [
+                      CircleAvatar(
+                        radius: 28,
+                        backgroundColor: Colors.grey[200],
+                        child: Icon(Icons.engineering_outlined,
+                            size: 28, color: Colors.grey[600]),
+                      ),
+                      if (totalRatings > 0)
+                        Positioned(
+                          top: -4,
+                          left: -4,
+                          child: Container(
+                            padding: const EdgeInsets.symmetric(
+                                horizontal: 6, vertical: 2),
+                            decoration: BoxDecoration(
+                              color: _getRatingChipColor(avgRating)
+                                  .withOpacity(0.9),
+                              borderRadius: BorderRadius.circular(12),
+                              border:
+                                  Border.all(color: Colors.white, width: 1.5),
+                            ),
+                            child: Text(
+                              avgRating.toStringAsFixed(1),
+                              style: const TextStyle(
+                                  color: Colors.white,
+                                  fontSize: 11,
+                                  fontWeight: FontWeight.bold),
+                            ),
+                          ),
+                        ),
+                    ],
+                  ),
+                  const SizedBox(width: 12),
+                  Expanded(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text(
+                          technician.name,
+                          style: const TextStyle(
+                              fontSize: 16, fontWeight: FontWeight.bold),
+                          maxLines: 1,
+                          overflow: TextOverflow.ellipsis,
+                        ),
+                        const SizedBox(height: 2),
+                        Text(
+                          technician.email,
+                          style:
+                              TextStyle(fontSize: 13, color: Colors.grey[600]),
+                          maxLines: 1,
+                          overflow: TextOverflow.ellipsis,
+                        ),
+                      ],
+                    ),
+                  ),
+                ],
+              ),
+              const SizedBox(height: 10),
+              Row(
+                children: [
+                  _buildRatingStars(avgRating),
+                  const SizedBox(width: 4),
+                  Text(
+                    '${avgRating.toStringAsFixed(1)} (${totalRatings})',
+                    style: const TextStyle(
+                        fontWeight: FontWeight.bold, fontSize: 13),
+                  ),
+                  const SizedBox(width: 8),
+                  if (totalRatings > 0)
+                    Container(
+                      padding: const EdgeInsets.symmetric(
+                          horizontal: 8, vertical: 2),
+                      decoration: BoxDecoration(
+                        color: _getRatingChipColor(avgRating).withOpacity(0.15),
+                        borderRadius: BorderRadius.circular(6),
+                      ),
+                      child: Text(
+                        _getRatingText(avgRating),
+                        style: TextStyle(
+                          color: _getRatingChipColor(avgRating),
+                          fontSize: 11,
+                          fontWeight: FontWeight.bold,
+                        ),
+                      ),
+                    ),
+                ],
+              ),
+              const Divider(height: 20),
+              Row(
+                mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                children: [
+                  _buildInfoChip(Icons.calendar_today_outlined,
+                      'Member since ${DateFormat('MMM yyyy').format(technician.createdAt)}'),
+                  _buildInfoChip(
+                      Icons.trending_up, _getSinceText(technician.createdAt)),
+                ],
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+
+  /// Widget utama untuk konten tab driver
+  Widget _buildDriverTabContent() {
+    if (_isLoading) {
+      return const Center(
+        child: Padding(
+          padding: EdgeInsets.all(32.0),
+          child: CircularProgressIndicator(),
+        ),
+      );
+    }
+
+    return Column(
+      children: [
+        // --- Header dengan Judul dan Tombol Sort ---
+        Padding(
+          padding: const EdgeInsets.fromLTRB(16, 16, 16, 8),
+          child: Row(
+            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+            children: [
+              Text(
+                'All Drivers (${_filteredDrivers.length})',
+                style: TextStyle(
+                  fontSize: 18,
+                  fontWeight: FontWeight.bold,
+                  color: Colors.grey[800],
+                ),
+              ),
+              PopupMenuButton<String>(
+                onSelected: (String newValue) {
+                  setState(() {
+                    _driverSortBy = newValue;
+                  });
+                  _filterAndSortDrivers();
+                },
+                icon: Icon(Icons.filter_list, color: Colors.grey[800]),
+                tooltip: 'Sort By',
+                itemBuilder: (BuildContext context) => <PopupMenuEntry<String>>[
+                  const PopupMenuItem<String>(
+                    value: 'rating',
+                    child: Text('Rating'),
+                  ),
+                  const PopupMenuItem<String>(
+                    value: 'name',
+                    child: Text('Name'),
+                  ),
+                  const PopupMenuItem<String>(
+                    value: 'since',
+                    child: Text('Since'),
+                  ),
+                ],
+              ),
+            ],
+          ),
+        ),
+
+        // --- Daftar Driver atau Pesan Kosong ---
+        _filteredDrivers.isEmpty
+            ? _buildEmptyStateForList(isDriver: true)
+            : ListView.builder(
+                shrinkWrap: true,
+                physics: const NeverScrollableScrollPhysics(),
+                itemCount: _filteredDrivers.length,
+                padding:
+                    const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+                itemBuilder: (context, index) {
+                  final driverUser = _filteredDrivers[index];
+                  // Cari detail driver untuk mendapatkan status isAvailable
+                  final driverDetail = _driverDetails.firstWhere(
+                    (d) => d.id == driverUser.uid,
+                    orElse: () => DriverModel(
+                        id: '',
+                        name: '',
+                        createdAt: DateTime.now(),
+                        isAvailable: true),
+                  );
+                  return _buildDriverCard(driverUser, driverDetail);
+                },
+              ),
+      ],
+    );
+  }
+
+  /// Widget untuk setiap kartu driver
+  Widget _buildDriverCard(UserModel driverUser, DriverModel driverDetail) {
+    final avgRating = driverUser.averageRating ?? 0.0;
+    final totalRatings = driverUser.totalRatings ?? 0;
+
+    return Card(
+      margin: const EdgeInsets.only(bottom: 12),
+      elevation: 2,
+      shadowColor: Colors.black.withOpacity(0.1),
+      shape: RoundedRectangleBorder(
+        borderRadius: BorderRadius.circular(12),
+      ),
+      child: InkWell(
+        onTap: () {
+          Navigator.push(
+            context,
+            MaterialPageRoute(
+              builder: (context) => RatingDetailScreen(
+                entity: driverUser,
+                type: DetailRatingType.driver,
+              ),
+            ),
+          );
+        },
+        borderRadius: BorderRadius.circular(12),
+        child: Padding(
+          padding: const EdgeInsets.all(12.0),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Row(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Stack(
+                    clipBehavior: Clip.none,
+                    children: [
+                      CircleAvatar(
+                        radius: 28,
+                        backgroundColor: Colors.blue[100],
+                        child: Icon(Icons.person_outline,
+                            size: 28, color: Colors.blue[800]),
+                      ),
+                      if (totalRatings > 0)
+                        Positioned(
+                          top: -4,
+                          left: -4,
+                          child: Container(
+                            padding: const EdgeInsets.symmetric(
+                                horizontal: 6, vertical: 2),
+                            decoration: BoxDecoration(
+                              color: _getRatingChipColor(avgRating)
+                                  .withOpacity(0.9),
+                              borderRadius: BorderRadius.circular(12),
+                              border:
+                                  Border.all(color: Colors.white, width: 1.5),
+                            ),
+                            child: Text(avgRating.toStringAsFixed(1),
+                                style: const TextStyle(
+                                    color: Colors.white,
+                                    fontSize: 11,
+                                    fontWeight: FontWeight.bold)),
+                          ),
+                        ),
+                    ],
+                  ),
+                  const SizedBox(width: 12),
+                  Expanded(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text(driverUser.name,
+                            style: const TextStyle(
+                                fontSize: 16, fontWeight: FontWeight.bold),
+                            maxLines: 1,
+                            overflow: TextOverflow.ellipsis),
+                        const SizedBox(height: 2),
+                        Text(driverUser.email,
+                            style: TextStyle(
+                                fontSize: 13, color: Colors.grey[600]),
+                            maxLines: 1,
+                            overflow: TextOverflow.ellipsis),
+                      ],
+                    ),
+                  ),
+                  // --- KETERANGAN STATUS isAvailable ---
+                  Container(
+                    padding:
+                        const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                    decoration: BoxDecoration(
+                        color: driverDetail.isAvailable
+                            ? Colors.green.withOpacity(0.1)
+                            : Colors.orange.withOpacity(0.1),
+                        borderRadius: BorderRadius.circular(12)),
+                    child: Row(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        Icon(Icons.circle,
+                            size: 8,
+                            color: driverDetail.isAvailable
+                                ? Colors.green
+                                : Colors.orange),
+                        const SizedBox(width: 4),
+                        Text(
+                          driverDetail.isAvailable ? 'Available' : 'On Duty',
+                          style: TextStyle(
+                            fontSize: 11,
+                            fontWeight: FontWeight.bold,
+                            color: driverDetail.isAvailable
+                                ? Colors.green[800]
+                                : Colors.orange[800],
+                          ),
+                        ),
+                      ],
+                    ),
+                  )
+                ],
+              ),
+              const SizedBox(height: 10),
+              Row(
+                children: [
+                  _buildRatingStars(avgRating),
+                  const SizedBox(width: 4),
+                  Text('${avgRating.toStringAsFixed(1)} (${totalRatings})',
+                      style: const TextStyle(
+                          fontWeight: FontWeight.bold, fontSize: 13)),
+                  const SizedBox(width: 8),
+                  if (totalRatings > 0)
+                    Container(
+                      padding: const EdgeInsets.symmetric(
+                          horizontal: 8, vertical: 2),
+                      decoration: BoxDecoration(
+                        color: _getRatingChipColor(avgRating).withOpacity(0.15),
+                        borderRadius: BorderRadius.circular(6),
+                      ),
+                      child: Text(_getRatingText(avgRating),
+                          style: TextStyle(
+                              color: _getRatingChipColor(avgRating),
+                              fontSize: 11,
+                              fontWeight: FontWeight.bold)),
+                    ),
+                ],
+              ),
+              const Divider(height: 20),
+              Row(
+                mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                children: [
+                  _buildInfoChip(Icons.calendar_today_outlined,
+                      'Member since ${DateFormat('MMM yyyy').format(driverUser.createdAt)}'),
+                  _buildInfoChip(
+                      Icons.trending_up, _getSinceText(driverUser.createdAt)),
+                ],
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+
+  /// Widget utama untuk konten tab vehicle
+  Widget _buildVehicleTabContent() {
+    if (_isLoading) {
+      return const Center(
+        child: Padding(
+            padding: EdgeInsets.all(32.0), child: CircularProgressIndicator()),
+      );
+    }
+    return Column(
+      children: [
+        Padding(
+          padding: const EdgeInsets.fromLTRB(16, 16, 16, 8),
+          child: Row(
+            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+            children: [
+              Text(
+                'All Vehicles (${_filteredVehicles.length})',
+                style: TextStyle(
+                    fontSize: 18,
+                    fontWeight: FontWeight.bold,
+                    color: Colors.grey[800]),
+              ),
+              PopupMenuButton<String>(
+                onSelected: (String newValue) {
+                  setState(() {
+                    _vehicleSortBy = newValue;
+                  });
+                  _filterAndSortVehicles();
+                },
+                icon: Icon(Icons.filter_list, color: Colors.grey[800]),
+                tooltip: 'Sort By',
+                itemBuilder: (BuildContext context) => <PopupMenuEntry<String>>[
+                  const PopupMenuItem<String>(
+                    value: 'rating',
+                    child: Text('Rating'),
+                  ),
+                  const PopupMenuItem<String>(
+                    value: 'name',
+                    child: Text('Name'),
+                  ),
+                ],
+              ),
+            ],
+          ),
+        ),
+        _filteredVehicles.isEmpty
+            ? _buildEmptyStateForList(isVehicle: true)
+            : ListView.builder(
+                shrinkWrap: true,
+                physics: const NeverScrollableScrollPhysics(),
+                itemCount: _filteredVehicles.length,
+                padding:
+                    const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+                itemBuilder: (context, index) {
+                  final vehicle = _filteredVehicles[index];
+                  return _buildVehicleCard(vehicle);
+                },
+              ),
+      ],
+    );
+  }
+
+  /// Widget untuk setiap kartu kendaraan
+  Widget _buildVehicleCard(VehicleModel vehicle) {
+    final ratingInfo = _vehicleRatings[vehicle.id] ??
+        {'averageRating': 0.0, 'totalRatings': 0};
+    final avgRating = ratingInfo['averageRating'] as double;
+    final totalRatings = ratingInfo['totalRatings'] as int;
+
+    return Card(
+      margin: const EdgeInsets.only(bottom: 12),
+      elevation: 2,
+      shadowColor: Colors.black.withOpacity(0.1),
+      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+      child: InkWell(
+        onTap: () {
+          Navigator.push(
+            context,
+            MaterialPageRoute(
+              builder: (context) => RatingDetailScreen(
+                entity: vehicle,
+                entityRatingData: ratingInfo,
+                type: DetailRatingType.vehicle,
+              ),
+            ),
+          );
+        },
+        borderRadius: BorderRadius.circular(12),
+        child: Padding(
+          padding: const EdgeInsets.all(12.0),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Row(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  CircleAvatar(
+                    radius: 28,
+                    backgroundColor: Colors.red[100],
+                    child: Icon(Icons.directions_car_outlined,
+                        size: 28, color: Colors.red[800]),
+                  ),
+                  const SizedBox(width: 12),
+                  Expanded(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text(
+                          '${vehicle.vehicleModel}',
+                          style: const TextStyle(
+                              fontSize: 16, fontWeight: FontWeight.bold),
+                          maxLines: 1,
+                          overflow: TextOverflow.ellipsis,
+                        ),
+                        const SizedBox(height: 2),
+                        Text(
+                          vehicle.licensePlate,
+                          style:
+                              TextStyle(fontSize: 13, color: Colors.grey[600]),
+                          maxLines: 1,
+                          overflow: TextOverflow.ellipsis,
+                        ),
+                      ],
+                    ),
+                  ),
+                  Container(
+                    padding:
+                        const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                    decoration: BoxDecoration(
+                        color: vehicle.isAvailable
+                            ? Colors.green.withOpacity(0.1)
+                            : Colors.orange.withOpacity(0.1),
+                        borderRadius: BorderRadius.circular(12)),
+                    child: Row(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        Icon(Icons.circle,
+                            size: 8,
+                            color: vehicle.isAvailable
+                                ? Colors.green
+                                : Colors.orange),
+                        const SizedBox(width: 4),
+                        Text(
+                          vehicle.isAvailable ? 'Available' : 'In Use',
+                          style: TextStyle(
+                            fontSize: 11,
+                            fontWeight: FontWeight.bold,
+                            color: vehicle.isAvailable
+                                ? Colors.green[800]
+                                : Colors.orange[800],
+                          ),
+                        ),
+                      ],
+                    ),
+                  )
+                ],
+              ),
+              const SizedBox(height: 10),
+              Row(
+                children: [
+                  _buildRatingStars(avgRating),
+                  const SizedBox(width: 4),
+                  Text(
+                    '${avgRating.toStringAsFixed(1)} ($totalRatings)',
+                    style: const TextStyle(
+                        fontWeight: FontWeight.bold, fontSize: 13),
+                  ),
+                  const SizedBox(width: 8),
+                  if (totalRatings > 0)
+                    Container(
+                      padding: const EdgeInsets.symmetric(
+                          horizontal: 8, vertical: 2),
+                      decoration: BoxDecoration(
+                        color: _getRatingChipColor(avgRating).withOpacity(0.15),
+                        borderRadius: BorderRadius.circular(6),
+                      ),
+                      child: Text(
+                        _getRatingText(avgRating),
+                        style: TextStyle(
+                            color: _getRatingChipColor(avgRating),
+                            fontSize: 11,
+                            fontWeight: FontWeight.bold),
+                      ),
+                    ),
+                ],
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+
+  /// Widget utama untuk konten tab room
+  Widget _buildRoomTabContent() {
+    if (_isLoading) {
+      return const Center(
+          child: Padding(
+        padding: EdgeInsets.all(32.0),
+        child: CircularProgressIndicator(),
+      ));
+    }
+    return Column(
+      children: [
+        Padding(
+          padding: const EdgeInsets.fromLTRB(16, 16, 16, 8),
+          child: Row(
+            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+            children: [
+              Text(
+                'Rated Bookings (${_filteredRatedBookings.length})',
+                style: TextStyle(
+                    fontSize: 18,
+                    fontWeight: FontWeight.bold,
+                    color: Colors.grey[800]),
+              ),
+              PopupMenuButton<String>(
+                onSelected: (String newValue) {
+                  setState(() {
+                    _roomSortBy = newValue;
+                  });
+                  _filterAndSortRatedBookings();
+                },
+                icon: Icon(Icons.filter_list, color: Colors.grey[800]),
+                tooltip: 'Sort By',
+                itemBuilder: (BuildContext context) => <PopupMenuEntry<String>>[
+                  const PopupMenuItem<String>(
+                    value: 'rating',
+                    child: Text('Rating'),
+                  ),
+                  const PopupMenuItem<String>(
+                    value: 'name',
+                    child: Text('Room Name'),
+                  ),
+                  const PopupMenuItem<String>(
+                    value: 'ratingDate',
+                    child: Text('Recent'),
+                  ),
+                ],
+              ),
+            ],
+          ),
+        ),
+        _filteredRatedBookings.isEmpty
+            ? _buildEmptyStateForList(isRoom: true)
+            : ListView.builder(
+                shrinkWrap: true,
+                physics: const NeverScrollableScrollPhysics(),
+                itemCount: _filteredRatedBookings.length,
+                padding:
+                    const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+                itemBuilder: (context, index) {
+                  final booking = _filteredRatedBookings[index];
+                  return _buildRatedBookingCard(booking);
+                },
+              ),
+      ],
+    );
+  }
+
+  /// Widget untuk setiap kartu booking yang sudah di-rate
+  Widget _buildRatedBookingCard(BookingModel booking) {
+    final rating = booking.rating ?? 0.0;
+
+    return Card(
+      margin: const EdgeInsets.only(bottom: 12),
+      elevation: 2,
+      shadowColor: Colors.black.withOpacity(0.1),
+      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+      child: InkWell(
+        onTap: () {
+          // Navigasi ke detail booking (sesuai permintaan)
+          Navigator.push(
+            context,
+            MaterialPageRoute(
+              builder: (context) => BookingDetailScreen(booking: booking),
+            ),
+          );
+        },
+        borderRadius: BorderRadius.circular(12),
+        child: Padding(
+          padding: const EdgeInsets.all(12.0),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Row(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  CircleAvatar(
+                    radius: 28,
+                    backgroundColor: Colors.teal[100],
+                    child: Icon(Icons.meeting_room_outlined,
+                        size: 28, color: Colors.teal[800]),
+                  ),
+                  const SizedBox(width: 12),
+                  Expanded(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text(
+                          booking.roomName,
+                          style: const TextStyle(
+                              fontSize: 16, fontWeight: FontWeight.bold),
+                          maxLines: 1,
+                          overflow: TextOverflow.ellipsis,
+                        ),
+                        const SizedBox(height: 2),
+                        Text(
+                          'Agenda: ${booking.eventAgenda}',
+                          style:
+                              TextStyle(fontSize: 13, color: Colors.grey[600]),
+                          maxLines: 1,
+                          overflow: TextOverflow.ellipsis,
+                        ),
+                      ],
+                    ),
+                  ),
+                ],
+              ),
+              const SizedBox(height: 10),
+              Container(
+                padding:
+                    const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+                decoration: BoxDecoration(
+                  color: _getRatingChipColor(rating).withOpacity(0.1),
+                  borderRadius: BorderRadius.circular(8),
+                ),
+                child: Row(
+                  children: [
+                    Text('Rated by ${booking.employeeName}',
+                        style:
+                            TextStyle(fontSize: 12, color: Colors.grey[700])),
+                    const Spacer(),
+                    _buildRatingStars(rating),
+                    const SizedBox(width: 4),
+                    Text(
+                      rating.toStringAsFixed(1),
+                      style: TextStyle(
+                          fontWeight: FontWeight.bold,
+                          fontSize: 13,
+                          color: _getRatingChipColor(rating)),
+                    ),
+                  ],
+                ),
+              ),
+              if (booking.ratingDate != null) ...[
+                const SizedBox(height: 8),
+                Row(
+                  mainAxisAlignment: MainAxisAlignment.end,
+                  children: [
+                    Icon(Icons.calendar_today_outlined,
+                        size: 12, color: Colors.grey[600]),
+                    const SizedBox(width: 4),
+                    Text(
+                      'Rated on: ${DateFormat('d MMM yyyy').format(booking.ratingDate!)}',
+                      style: TextStyle(fontSize: 11, color: Colors.grey[700]),
+                    ),
+                  ],
+                ),
+              ]
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+
+  /// Helper untuk membuat bintang rating
+  Widget _buildRatingStars(double rating) {
+    return Row(
+      mainAxisSize: MainAxisSize.min,
+      children: List.generate(5, (index) {
+        return Icon(
+          index < rating.round() ? Icons.star : Icons.star_border,
+          color: Colors.amber,
+          size: 16,
+        );
+      }),
+    );
+  }
+
+  /// Helper untuk info di bagian bawah kartu
+  Widget _buildInfoChip(IconData icon, String text) {
+    return Row(
+      children: [
+        Icon(icon, size: 12, color: Colors.grey[600]),
+        const SizedBox(width: 4),
+        Text(
+          text,
+          style: TextStyle(fontSize: 11, color: Colors.grey[700]),
+        ),
+      ],
+    );
+  }
+
+  /// Helper untuk mendapatkan warna chip rating
+  Color _getRatingChipColor(double rating) {
+    if (rating >= 4.5) return Colors.green;
+    if (rating >= 3.5) return Colors.blue;
+    if (rating >= 2.5) return Colors.orange;
+    return Colors.red;
+  }
+
+  /// Helper untuk mendapatkan teks rating
+  String _getRatingText(double rating) {
+    if (rating >= 4.5) return 'EXCELLENT';
+    if (rating >= 3.5) return 'GOOD';
+    if (rating >= 2.5) return 'AVERAGE';
+    return 'POOR';
+  }
+
+  /// Helper untuk menghitung pengalaman
+  String _getSinceText(DateTime createdAt) {
+    final difference = DateTime.now().difference(createdAt);
+    final years = difference.inDays ~/ 365;
+    final months = (difference.inDays % 365) ~/ 30;
+
+    if (years > 0) {
+      return '$years yr ${months > 0 ? '$months mo ' : ''}';
+    } else if (months > 0) {
+      return '$months mo';
+    } else {
+      return '${difference.inDays} d';
+    }
+  }
+
+  /// Widget untuk menampilkan state kosong pada list
+  Widget _buildEmptyStateForList(
+      {bool isDriver = false, bool isVehicle = false, bool isRoom = false}) {
+    String title = 'No Technicians Found';
+    String description = 'There are no technicians available.';
+    IconData icon = Icons.engineering_outlined;
+
+    if (isDriver) {
+      title = 'No Drivers Found';
+      description = 'There are no drivers available.';
+      icon = Icons.person_off_outlined;
+    } else if (isVehicle) {
+      title = 'No Vehicles Found';
+      description = 'There are no vehicles available.';
+      icon = Icons.no_transfer_outlined;
+    } else if (isRoom) {
+      title = 'No Rated Bookings';
+      description = 'No room bookings have been rated yet.';
+      icon = Icons.rate_review_outlined;
+    }
+
+    if (_searchQuery.isNotEmpty) {
+      description = 'No data matches your search query.';
+      icon = Icons.search_off;
+    }
+
+    return Padding(
+      padding: const EdgeInsets.symmetric(vertical: 48.0),
+      child: Center(
+        child: Column(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            Icon(icon, size: 64, color: Colors.grey[300]),
+            const SizedBox(height: 16),
+            Text(title,
+                style: TextStyle(
+                    fontSize: 18,
+                    fontWeight: FontWeight.bold,
+                    color: Colors.grey[600])),
+            const SizedBox(height: 4),
+            Text(description,
+                textAlign: TextAlign.center,
+                style: TextStyle(color: Colors.grey[500])),
+          ],
+        ),
       ),
     );
   }
@@ -4106,28 +5425,6 @@ class _OfficerRatingTabState extends State<OfficerRatingTab>
                     const EdgeInsets.symmetric(vertical: 14, horizontal: 16),
               ),
             ),
-          ),
-        ),
-        const SizedBox(width: 8),
-        Container(
-          decoration: BoxDecoration(
-            color: Colors.white,
-            shape: BoxShape.circle,
-            boxShadow: [
-              BoxShadow(
-                color: Colors.black.withOpacity(0.08),
-                blurRadius: 8,
-                offset: const Offset(0, 4),
-              ),
-            ],
-          ),
-          child: IconButton(
-            onPressed: _showFilterDialog,
-            icon: Icon(
-              Icons.filter_list,
-              color: Theme.of(context).primaryColor,
-            ),
-            tooltip: 'Filter By Time',
           ),
         ),
       ],
