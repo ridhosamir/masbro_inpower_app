@@ -104,7 +104,7 @@ class _HomeDashboardOfficerState extends State<HomeDashboardOfficer>
                   return <Widget>[
                     SliverAppBar(
                       backgroundColor: const Color.fromARGB(255, 4, 117, 217),
-                      expandedHeight: 325.0,
+                      expandedHeight: 360.0,
                       floating: false,
                       pinned: true,
                       automaticallyImplyLeading: false,
@@ -180,9 +180,9 @@ class _HomeDashboardOfficerState extends State<HomeDashboardOfficer>
                         unselectedLabelStyle: const TextStyle(
                             fontWeight: FontWeight.normal, fontSize: 16),
                         tabs: const [
-                          Tab(text: 'Status'),
-                          Tab(text: 'Application'),
-                          Tab(text: 'Rating'),
+                          Tab(icon: Icon(Icons.update)),
+                          Tab(icon: Icon(Icons.apps)),
+                          Tab(icon: Icon(Icons.star_rate)),
                         ],
                       ),
                     )
@@ -200,6 +200,7 @@ class _HomeDashboardOfficerState extends State<HomeDashboardOfficer>
             ),
     );
   }
+
   Widget _buildProfileButton() {
     return Container(
       decoration: BoxDecoration(
@@ -503,7 +504,8 @@ class _HomeDashboardOfficerState extends State<HomeDashboardOfficer>
       ],
     );
   }
-   Widget _buildAppGrid(BuildContext context) {
+
+  Widget _buildAppGrid(BuildContext context) {
     return Container(
       color: const Color(0xFFF4F6F8),
       padding: const EdgeInsets.all(16.0),
@@ -516,8 +518,7 @@ class _HomeDashboardOfficerState extends State<HomeDashboardOfficer>
         shrinkWrap: true,
         physics: const NeverScrollableScrollPhysics(),
         children: [
-          _buildAppCard(
-            context: context,
+          _AnimatedAppCard(
             title: 'Maintenance',
             icon: Icons.construction,
             color: Colors.orange[700]!,
@@ -528,8 +529,7 @@ class _HomeDashboardOfficerState extends State<HomeDashboardOfficer>
               );
             },
           ),
-          _buildAppCard(
-            context: context,
+          _AnimatedAppCard(
             title: 'Resource/Item',
             icon: Icons.people_alt_outlined,
             color: Colors.cyan[700]!,
@@ -541,8 +541,7 @@ class _HomeDashboardOfficerState extends State<HomeDashboardOfficer>
               );
             },
           ),
-          _buildAppCard(
-            context: context,
+          _AnimatedAppCard(
             title: 'Operational',
             icon: Icons.directions_car,
             color: Colors.red[700]!,
@@ -554,8 +553,7 @@ class _HomeDashboardOfficerState extends State<HomeDashboardOfficer>
               );
             },
           ),
-          _buildAppCard(
-            context: context,
+          _AnimatedAppCard(
             title: 'Booking Room',
             icon: Icons.meeting_room,
             color: Colors.teal[700]!,
@@ -572,93 +570,90 @@ class _HomeDashboardOfficerState extends State<HomeDashboardOfficer>
     );
   }
 
-  Widget _buildAppCard({
-    required BuildContext context,
-    required String title,
-    required IconData icon,
-    required Color color,
-    required VoidCallback onTap,
-  }) {
-    // Create a lighter background color, same as in HomeDashboardUser
-    Color bgColor = Color.lerp(Colors.white, color, 0.30)!;
+  // Widget _buildAppCard({
+  //   required BuildContext context,
+  //   required String title,
+  //   required IconData icon,
+  //   required Color color,
+  //   required VoidCallback onTap,
+  // }) {
+  //   // Create a lighter background color, same as in HomeDashboardUser
+  //   Color bgColor = Color.lerp(Colors.white, color, 0.30)!;
 
-    return Card(
-      elevation: 0,
-      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(24)),
-      child: InkWell(
-        onTap: onTap,
-        borderRadius: BorderRadius.circular(24),
-        child: Container(
-          decoration: BoxDecoration(
-            borderRadius: BorderRadius.circular(24),
-            color: bgColor, // Use the light solid color
-            boxShadow: [
-              BoxShadow(
-                color: color.withOpacity(0.15),
-                blurRadius: 20,
-                spreadRadius: 0,
-                offset: const Offset(5, 10),
-              ),
-            ],
-            border: Border.all(
-              color: color.withOpacity(0.3),
-              width: 1.5,
-            ),
-          ),
-          child: Column(
-            mainAxisAlignment: MainAxisAlignment.center,
-            children: [
-              Container(
-                padding: const EdgeInsets.all(16),
-                decoration: BoxDecoration(
-                  // Semi-transparent white background for the icon
-                  color: Colors.white.withOpacity(0.7),
-                  shape: BoxShape.circle,
-                  boxShadow: [
-                    BoxShadow(
-                      color: color.withOpacity(0.1),
-                      blurRadius: 10,
-                      spreadRadius: 0,
-                      offset: const Offset(0, 5),
-                    ),
-                  ],
-                ),
-                child: Icon(icon, size: 32, color: color),
-              ),
-              const SizedBox(height: 16),
-              Text(
-                title,
-                textAlign: TextAlign.center,
-                style: TextStyle(
-                  fontSize: 16,
-                  fontWeight: FontWeight.w600,
-                  color: color.withOpacity(0.9),
-                  letterSpacing: 0.5,
-                ),
-              ),
-              const SizedBox(height: 8),
-              Container(
-                padding:
-                    const EdgeInsets.symmetric(horizontal: 12, vertical: 4),
-                decoration: BoxDecoration(
-                  color: Colors.white.withOpacity(0.5),
-                  borderRadius: BorderRadius.circular(12),
-                ),
-                child: Text(
-                  'Manage', 
-                  style: TextStyle(
-                    fontSize: 11,
-                    fontWeight: FontWeight.w600,
-                    color: color,
-                  ),
-                ),
-              ),
-            ],
-          ),
-        ),
-      ),
-    );
-  }
+  //   return Card(
+  //     elevation: 0,
+  //     shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(24)),
+  //     child: InkWell(
+  //       onTap: onTap,
+  //       borderRadius: BorderRadius.circular(24),
+  //       child: Container(
+  //         decoration: BoxDecoration(
+  //           borderRadius: BorderRadius.circular(24),
+  //           color: bgColor, // Use the light solid color
+  //           boxShadow: [
+  //             BoxShadow(
+  //               color: color.withOpacity(0.15),
+  //               blurRadius: 20,
+  //               spreadRadius: 0,
+  //               offset: const Offset(5, 10),
+  //             ),
+  //           ],
+  //           border: Border.all(
+  //             color: color.withOpacity(0.3),
+  //             width: 1.5,
+  //           ),
+  //         ),
+  //         child: Column(
+  //           mainAxisAlignment: MainAxisAlignment.center,
+  //           children: [
+  //             Container(
+  //               padding: const EdgeInsets.all(16),
+  //               decoration: BoxDecoration(
+  //                 // Semi-transparent white background for the icon
+  //                 color: Colors.white.withOpacity(0.7),
+  //                 shape: BoxShape.circle,
+  //                 boxShadow: [
+  //                   BoxShadow(
+  //                     color: color.withOpacity(0.1),
+  //                     blurRadius: 10,
+  //                     spreadRadius: 0,
+  //                     offset: const Offset(0, 5),
+  //                   ),
+  //                 ],
+  //               ),
+  //               child: Icon(icon, size: 32, color: color),
+  //             ),
+  //             const SizedBox(height: 16),
+  //             Text(
+  //               title,
+  //               textAlign: TextAlign.center,
+  //               style: TextStyle(
+  //                 fontSize: 16,
+  //                 fontWeight: FontWeight.w600,
+  //                 color: color.withOpacity(0.9),
+  //                 letterSpacing: 0.5,
+  //               ),
+  //             ),
+  //             const SizedBox(height: 8),
+  //             Container(
+  //               padding:
+  //                   const EdgeInsets.symmetric(horizontal: 12, vertical: 4),
+  //               decoration: BoxDecoration(
+  //                 color: Colors.white.withOpacity(0.5),
+  //                 borderRadius: BorderRadius.circular(12),
+  //               ),
+  //               child: Icon(
+  //                 Icons.open_in_new,
+  //                 size: 16,
+  //                 color: color,
+  //               ),
+  //             ),
+  //           ],
+  //         ),
+  //       ),
+  //     ),
+  //   );
+  // }
 
   void _showProfileDialog() {
     if (currentUser == null) return;
@@ -1552,16 +1547,16 @@ class _OfficerStatusTabState extends State<OfficerStatusTab>
     );
   }
 
-  
   Widget _buildReportCard(ReportModel report) {
     return Container(
       // Use Container to apply decoration
       margin: const EdgeInsets.only(bottom: 16),
       decoration: BoxDecoration(
+        color: Colors.white,
         borderRadius: BorderRadius.circular(16),
         boxShadow: [
           BoxShadow(
-            color: Colors.orangeAccent.withOpacity(0.1), 
+            color: Colors.orangeAccent.withOpacity(0.1),
             blurRadius: 12,
             spreadRadius: 2,
             offset: const Offset(0, 2),
@@ -1610,9 +1605,40 @@ class _OfficerStatusTabState extends State<OfficerStatusTab>
                 _buildInfoRow(Icons.location_on_outlined,
                     '${report.buildingName} - ${report.roomName}',
                     isBold: true),
-                const SizedBox(height: 6),
-                _buildInfoRow(Icons.notes_outlined, report.description,
-                    maxLines: 2),
+                const SizedBox(height: 8),
+                Container(
+                  width: double.infinity,
+                  padding: EdgeInsets.all(12),
+                  decoration: BoxDecoration(
+                    color: Colors.grey[50],
+                    borderRadius: BorderRadius.circular(8),
+                  ),
+                  child: Text(
+                    report.description,
+                    style: TextStyle(
+                      fontSize: 14,
+                      color: Colors.grey[700],
+                      height: 1.4,
+                    ),
+                    maxLines: 2,
+                    overflow: TextOverflow.ellipsis,
+                  ),
+                ),
+                const SizedBox(height: 12),
+                if (report.imageUrl != null && report.hasValidImage()) ...[
+                  const SizedBox(height: 8), // Reduced spacing
+                  SizedBox(
+                    height: 100, // Reduced height
+                    child: ClipRRect(
+                      borderRadius: BorderRadius.circular(12),
+                      child: FirebaseStorageImage(
+                        imageUrl: report.imageUrl!,
+                        fit: BoxFit.cover,
+                        width: double.infinity,
+                      ),
+                    ),
+                  ),
+                ],
                 const SizedBox(height: 12),
                 Row(
                   children: [
@@ -1629,7 +1655,7 @@ class _OfficerStatusTabState extends State<OfficerStatusTab>
                               const Icon(Icons.engineering_outlined, size: 16),
                           label: const Text('Assign'),
                           style: ElevatedButton.styleFrom(
-                            backgroundColor: Theme.of(context).primaryColor,
+                            backgroundColor: Colors.orange[500],
                             foregroundColor: Colors.white,
                           ),
                         ),
@@ -1662,14 +1688,14 @@ class _OfficerStatusTabState extends State<OfficerStatusTab>
   }
 
   Widget _buildRequestCard(RequestModel request) {
+    final bool isResourceRequest = request.request == 'resource';
     return Container(
-      
       margin: const EdgeInsets.only(bottom: 16),
       decoration: BoxDecoration(
         borderRadius: BorderRadius.circular(16),
         boxShadow: [
           BoxShadow(
-            color: Colors.cyanAccent.withOpacity(0.1), 
+            color: Colors.cyanAccent.withOpacity(0.1),
             blurRadius: 12,
             spreadRadius: 2,
             offset: const Offset(0, 2),
@@ -1677,12 +1703,12 @@ class _OfficerStatusTabState extends State<OfficerStatusTab>
         ],
       ),
       child: Card(
-        elevation: 0, 
+        elevation: 0,
         shape: RoundedRectangleBorder(
           borderRadius: BorderRadius.circular(16),
           side: BorderSide(color: Colors.cyan.withOpacity(0.3), width: 1.5),
         ),
-        margin: EdgeInsets.zero, 
+        margin: EdgeInsets.zero,
         child: InkWell(
           onTap: () => _navigateToDetail(request),
           borderRadius: BorderRadius.circular(16),
@@ -1715,8 +1741,108 @@ class _OfficerStatusTabState extends State<OfficerStatusTab>
                   ],
                 ),
                 const Divider(height: 24),
-                _buildInfoRow(Icons.inventory_2_outlined, request.description,
-                    isBold: true, maxLines: 2),
+                if (!isResourceRequest && request.hasValidImage()) ...[
+                  SizedBox(
+                    height: 100, // Reduced height
+                    child: ClipRRect(
+                      borderRadius: BorderRadius.circular(12),
+                      child: FirebaseStorageImage(
+                        imageUrl: request.getNormalizedImageUrl(),
+                        fit: BoxFit.cover,
+                        width: double.infinity,
+                        placeholder: Container(
+                          color: Colors.grey[200],
+                          child: const Center(
+                            child: SizedBox(
+                              width: 20, // Smaller spinner
+                              height: 20,
+                              child: CircularProgressIndicator(
+                                strokeWidth: 2,
+                              ),
+                            ),
+                          ),
+                        ),
+                        errorWidget: Container(
+                          color: Colors.grey[200],
+                          child: Center(
+                            child: Icon(
+                              Icons.image_not_supported_outlined,
+                              color: Colors.grey[400],
+                              size: 30, // Smaller icon
+                            ),
+                          ),
+                        ),
+                      ),
+                    ),
+                  ),
+                  const SizedBox(height: 8), // Reduced spacing
+                ],
+                Text(
+                  'Request:',
+                  style: TextStyle(
+                    fontSize: 13,
+                    fontWeight: FontWeight.w600,
+                    color: Colors.grey[800],
+                  ),
+                ),
+                const SizedBox(height: 6),
+                Container(
+                  width: double.infinity,
+                  padding: const EdgeInsets.all(12),
+                  decoration: BoxDecoration(
+                    color: Colors.grey[50],
+                    borderRadius: BorderRadius.circular(8),
+                  ),
+                  child: Text(
+                    request.description,
+                    style: TextStyle(
+                      fontSize: 14,
+                      color: Colors.grey[700],
+                    ),
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                  ),
+                ),
+                const SizedBox(height: 12),
+                Row(
+                  children: [
+                    Icon(
+                      isResourceRequest
+                          ? Icons.supervisor_account
+                          : Icons.inventory,
+                      size: 16,
+                      color: Colors.grey[600],
+                    ),
+                    const SizedBox(width: 6),
+                    Flexible(
+                      child: Text(
+                        'Need: ${request.request[0].toUpperCase()}${request.request.substring(1)}',
+                        style: TextStyle(
+                          fontSize: 13,
+                          color: Colors.grey[600],
+                          fontWeight: FontWeight.w500,
+                        ),
+                        overflow: TextOverflow.ellipsis,
+                      ),
+                    ),
+                  ],
+                ),
+                const SizedBox(height: 12),
+                if (request.timeRequired != null &&
+                    request.timeRequired!.isNotEmpty) ...[
+                  Row(
+                    children: [
+                      Icon(Icons.calendar_today,
+                          size: 14, color: Colors.grey[500]),
+                      const SizedBox(width: 8),
+                      Text(
+                        request.timeRequired!,
+                        style: TextStyle(fontSize: 12, color: Colors.grey[600]),
+                      ),
+                    ],
+                  ),
+                  const SizedBox(height: 6),
+                ],
                 const SizedBox(height: 12),
                 Row(
                   children: [
@@ -1733,7 +1859,7 @@ class _OfficerStatusTabState extends State<OfficerStatusTab>
                               const Icon(Icons.engineering_outlined, size: 16),
                           label: const Text('Assign'),
                           style: ElevatedButton.styleFrom(
-                            backgroundColor: Theme.of(context).primaryColor,
+                            backgroundColor: Colors.cyan[500],
                             foregroundColor: Colors.white,
                           ),
                         ),
@@ -1765,16 +1891,14 @@ class _OfficerStatusTabState extends State<OfficerStatusTab>
     );
   }
 
-
-Widget _buildRideRequestCard(RideRequestModel request) {
+  Widget _buildRideRequestCard(RideRequestModel request) {
     return Container(
-      
       margin: const EdgeInsets.only(bottom: 16),
       decoration: BoxDecoration(
         borderRadius: BorderRadius.circular(16),
         boxShadow: [
           BoxShadow(
-            color: Colors.redAccent.withOpacity(0.1), 
+            color: Colors.redAccent.withOpacity(0.1),
             blurRadius: 12,
             spreadRadius: 2,
             offset: const Offset(0, 2),
@@ -1782,12 +1906,12 @@ Widget _buildRideRequestCard(RideRequestModel request) {
         ],
       ),
       child: Card(
-        elevation: 0, 
+        elevation: 0,
         shape: RoundedRectangleBorder(
           borderRadius: BorderRadius.circular(16),
           side: BorderSide(color: Colors.red.withOpacity(0.3), width: 1.5),
         ),
-        margin: EdgeInsets.zero, 
+        margin: EdgeInsets.zero,
         child: InkWell(
           onTap: () => _navigateToDetail(request),
           borderRadius: BorderRadius.circular(16),
@@ -1830,6 +1954,77 @@ Widget _buildRideRequestCard(RideRequestModel request) {
                 const SizedBox(height: 12),
                 Row(
                   children: [
+                    Icon(Icons.person, size: 16, color: Colors.grey[500]),
+                    SizedBox(width: 8),
+                    Text(
+                      'By ${request.employeeName}',
+                      style: TextStyle(
+                        fontSize: 12,
+                        color: Colors.grey[600],
+                        fontWeight: FontWeight.w500,
+                      ),
+                    ),
+                    SizedBox(width: 16),
+                    Icon(Icons.access_time, size: 16, color: Colors.grey[500]),
+                    SizedBox(width: 8),
+                    Text(
+                      _getTimeAgo(request.createdAt),
+                      style: TextStyle(
+                        fontSize: 12,
+                        color: Colors.grey[600],
+                      ),
+                    ),
+                  ],
+                ),
+                SizedBox(height: 12),
+                Row(
+                  children: [
+                    Icon(Icons.event, size: 16, color: Colors.grey[500]),
+                    SizedBox(width: 8),
+                    Text(
+                      'Pickup: ${DateFormat('MMM dd, HH:mm').format(request.pickupDateTime)}',
+                      style: TextStyle(
+                        fontSize: 12,
+                        color: Colors.grey[600],
+                      ),
+                    ),
+                    if (request.returnDateTime != null) ...[
+                      SizedBox(width: 16),
+                      Icon(Icons.event_available,
+                          size: 16, color: Colors.grey[500]),
+                      SizedBox(width: 8),
+                      Text(
+                        'Return: ${DateFormat('MMM dd, HH:mm').format(request.returnDateTime!)}',
+                        style: TextStyle(
+                          fontSize: 12,
+                          color: Colors.grey[600],
+                        ),
+                      ),
+                    ],
+                  ],
+                ),
+                SizedBox(height: 12),
+                Container(
+                  width: double.infinity,
+                  padding: EdgeInsets.all(12),
+                  decoration: BoxDecoration(
+                    color: Colors.grey[50],
+                    borderRadius: BorderRadius.circular(8),
+                  ),
+                  child: Text(
+                    request.description,
+                    style: TextStyle(
+                      fontSize: 14,
+                      color: Colors.grey[700],
+                      height: 1.4,
+                    ),
+                    maxLines: 2,
+                    overflow: TextOverflow.ellipsis,
+                  ),
+                ),
+                SizedBox(height: 12),
+                Row(
+                  children: [
                     _buildInfoChip(
                         Icons.event,
                         DateFormat('d MMM, HH:mm')
@@ -1845,7 +2040,7 @@ Widget _buildRideRequestCard(RideRequestModel request) {
                               size: 16),
                           label: const Text('Assign'),
                           style: ElevatedButton.styleFrom(
-                            backgroundColor: Theme.of(context).primaryColor,
+                            backgroundColor: Colors.red[400],
                             foregroundColor: Colors.white,
                           ),
                         ),
@@ -1877,7 +2072,6 @@ Widget _buildRideRequestCard(RideRequestModel request) {
     );
   }
 
-
   Widget _buildBookingCard(BookingModel booking) {
     return Container(
       margin: const EdgeInsets.only(bottom: 16),
@@ -1885,7 +2079,7 @@ Widget _buildRideRequestCard(RideRequestModel request) {
         borderRadius: BorderRadius.circular(16),
         boxShadow: [
           BoxShadow(
-            color: Colors.tealAccent.withOpacity(0.1), 
+            color: Colors.tealAccent.withOpacity(0.1),
             blurRadius: 12,
             spreadRadius: 2,
             offset: const Offset(0, 2),
@@ -1893,12 +2087,12 @@ Widget _buildRideRequestCard(RideRequestModel request) {
         ],
       ),
       child: Card(
-        elevation: 0, 
+        elevation: 0,
         shape: RoundedRectangleBorder(
           borderRadius: BorderRadius.circular(16),
           side: BorderSide(color: Colors.teal.withOpacity(0.3), width: 1.5),
         ),
-        margin: EdgeInsets.zero, 
+        margin: EdgeInsets.zero,
         child: InkWell(
           onTap: () => _navigateToDetail(booking),
           borderRadius: BorderRadius.circular(16),
@@ -1931,12 +2125,58 @@ Widget _buildRideRequestCard(RideRequestModel request) {
                   ],
                 ),
                 const Divider(height: 24),
-                _buildInfoRow(Icons.push_pin_outlined, booking.eventAgenda,
-                    isBold: true),
+                Text(
+                  'Event Agenda:',
+                  style: TextStyle(
+                    fontSize: 13,
+                    fontWeight: FontWeight.w600,
+                    color: Colors.grey[800],
+                  ),
+                ),
+                const SizedBox(height: 6),
+                Container(
+                  width: double.infinity,
+                  padding: const EdgeInsets.all(12),
+                  decoration: BoxDecoration(
+                    color: Colors.grey[50],
+                    borderRadius: BorderRadius.circular(8),
+                  ),
+                  child: Text(
+                    '${booking.eventAgenda}',
+                    style: TextStyle(fontSize: 14, color: Colors.grey[700]),
+                    maxLines: 2,
+                    overflow: TextOverflow.ellipsis,
+                  ),
+                ),
+                const SizedBox(height: 12),
+                Row(
+                  children: [
+                    Icon(
+                      Icons.meeting_room_outlined,
+                      size: 16,
+                      color: Colors.grey[500],
+                    ),
+                    const SizedBox(width: 6),
+                    Flexible(
+                      child: Text(
+                        'Room: ${booking.roomName}',
+                        style: TextStyle(
+                          fontSize: 13,
+                          color: Colors.grey[600],
+                          fontWeight: FontWeight.w500,
+                        ),
+                        overflow: TextOverflow.ellipsis,
+                      ),
+                    ),
+                  ],
+                ),
+                const SizedBox(height: 6),
+                _buildInfoRow(
+                    Icons.person_outline, 'by: ${booking.employeeName}'),
                 const SizedBox(height: 6),
                 _buildInfoRow(
                     Icons.calendar_today_outlined,
-                    _formatBookingDuration(
+                    _formatDateRange(
                         booking.usageStartDate, booking.usageEndDate)),
                 const SizedBox(height: 12),
                 Row(
@@ -1953,7 +2193,7 @@ Widget _buildRideRequestCard(RideRequestModel request) {
                               size: 16),
                           label: const Text('Manage'),
                           style: ElevatedButton.styleFrom(
-                            backgroundColor: Theme.of(context).primaryColor,
+                            backgroundColor: Colors.teal[400],
                             foregroundColor: Colors.white,
                           ),
                         ),
@@ -1967,8 +2207,6 @@ Widget _buildRideRequestCard(RideRequestModel request) {
       ),
     );
   }
-
-
 
   Widget _buildInfoChip(IconData icon, String text) {
     return Container(
@@ -2669,7 +2907,7 @@ Widget _buildRideRequestCard(RideRequestModel request) {
                           child: const Text('Cancel')),
                       TextButton(
                           onPressed: () => Navigator.of(ctx).pop(true),
-                          child: const Text('Yes, agrree',
+                          child: const Text('Yes, agree',
                               style: TextStyle(color: Colors.green))),
                     ],
                   ),
@@ -4618,7 +4856,7 @@ class _OfficerRatingTabState extends State<OfficerRatingTab>
         borderRadius: BorderRadius.circular(12),
         boxShadow: [
           BoxShadow(
-            color: Colors.redAccent.withOpacity(0.1), 
+            color: Colors.redAccent.withOpacity(0.1),
             blurRadius: 10,
             spreadRadius: 1,
           ),
@@ -5083,6 +5321,111 @@ class _OfficerRatingTabState extends State<OfficerRatingTab>
           ),
         ),
       ],
+    );
+  }
+}
+
+class _AnimatedAppCard extends StatefulWidget {
+  const _AnimatedAppCard({
+    required this.title,
+    required this.icon,
+    required this.color,
+    required this.onTap,
+  });
+
+  final String title;
+  final IconData icon;
+  final Color color;
+  final VoidCallback onTap;
+
+  @override
+  State<_AnimatedAppCard> createState() => _AnimatedAppCardState();
+}
+
+class _AnimatedAppCardState extends State<_AnimatedAppCard> {
+  bool _isPressed = false;
+
+  @override
+  Widget build(BuildContext context) {
+    final scale = _isPressed ? 0.95 : 1.0;
+    final bgColor = Color.lerp(Colors.white, widget.color, 0.30)!;
+
+    return AnimatedScale(
+      scale: scale,
+      duration: const Duration(milliseconds: 150),
+      curve: Curves.fastOutSlowIn,
+      child: Card(
+        elevation: 0,
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(24)),
+        child: InkWell(
+          onTap: widget.onTap,
+          onHighlightChanged: (isHighlighted) {
+            setState(() {
+              _isPressed = isHighlighted;
+            });
+          },
+          borderRadius: BorderRadius.circular(24),
+          child: Container(
+            decoration: BoxDecoration(
+              borderRadius: BorderRadius.circular(24),
+              color: bgColor,
+              boxShadow: [
+                BoxShadow(
+                  color: widget.color.withOpacity(0.15),
+                  blurRadius: 20,
+                  spreadRadius: 0,
+                  offset: const Offset(5, 10),
+                ),
+              ],
+              border: Border.all(
+                color: widget.color.withOpacity(0.3),
+                width: 1.5,
+              ),
+            ),
+            child: Column(
+              mainAxisAlignment: MainAxisAlignment.center,
+              children: [
+                Container(
+                  padding: const EdgeInsets.all(16),
+                  decoration: BoxDecoration(
+                    color: Colors.white.withOpacity(0.7),
+                    shape: BoxShape.circle,
+                    boxShadow: [
+                      BoxShadow(
+                        color: widget.color.withOpacity(0.1),
+                        blurRadius: 10,
+                        spreadRadius: 0,
+                        offset: const Offset(0, 5),
+                      ),
+                    ],
+                  ),
+                  child: Icon(widget.icon, size: 32, color: widget.color),
+                ),
+                const SizedBox(height: 16),
+                Text(
+                  widget.title,
+                  textAlign: TextAlign.center,
+                  style: TextStyle(
+                    fontSize: 16,
+                    fontWeight: FontWeight.w600,
+                    color: widget.color.withOpacity(0.9),
+                    letterSpacing: 0.5,
+                  ),
+                ),
+                const SizedBox(height: 8),
+                Container(
+                    padding:
+                        const EdgeInsets.symmetric(horizontal: 12, vertical: 4),
+                    child: Icon(
+                      Icons.open_in_new,
+                      size: 16,
+                      color: widget.color,
+                    )),
+              ],
+            ),
+          ),
+        ),
+      ),
     );
   }
 }
