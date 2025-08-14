@@ -743,10 +743,22 @@ class FirestoreService {
   }
 
   /// Get technician rating data - Use this method to get rating info for display
-Future<Map<String, dynamic>> getTechnicianRatingData(
+/// Get technician rating data - Use this method to get rating info for display
+  Future<Map<String, dynamic>> getTechnicianRatingData(
       String technicianId) async {
     try {
-      // Get all ratings for this technician from ratings collection
+      // Verify that the technician is not in the drivers collection
+      final driverDoc =
+          await _firestore.collection('drivers').doc(technicianId).get();
+      if (driverDoc.exists) {
+        // If technician exists in drivers collection, don't show rating
+        return {
+          'averageRating': 0.0,
+          'totalRatings': 0,
+        };
+      }
+
+      // Get all ratings for this technician from the ratings collection
       final ratingsSnapshot = await _ratingsCollection
           .where('technicianId', isEqualTo: technicianId)
           .get();
@@ -759,70 +771,59 @@ Future<Map<String, dynamic>> getTechnicianRatingData(
       }
 
       // Extract all report IDs from the ratings
-      List<String> reportIds = ratingsSnapshot.docs.map((doc) {
+      final reportIds = ratingsSnapshot.docs.map((doc) {
         final data = doc.data() as Map<String, dynamic>;
         return data['reportId'] as String;
       }).toList();
 
-      // Get reports to filter for maintenance reports only
+      // Get reports to verify they exist in the reports collection
       final reportsSnapshot = await _reportsCollection
           .where(FieldPath.documentId, whereIn: reportIds)
           .get();
 
-      // Create a map of report IDs for quick lookup
-      Map<String, bool> maintenanceReportIds = {};
-      for (var doc in reportsSnapshot.docs) {
-        // We're considering all reports from the reports collection as maintenance reports
-        maintenanceReportIds[doc.id] = true;
-      }
+      // Create a map of valid report IDs for quick lookup
+      final validReportIds = reportsSnapshot.docs.map((doc) => doc.id).toSet();
 
-      // Filter ratings to only include ones from maintenance reports
-      List<Map<String, dynamic>> maintenanceRatings = [];
+      // Filter ratings to only include ones with matching report IDs
+      double totalRating = 0;
+      int validRatingsCount = 0;
 
       for (var doc in ratingsSnapshot.docs) {
         final data = doc.data() as Map<String, dynamic>;
         final reportId = data['reportId'] as String;
 
-        // Only include if the report ID exists in our maintenance reports
-        if (maintenanceReportIds.containsKey(reportId)) {
-          maintenanceRatings.add(data);
+        // Only include if the report ID exists in our reports collection
+        if (validReportIds.contains(reportId)) {
+          final rating = data['rating'] is int
+              ? (data['rating'] as int).toDouble()
+              : data['rating'] as double;
+          totalRating += rating;
+          validRatingsCount++;
         }
       }
 
-      // If no maintenance ratings were found
-      if (maintenanceRatings.isEmpty) {
+      // If no valid ratings were found
+      if (validRatingsCount == 0) {
         return {
           'averageRating': 0.0,
           'totalRatings': 0,
         };
       }
 
-      // Calculate average from filtered maintenance ratings
-      double totalRating = 0;
-      final totalRatings = maintenanceRatings.length;
-
-      for (var data in maintenanceRatings) {
-        final rating = data['rating'] is int
-            ? (data['rating'] as int).toDouble()
-            : data['rating'] as double;
-        totalRating += rating;
-      }
-
-      final averageRating = totalRating / totalRatings;
+      final averageRating = totalRating / validRatingsCount;
 
       print(
-          'Calculated MAINTENANCE rating for technician $technicianId: $averageRating from $totalRatings ratings');
+          'Calculated maintenance rating for technician $technicianId: $averageRating from $validRatingsCount ratings');
 
       return {
         'averageRating': averageRating,
-        'totalRatings': totalRatings,
+        'totalRatings': validRatingsCount,
       };
     } catch (e) {
-      print('Error getting technician maintenance rating data: $e');
+      print('Error getting technician rating data: $e');
       return {
         'averageRating': 0.0,
         'totalRatings': 0,
-        'error': e.toString(),
       };
     }
   }

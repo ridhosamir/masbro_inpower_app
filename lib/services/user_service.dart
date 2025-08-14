@@ -254,6 +254,15 @@ class UserService extends ChangeNotifier {
       return null;
     }
   }
+  Future<List<UserModel>> getDrivers() async {
+    try {
+      final snapshot = await _firestore.collection('drivers').get();
+      return snapshot.docs.map((doc) => UserModel.fromFirestore(doc)).toList();
+    } catch (e) {
+      print('Error getting drivers: $e');
+      return [];
+    }
+  }
 
   // MIGRATION: Create driver documents for existing technicians with "driver" in name/email
   Future<Map<String, dynamic>> migrateExistingDrivers() async {

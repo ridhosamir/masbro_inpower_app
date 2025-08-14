@@ -27,6 +27,9 @@ class _AssignTechnicianScreenState extends State<AssignTechnicianScreen> {
   bool _isAssigning = false;
   String _sortBy = 'rating'; // 'rating', 'name', 'since'
 
+  // Map to store technician ratings
+  Map<String, Map<String, dynamic>> _technicianRatings = {};
+
   @override
   void initState() {
     super.initState();
@@ -77,6 +80,9 @@ class _AssignTechnicianScreenState extends State<AssignTechnicianScreen> {
 
       print('Final filtered technicians: ${nonDriverTechnicians.length}');
 
+      // 4. Load ratings for all technicians
+      await _loadTechnicianRatings(nonDriverTechnicians);
+
       if (mounted) {
         setState(() {
           _technicians = nonDriverTechnicians;
@@ -101,19 +107,36 @@ class _AssignTechnicianScreenState extends State<AssignTechnicianScreen> {
     }
   }
 
+  // Load ratings for all technicians using the same method as dashboard
+  Future<void> _loadTechnicianRatings(List<UserModel> technicians) async {
+    try {
+      for (UserModel technician in technicians) {
+        final ratingData =
+            await _firestoreService.getTechnicianRatingData(technician.uid);
+        _technicianRatings[technician.uid] = ratingData;
+      }
+    } catch (e) {
+      print('Error loading technician ratings: $e');
+    }
+  }
+
   void _sortTechnicians() {
     setState(() {
       switch (_sortBy) {
         case 'rating':
           _technicians.sort((a, b) {
-            final ratingA = a.averageRating ?? 0.0;
-            final ratingB = b.averageRating ?? 0.0;
+            final ratingDataA = _technicianRatings[a.uid];
+            final ratingDataB = _technicianRatings[b.uid];
+
+            final ratingA = ratingDataA?['averageRating'] ?? 0.0;
+            final ratingB = ratingDataB?['averageRating'] ?? 0.0;
+
             // Sort by rating (highest first), then by total ratings if same rating
             if (ratingA != ratingB) {
               return ratingB.compareTo(ratingA);
             }
-            final totalA = a.totalRatings ?? 0;
-            final totalB = b.totalRatings ?? 0;
+            final totalA = ratingDataA?['totalRatings'] ?? 0;
+            final totalB = ratingDataB?['totalRatings'] ?? 0;
             return totalB.compareTo(totalA);
           });
           break;
@@ -299,8 +322,7 @@ class _AssignTechnicianScreenState extends State<AssignTechnicianScreen> {
                             children: [
                               Icon(Icons.access_time, size: 16),
                               SizedBox(width: 4),
-                              Text('Since',
-                                  style: TextStyle(fontSize: 14)),
+                              Text('Since', style: TextStyle(fontSize: 14)),
                             ],
                           ),
                         ),
@@ -359,6 +381,11 @@ class _AssignTechnicianScreenState extends State<AssignTechnicianScreen> {
                     final isSelected =
                         _selectedTechnician?.uid == technician.uid;
 
+                    // Get rating data from the loaded map
+                    final ratingData = _technicianRatings[technician.uid];
+                    final averageRating = ratingData?['averageRating'] ?? 0.0;
+                    final totalRatings = ratingData?['totalRatings'] ?? 0;
+
                     return Container(
                       margin: EdgeInsets.only(bottom: 12),
                       child: InkWell(
@@ -411,9 +438,7 @@ class _AssignTechnicianScreenState extends State<AssignTechnicianScreen> {
                                     ),
                                   ),
                                   // Rating badge
-                                  if (technician.averageRating != null &&
-                                      technician.totalRatings != null &&
-                                      technician.totalRatings! > 0)
+                                  if (averageRating > 0 && totalRatings > 0)
                                     Positioned(
                                       right: -2,
                                       top: -2,
@@ -421,16 +446,14 @@ class _AssignTechnicianScreenState extends State<AssignTechnicianScreen> {
                                         padding: EdgeInsets.symmetric(
                                             horizontal: 6, vertical: 2),
                                         decoration: BoxDecoration(
-                                          color: _getRatingColor(
-                                              technician.averageRating!),
+                                          color: _getRatingColor(averageRating),
                                           borderRadius:
                                               BorderRadius.circular(10),
                                           border: Border.all(
                                               color: Colors.white, width: 2),
                                         ),
                                         child: Text(
-                                          technician.averageRating!
-                                              .toStringAsFixed(1),
+                                          averageRating.toStringAsFixed(1),
                                           style: TextStyle(
                                             color: Colors.white,
                                             fontSize: 10,
@@ -486,7 +509,8 @@ class _AssignTechnicianScreenState extends State<AssignTechnicianScreen> {
                                     SizedBox(height: 8),
 
                                     // Rating section with enhanced display
-                                    _buildTechnicianRatingEnhanced(technician),
+                                    _buildTechnicianRatingEnhanced(
+                                        averageRating, totalRatings),
 
                                     SizedBox(height: 6),
                                     Row(
@@ -507,8 +531,7 @@ class _AssignTechnicianScreenState extends State<AssignTechnicianScreen> {
                                             size: 12, color: Colors.grey[500]),
                                         SizedBox(width: 4),
                                         Text(
-                                          _getsinceText(
-                                              technician.createdAt),
+                                          _getsinceText(technician.createdAt),
                                           style: TextStyle(
                                             fontSize: 11,
                                             color: Colors.grey[500],
@@ -567,18 +590,17 @@ class _AssignTechnicianScreenState extends State<AssignTechnicianScreen> {
     }
   }
 
-  Widget _buildTechnicianRatingEnhanced(UserModel technician) {
+  Widget _buildTechnicianRatingEnhanced(
+      double averageRating, int totalRatings) {
     // Check if technician has ratings
-    if (technician.averageRating != null &&
-        technician.totalRatings != null &&
-        technician.totalRatings! > 0) {
+    if (averageRating > 0 && totalRatings > 0) {
       return Container(
         padding: EdgeInsets.symmetric(horizontal: 8, vertical: 4),
         decoration: BoxDecoration(
-          color: _getRatingColor(technician.averageRating!).withOpacity(0.1),
+          color: _getRatingColor(averageRating).withOpacity(0.1),
           borderRadius: BorderRadius.circular(8),
           border: Border.all(
-            color: _getRatingColor(technician.averageRating!).withOpacity(0.3),
+            color: _getRatingColor(averageRating).withOpacity(0.3),
           ),
         ),
         child: Row(
@@ -588,11 +610,10 @@ class _AssignTechnicianScreenState extends State<AssignTechnicianScreen> {
             Row(
               children: List.generate(5, (index) {
                 return Icon(
-                  index < (technician.averageRating ?? 0).floor()
+                  index < averageRating.floor()
                       ? Icons.star
-                      : index < (technician.averageRating ?? 0).ceil() &&
-                              (technician.averageRating ?? 0).floor() !=
-                                  (technician.averageRating ?? 0).ceil()
+                      : index < averageRating.ceil() &&
+                              averageRating.floor() != averageRating.ceil()
                           ? Icons.star_half
                           : Icons.star_border,
                   color: Colors.amber,
@@ -603,16 +624,16 @@ class _AssignTechnicianScreenState extends State<AssignTechnicianScreen> {
             SizedBox(width: 4),
             // Rating text
             Text(
-              '${technician.averageRating!.toStringAsFixed(1)}',
+              '${averageRating.toStringAsFixed(1)}',
               style: TextStyle(
                 fontSize: 12,
                 fontWeight: FontWeight.bold,
-                color: _getRatingColor(technician.averageRating!),
+                color: _getRatingColor(averageRating),
               ),
             ),
             SizedBox(width: 4),
             Text(
-              '(${technician.totalRatings})',
+              '($totalRatings)',
               style: TextStyle(
                 fontSize: 11,
                 color: Colors.grey[600],
@@ -623,11 +644,11 @@ class _AssignTechnicianScreenState extends State<AssignTechnicianScreen> {
             Container(
               padding: EdgeInsets.symmetric(horizontal: 4, vertical: 2),
               decoration: BoxDecoration(
-                color: _getRatingColor(technician.averageRating!),
+                color: _getRatingColor(averageRating),
                 borderRadius: BorderRadius.circular(4),
               ),
               child: Text(
-                _getPerformanceLabel(technician.averageRating!),
+                _getPerformanceLabel(averageRating),
                 style: TextStyle(
                   color: Colors.white,
                   fontSize: 9,
