@@ -1,20 +1,14 @@
-// ===== ELEGANT LOGIN SCREEN =====
-// File: screens/auth/login_screen.dart
-
+import 'dart:ui';
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import '../../services/auth_service.dart';
-import '../../widgets/custom_button.dart';
-import '../../widgets/custom_text_field.dart';
 import 'register_screen.dart';
-import '../employee/maintenanceApp/employee_dashboard.dart';
-import '../officer/maintenanceApp/officer_dashboard.dart';
-import '../technician/maintenanceApp/technician_dashboard.dart';
-import 'dart:ui';
 
 class LoginScreen extends StatefulWidget {
+  const LoginScreen({super.key});
+
   @override
-  _LoginScreenState createState() => _LoginScreenState();
+  State<LoginScreen> createState() => _LoginScreenState();
 }
 
 class _LoginScreenState extends State<LoginScreen>
@@ -32,7 +26,6 @@ class _LoginScreenState extends State<LoginScreen>
   void initState() {
     super.initState();
 
-    // Initialize animations
     _animationController = AnimationController(
       duration: const Duration(milliseconds: 1200),
       vsync: this,
@@ -54,7 +47,6 @@ class _LoginScreenState extends State<LoginScreen>
       curve: const Interval(0.0, 0.8, curve: Curves.easeOutCubic),
     ));
 
-    // Start animation
     _animationController.forward();
   }
 
@@ -66,24 +58,36 @@ class _LoginScreenState extends State<LoginScreen>
     super.dispose();
   }
 
+  // Helper untuk menambahkan @gmail.com jika tidak ada
+  String _normalizeEmail(String email) {
+    String trimmedEmail = email.trim();
+    if (trimmedEmail.contains('@')) {
+      return trimmedEmail; // Pengguna sudah mengetik email lengkap
+    }
+    // Pengguna hanya mengetik username, tambahkan domain
+    return '$trimmedEmail@gmail.com';
+  }
+
   Future<void> _login() async {
     if (!_formKey.currentState!.validate()) return;
 
     setState(() => _isLoading = true);
 
+    final normalizedEmail = _normalizeEmail(_emailController.text);
     final authService = Provider.of<AuthService>(context, listen: false);
     final error = await authService.signIn(
-      _emailController.text.trim(),
+      normalizedEmail,
       _passwordController.text,
     );
 
-    setState(() => _isLoading = false);
+    if (mounted) {
+      setState(() => _isLoading = false);
+    }
 
-    if (error != null) {
-      // Show a more elegant error notification
+    if (error != null && mounted) {
       _showErrorDialog(error);
     }
-    // Navigation will be handled by AuthWrapper in main.dart
+    // Navigasi setelah login sukses akan ditangani oleh AuthWrapper
   }
 
   void _showErrorDialog(String error) {
@@ -115,14 +119,14 @@ class _LoginScreenState extends State<LoginScreen>
                         color: Colors.red.shade50,
                         shape: BoxShape.circle,
                       ),
-                      child: Icon(
+                      child: const Icon(
                         Icons.error_outline,
                         color: Colors.red,
                         size: 32,
                       ),
                     ),
                     const SizedBox(height: 20),
-                    Text(
+                    const Text(
                       'Login Failed',
                       style: TextStyle(
                         fontWeight: FontWeight.bold,
@@ -143,6 +147,7 @@ class _LoginScreenState extends State<LoginScreen>
                       onPressed: () => Navigator.of(context).pop(),
                       style: ElevatedButton.styleFrom(
                         backgroundColor: Theme.of(context).primaryColor,
+                        foregroundColor: Colors.white,
                         shape: RoundedRectangleBorder(
                           borderRadius: BorderRadius.circular(30),
                         ),
@@ -177,7 +182,6 @@ class _LoginScreenState extends State<LoginScreen>
     return Scaffold(
       body: Stack(
         children: [
-          // Animated Background
           Container(
             decoration: BoxDecoration(
               gradient: LinearGradient(
@@ -192,8 +196,6 @@ class _LoginScreenState extends State<LoginScreen>
               ),
             ),
           ),
-
-          // Decorative Elements
           Positioned(
             top: -screenHeight * 0.1,
             right: -screenWidth * 0.2,
@@ -218,8 +220,6 @@ class _LoginScreenState extends State<LoginScreen>
               ),
             ),
           ),
-
-          // Main Content
           SafeArea(
             child: Center(
               child: SingleChildScrollView(
@@ -231,7 +231,6 @@ class _LoginScreenState extends State<LoginScreen>
                     child: Column(
                       mainAxisSize: MainAxisSize.min,
                       children: [
-                        // Header Section with Logo
                         Hero(
                           tag: 'app_logo',
                           child: Container(
@@ -268,7 +267,7 @@ class _LoginScreenState extends State<LoginScreen>
                               Shadow(
                                 blurRadius: 10.0,
                                 color: Colors.black26,
-                                offset: Offset(0, 5.0),
+                                offset: const Offset(0, 5.0),
                               ),
                             ],
                           ),
@@ -291,8 +290,6 @@ class _LoginScreenState extends State<LoginScreen>
                           ),
                         ),
                         const SizedBox(height: 40),
-
-                        // Login Card
                         Container(
                           decoration: BoxDecoration(
                             color: Colors.white.withOpacity(0.9),
@@ -327,9 +324,8 @@ class _LoginScreenState extends State<LoginScreen>
                                     crossAxisAlignment:
                                         CrossAxisAlignment.start,
                                     children: [
-                                      // Email Field
                                       Text(
-                                        'Email',
+                                        'Username',
                                         style: TextStyle(
                                           fontSize: 16,
                                           fontWeight: FontWeight.w600,
@@ -342,7 +338,8 @@ class _LoginScreenState extends State<LoginScreen>
                                         keyboardType:
                                             TextInputType.emailAddress,
                                         decoration: InputDecoration(
-                                          hintText: 'Enter your email',
+                                          hintText:
+                                              'Enter username',
                                           prefixIcon: Icon(
                                             Icons.email_outlined,
                                             color:
@@ -363,19 +360,24 @@ class _LoginScreenState extends State<LoginScreen>
                                         ),
                                         validator: (value) {
                                           if (value == null || value.isEmpty) {
-                                            return 'Please enter your email';
+                                            return 'Please enter your email or username';
                                           }
-                                          if (!RegExp(
-                                                  r'^[\w-\.]+@([\w-]+\.)+[\w-]{2,4}$')
-                                              .hasMatch(value)) {
-                                            return 'Please enter a valid email';
+                                          if (value.contains('@')) {
+                                            if (!RegExp(
+                                                    r'^[\w-\.]+@([\w-]+\.)+[\w-]{2,4}$')
+                                                .hasMatch(value)) {
+                                              return 'Please enter a valid email';
+                                            }
+                                          } else {
+                                            if (!RegExp(r'^[a-zA-Z0-9_.+-]+$')
+                                                .hasMatch(value)) {
+                                              return 'Please enter a valid username';
+                                            }
                                           }
                                           return null;
                                         },
                                       ),
                                       const SizedBox(height: 24),
-
-                                      // Password Field
                                       Text(
                                         'Password',
                                         style: TextStyle(
@@ -433,13 +435,7 @@ class _LoginScreenState extends State<LoginScreen>
                                           return null;
                                         },
                                       ),
-                                      const SizedBox(height: 16),
-
-                                      // Forgot Password
-                                      
                                       const SizedBox(height: 30),
-
-                                      // Login Button
                                       SizedBox(
                                         width: double.infinity,
                                         child: ElevatedButton(
@@ -469,7 +465,7 @@ class _LoginScreenState extends State<LoginScreen>
                                                     strokeWidth: 2.5,
                                                   ),
                                                 )
-                                              : Row(
+                                              : const Row(
                                                   mainAxisAlignment:
                                                       MainAxisAlignment.center,
                                                   children: [
@@ -482,8 +478,8 @@ class _LoginScreenState extends State<LoginScreen>
                                                         letterSpacing: 0.5,
                                                       ),
                                                     ),
-                                                    const SizedBox(width: 8),
-                                                    const Icon(
+                                                    SizedBox(width: 8),
+                                                    Icon(
                                                       Icons
                                                           .arrow_forward_rounded,
                                                       size: 20,
@@ -499,8 +495,6 @@ class _LoginScreenState extends State<LoginScreen>
                             ),
                           ),
                         ),
-
-                        // Copyright or Version
                         const SizedBox(height: 30),
                         Text(
                           '© 2025 MasBro App',
