@@ -525,8 +525,7 @@ class _HomeDashboardTechnicianState extends State<HomeDashboardTechnician>
         crossAxisSpacing: 16,
         mainAxisSpacing: 16,
         children: [
-          _buildAppCard(
-            context: context,
+          _AnimatedAppCard(
             title: 'Maintenance',
             icon: Icons.construction,
             color: Colors.orange[700]!,
@@ -537,8 +536,7 @@ class _HomeDashboardTechnicianState extends State<HomeDashboardTechnician>
               );
             },
           ),
-          _buildAppCard(
-            context: context,
+          _AnimatedAppCard(
             title: 'Resource/Item',
             icon: Icons.people_alt_outlined,
             color: Colors.cyan[700]!,
@@ -550,8 +548,7 @@ class _HomeDashboardTechnicianState extends State<HomeDashboardTechnician>
               );
             },
           ),
-          _buildAppCard(
-            context: context,
+          _AnimatedAppCard(
             title: 'Operational',
             icon: Icons.directions_car,
             color: Colors.red[700]!,
@@ -562,8 +559,7 @@ class _HomeDashboardTechnicianState extends State<HomeDashboardTechnician>
               );
             },
           ),
-          _buildAppCard(
-            context: context,
+          _AnimatedAppCard(
             title: 'Booking Room',
             icon: Icons.meeting_room,
             color: Colors.grey[700]!, // Greyed out color
@@ -582,95 +578,95 @@ class _HomeDashboardTechnicianState extends State<HomeDashboardTechnician>
     );
   }
 
-  Widget _buildAppCard({
-    required BuildContext context,
-    required String title,
-    required IconData icon,
-    required Color color,
-    required VoidCallback onTap,
-  }) {
-    // Buat versi lebih terang dari warna utama untuk background card
-    Color bgColor = Color.lerp(Colors.white, color, 0.30)!;
+  // Widget _buildAppCard({
+  //   required BuildContext context,
+  //   required String title,
+  //   required IconData icon,
+  //   required Color color,
+  //   required VoidCallback onTap,
+  // }) {
+  //   // Buat versi lebih terang dari warna utama untuk background card
+  //   Color bgColor = Color.lerp(Colors.white, color, 0.30)!;
 
-    return Card(
-      elevation: 0,
-      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(24)),
-      child: InkWell(
-        onTap: onTap,
-        borderRadius: BorderRadius.circular(24),
-        child: Container(
-          decoration: BoxDecoration(
-            borderRadius: BorderRadius.circular(24),
-            // Gunakan warna solid (bukan gradasi)
-            color: bgColor, // Warna solid yang sesuai dengan tema card
-            boxShadow: [
-              BoxShadow(
-                color: color.withOpacity(0.15),
-                blurRadius: 20,
-                spreadRadius: 0,
-                offset: const Offset(5, 10),
-              ),
-            ],
-            border: Border.all(
-              color: color.withOpacity(0.3),
-              width: 1.5,
-            ),
-          ),
-          child: Column(
-            mainAxisAlignment: MainAxisAlignment.center,
-            children: [
-              Container(
-                padding: const EdgeInsets.all(16),
-                decoration: BoxDecoration(
-                  color: Colors.white
-                      .withOpacity(0.7), // Background putih semi-transparan
-                  shape: BoxShape.circle,
-                  boxShadow: [
-                    BoxShadow(
-                      color: color.withOpacity(0.1),
-                      blurRadius: 10,
-                      spreadRadius: 0,
-                      offset: const Offset(0, 5),
-                    ),
-                  ],
-                ),
-                child: Icon(icon, size: 32, color: color),
-              ),
-              const SizedBox(height: 16),
-              Text(
-                title,
-                textAlign: TextAlign.center,
-                style: TextStyle(
-                  fontSize: 16,
-                  fontWeight: FontWeight.w600,
-                  color: color.withOpacity(0.9), // Warna teks yang sesuai
-                  letterSpacing: 0.5,
-                ),
-              ),
-              const SizedBox(height: 8),
-              Container(
-                padding:
-                    const EdgeInsets.symmetric(horizontal: 12, vertical: 4),
-                decoration: BoxDecoration(
-                  color:
-                      Colors.white.withOpacity(0.5), // Background lebih terang
-                  borderRadius: BorderRadius.circular(12),
-                ),
-                child: Text(
-                  'Open',
-                  style: TextStyle(
-                    fontSize: 11,
-                    fontWeight: FontWeight.w600,
-                    color: color, // Warna teks yang sama dengan ikon
-                  ),
-                ),
-              ),
-            ],
-          ),
-        ),
-      ),
-    );
-  }
+  //   return Card(
+  //     elevation: 0,
+  //     shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(24)),
+  //     child: InkWell(
+  //       onTap: onTap,
+  //       borderRadius: BorderRadius.circular(24),
+  //       child: Container(
+  //         decoration: BoxDecoration(
+  //           borderRadius: BorderRadius.circular(24),
+  //           // Gunakan warna solid (bukan gradasi)
+  //           color: bgColor, // Warna solid yang sesuai dengan tema card
+  //           boxShadow: [
+  //             BoxShadow(
+  //               color: color.withOpacity(0.15),
+  //               blurRadius: 20,
+  //               spreadRadius: 0,
+  //               offset: const Offset(5, 10),
+  //             ),
+  //           ],
+  //           border: Border.all(
+  //             color: color.withOpacity(0.3),
+  //             width: 1.5,
+  //           ),
+  //         ),
+  //         child: Column(
+  //           mainAxisAlignment: MainAxisAlignment.center,
+  //           children: [
+  //             Container(
+  //               padding: const EdgeInsets.all(16),
+  //               decoration: BoxDecoration(
+  //                 color: Colors.white
+  //                     .withOpacity(0.7), // Background putih semi-transparan
+  //                 shape: BoxShape.circle,
+  //                 boxShadow: [
+  //                   BoxShadow(
+  //                     color: color.withOpacity(0.1),
+  //                     blurRadius: 10,
+  //                     spreadRadius: 0,
+  //                     offset: const Offset(0, 5),
+  //                   ),
+  //                 ],
+  //               ),
+  //               child: Icon(icon, size: 32, color: color),
+  //             ),
+  //             const SizedBox(height: 16),
+  //             Text(
+  //               title,
+  //               textAlign: TextAlign.center,
+  //               style: TextStyle(
+  //                 fontSize: 16,
+  //                 fontWeight: FontWeight.w600,
+  //                 color: color.withOpacity(0.9), // Warna teks yang sesuai
+  //                 letterSpacing: 0.5,
+  //               ),
+  //             ),
+  //             const SizedBox(height: 8),
+  //             Container(
+  //               padding:
+  //                   const EdgeInsets.symmetric(horizontal: 12, vertical: 4),
+  //               decoration: BoxDecoration(
+  //                 color:
+  //                     Colors.white.withOpacity(0.5), // Background lebih terang
+  //                 borderRadius: BorderRadius.circular(12),
+  //               ),
+  //               child: Text(
+  //                 'Open',
+  //                 style: TextStyle(
+  //                   fontSize: 11,
+  //                   fontWeight: FontWeight.w600,
+  //                   color: color, // Warna teks yang sama dengan ikon
+  //                 ),
+  //               ),
+  //             ),
+  //           ],
+  //         ),
+  //       ),
+  //     ),
+  //   );
+  // }
 
   void _showProfileDialog() {
     if (currentUser == null) return;
@@ -1931,6 +1927,36 @@ class _TechnicianStatusTabState extends State<TechnicianStatusTab>
                   ],
                 ),
                 const SizedBox(height: 8),
+                if (!isResourceRequest && task.hasValidImage()) ...[
+                  const SizedBox(height: 12),
+                  SizedBox(
+                    width: double.infinity,
+                    height: 150,
+                    child: ClipRRect(
+                      borderRadius: BorderRadius.circular(12),
+                      child: FirebaseStorageImage(
+                        imageUrl: task.getNormalizedImageUrl(),
+                        fit: BoxFit.cover,
+                        placeholder: Container(
+                          color: Colors.grey[200],
+                          child:
+                              const Center(child: CircularProgressIndicator()),
+                        ),
+                        errorWidget: Container(
+                          color: Colors.grey[200],
+                          child: Center(
+                            child: Icon(
+                              Icons.image_not_supported_outlined,
+                              color: Colors.grey[400],
+                              size: 40,
+                            ),
+                          ),
+                        ),
+                      ),
+                    ),
+                  ),
+                ],
+                const SizedBox(height: 12),
                 Container(
                   width: double.infinity,
                   padding:
@@ -1964,6 +1990,10 @@ class _TechnicianStatusTabState extends State<TechnicianStatusTab>
                     Icons.calendar_today_outlined,
                     'Time: ${task.timeRequired!}',
                   ),
+                _buildCompactInfoRow(
+                  Icons.access_time,
+                  'Assigned: ${DateFormat('dd MMM').format(task.assignedAt)}',
+                ),
               ],
             ),
           ),
@@ -3142,5 +3172,138 @@ class _TechnicianStatusTabState extends State<TechnicianStatusTab>
         _fetchData(); // Refresh the list
       }
     }
+  }
+}
+
+class _AnimatedAppCard extends StatefulWidget {
+  const _AnimatedAppCard({
+    required this.title,
+    required this.icon,
+    required this.color,
+    required this.onTap,
+  });
+
+  final String title;
+  final IconData icon;
+  final Color color;
+  final VoidCallback onTap;
+
+  @override
+  State<_AnimatedAppCard> createState() => _AnimatedAppCardState();
+}
+
+class _AnimatedAppCardState extends State<_AnimatedAppCard> {
+  bool _isPressed = false;
+
+  @override
+  Widget build(BuildContext context) {
+    final scale = _isPressed ? 0.95 : 1.0;
+    final bgColor = Color.lerp(Colors.white, widget.color, 0.30)!;
+
+    return AnimatedScale(
+      scale: scale,
+      duration: const Duration(milliseconds: 150),
+      curve: Curves.fastOutSlowIn,
+      child: Card(
+        elevation: 0,
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(24)),
+        child: InkWell(
+          onTap: widget.onTap,
+          onHighlightChanged: (isHighlighted) {
+            setState(() {
+              _isPressed = isHighlighted;
+            });
+          },
+          borderRadius: BorderRadius.circular(24),
+          child: Container(
+            decoration: BoxDecoration(
+              borderRadius: BorderRadius.circular(24),
+              color: bgColor,
+              boxShadow: [
+                BoxShadow(
+                  color: widget.color.withOpacity(0.15),
+                  blurRadius: 20,
+                  spreadRadius: 0,
+                  offset: const Offset(5, 10),
+                ),
+              ],
+              border: Border.all(
+                color: widget.color.withOpacity(0.3),
+                width: 1.5,
+              ),
+            ),
+            child: Column(
+              mainAxisAlignment: MainAxisAlignment.center,
+              children: [
+                Container(
+                  padding: const EdgeInsets.all(16),
+                  decoration: BoxDecoration(
+                    color: Colors.white.withOpacity(0.7),
+                    shape: BoxShape.circle,
+                    boxShadow: [
+                      BoxShadow(
+                        color: widget.color.withOpacity(0.1),
+                        blurRadius: 10,
+                        spreadRadius: 0,
+                        offset: const Offset(0, 5),
+                      ),
+                    ],
+                  ),
+                  child: Icon(widget.icon, size: 32, color: widget.color),
+                ),
+                const SizedBox(height: 16),
+                Text(
+                  widget.title,
+                  textAlign: TextAlign.center,
+                  style: TextStyle(
+                    fontSize: 16,
+                    fontWeight: FontWeight.w600,
+                    color: widget.color.withOpacity(0.9),
+                    letterSpacing: 0.5,
+                  ),
+                ),
+                const SizedBox(height: 8),
+                Container(
+                    padding:
+                        const EdgeInsets.symmetric(horizontal: 12, vertical: 4),
+                    child: Icon(
+                      Icons.open_in_new,
+                      size: 16,
+                      color: widget.color,
+                    )),
+              ],
+            ),
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+class _AnimatedListItem extends StatefulWidget {
+  final Widget child;
+  const _AnimatedListItem({required this.child});
+
+  @override
+  State<_AnimatedListItem> createState() => _AnimatedListItemState();
+}
+
+class _AnimatedListItemState extends State<_AnimatedListItem> {
+  bool _isPressed = false;
+
+  @override
+  Widget build(BuildContext context) {
+    final scale = _isPressed ? 0.96 : 1.0;
+    return GestureDetector(
+      onTapDown: (_) => setState(() => _isPressed = true),
+      onTapUp: (_) => setState(() => _isPressed = false),
+      onTapCancel: () => setState(() => _isPressed = false),
+      child: AnimatedScale(
+        scale: scale,
+        duration: const Duration(milliseconds: 150),
+        curve: Curves.fastOutSlowIn,
+        child: widget.child,
+      ),
+    );
   }
 }

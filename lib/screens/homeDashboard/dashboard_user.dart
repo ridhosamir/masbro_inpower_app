@@ -96,8 +96,6 @@ class _HomeDashboardUserState extends State<HomeDashboardUser>
     return Scaffold(
       backgroundColor: const Color(0xFFF4F6F8),
       extendBodyBehindAppBar: true,
-      
-           
       body: currentUser == null
           ? _buildLoading()
           : Stack(
@@ -108,7 +106,7 @@ class _HomeDashboardUserState extends State<HomeDashboardUser>
                     return <Widget>[
                       SliverAppBar(
                         backgroundColor: const Color(0xFF0277BD),
-                        expandedHeight: 350.0, 
+                        expandedHeight: 350.0,
                         floating: false,
                         pinned: true,
                         automaticallyImplyLeading: false,
@@ -176,8 +174,8 @@ class _HomeDashboardUserState extends State<HomeDashboardUser>
                             unselectedLabelStyle: const TextStyle(
                                 fontWeight: FontWeight.normal, fontSize: 16),
                             tabs: const [
-                              Tab(text: 'Status'),
-                              Tab(text: 'Application'),
+                              Tab(icon: Icon(Icons.update)),
+                              Tab(icon: Icon(Icons.apps)),
                             ],
                             indicator: const UnderlineTabIndicator(
                               borderSide:
@@ -197,9 +195,6 @@ class _HomeDashboardUserState extends State<HomeDashboardUser>
                     ],
                   ),
                 ),
-
- 
-               
               ],
             ),
     );
@@ -262,7 +257,7 @@ class _HomeDashboardUserState extends State<HomeDashboardUser>
       ),
     );
   }
-  
+
   Widget _buildProfileButton() {
     return Container(
       decoration: BoxDecoration(
@@ -345,7 +340,7 @@ class _HomeDashboardUserState extends State<HomeDashboardUser>
               ),
             ),
           ),
-          
+
           // Content
           SafeArea(
             child: Padding(
@@ -393,7 +388,7 @@ class _HomeDashboardUserState extends State<HomeDashboardUser>
                           ],
                         ),
                         const SizedBox(height: 30),
-                        
+
                         // User welcome section with glass effect
                         ClipRRect(
                           borderRadius: BorderRadius.circular(20),
@@ -426,7 +421,8 @@ class _HomeDashboardUserState extends State<HomeDashboardUser>
                                         padding: const EdgeInsets.all(10),
                                         decoration: BoxDecoration(
                                           color: Colors.white.withOpacity(0.25),
-                                          borderRadius: BorderRadius.circular(14),
+                                          borderRadius:
+                                              BorderRadius.circular(14),
                                         ),
                                         child: const Icon(
                                           Icons.waving_hand,
@@ -466,7 +462,8 @@ class _HomeDashboardUserState extends State<HomeDashboardUser>
                                   ),
                                   const SizedBox(height: 10),
                                   Container(
-                                    padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+                                    padding: const EdgeInsets.symmetric(
+                                        horizontal: 12, vertical: 6),
                                     decoration: BoxDecoration(
                                       color: Colors.white.withOpacity(0.15),
                                       borderRadius: BorderRadius.circular(30),
@@ -483,7 +480,8 @@ class _HomeDashboardUserState extends State<HomeDashboardUser>
                                         Text(
                                           'Member since ${DateFormat('dd MMM yyyy').format(currentUser!.createdAt)}',
                                           style: TextStyle(
-                                            color: Colors.white.withOpacity(0.9),
+                                            color:
+                                                Colors.white.withOpacity(0.9),
                                             fontSize: 13,
                                             fontWeight: FontWeight.w500,
                                           ),
@@ -496,7 +494,7 @@ class _HomeDashboardUserState extends State<HomeDashboardUser>
                             ),
                           ),
                         ),
-                        
+
                         // Search bar
                         const SizedBox(height: 16),
                         Container(
@@ -511,7 +509,6 @@ class _HomeDashboardUserState extends State<HomeDashboardUser>
                               ),
                             ],
                           ),
-                          
                         ),
                       ],
                     ),
@@ -551,7 +548,8 @@ class _HomeDashboardUserState extends State<HomeDashboardUser>
                   color: Colors.blue.withOpacity(0.1),
                   shape: BoxShape.circle,
                 ),
-                child: Icon(Icons.person_outline, color: Colors.blue[700], size: 20),
+                child: Icon(Icons.person_outline,
+                    color: Colors.blue[700], size: 20),
               ),
               const SizedBox(width: 12),
               const Text('My Profile'),
@@ -584,16 +582,14 @@ class _HomeDashboardUserState extends State<HomeDashboardUser>
       color: const Color(0xFFF4F6F8),
       padding: const EdgeInsets.fromLTRB(10.0, 0.0, 10.0, 10.0),
       child: GridView.count(
-      padding: const EdgeInsets.fromLTRB(6, 30, 6, 30),
+        padding: const EdgeInsets.fromLTRB(6, 30, 6, 30),
         crossAxisCount: 2,
         crossAxisSpacing: 16,
         mainAxisSpacing: 16,
         children: [
-          _buildAppCard(
-            context: context,
+          _AnimatedAppCard(
             title: 'Maintenance',
             icon: Icons.construction,
-            // Gunakan warna solid yang lebih terang untuk card Maintenance
             color: Colors.orange[700]!,
             onTap: () {
               Navigator.push(
@@ -602,11 +598,9 @@ class _HomeDashboardUserState extends State<HomeDashboardUser>
               );
             },
           ),
-          _buildAppCard(
-            context: context,
+          _AnimatedAppCard(
             title: 'Resource/Item',
             icon: Icons.people_alt_outlined,
-            // Gunakan warna solid yang lebih terang untuk card Resource
             color: Colors.cyan[700]!,
             onTap: () {
               Navigator.push(
@@ -616,11 +610,9 @@ class _HomeDashboardUserState extends State<HomeDashboardUser>
               );
             },
           ),
-          _buildAppCard(
-            context: context,
+          _AnimatedAppCard(
             title: 'Operational',
             icon: Icons.directions_car,
-            // Gunakan warna solid yang lebih terang untuk card Operational
             color: Colors.red[700]!,
             onTap: () {
               Navigator.push(
@@ -630,11 +622,9 @@ class _HomeDashboardUserState extends State<HomeDashboardUser>
               );
             },
           ),
-          _buildAppCard(
-            context: context,
+          _AnimatedAppCard(
             title: 'Booking Room',
             icon: Icons.meeting_room,
-            // Gunakan warna solid yang lebih terang untuk card Booking
             color: Colors.teal[700]!,
             onTap: () {
               Navigator.push(
@@ -648,98 +638,87 @@ class _HomeDashboardUserState extends State<HomeDashboardUser>
       ),
     );
   }
- Widget _buildAppCard({
-    required BuildContext context,
-    required String title,
-    required IconData icon,
-    required Color color,
-    required VoidCallback onTap,
-  }) {
-    // Buat versi lebih terang dari warna utama untuk background card
-    Color bgColor =
-        Color.lerp(Colors.white, color, 0.30)!; 
 
-    return Card(
-      elevation: 0,
-      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(24)),
-      child: InkWell(
-        onTap: onTap,
-        borderRadius: BorderRadius.circular(24),
-        child: Container(
-          decoration: BoxDecoration(
-            borderRadius: BorderRadius.circular(24),
-            // Gunakan warna solid (bukan gradasi)
-            color: bgColor, // Warna solid yang sesuai dengan tema card
-            boxShadow: [
-              BoxShadow(
-                color: color.withOpacity(0.15),
-                blurRadius: 20,
-                spreadRadius: 0,
-                offset: const Offset(5, 10),
-              ),
-            ],
-            border: Border.all(
-              color: color.withOpacity(0.3),
-              width: 1.5,
-            ),
-          ),
-          child: Column(
-            mainAxisAlignment: MainAxisAlignment.center,
-            children: [
-              Container(
-                padding: const EdgeInsets.all(16),
-                decoration: BoxDecoration(
-                  color: Colors.white
-                      .withOpacity(0.7), // Background putih semi-transparan
-                  shape: BoxShape.circle,
-                  boxShadow: [
-                    BoxShadow(
-                      color: color.withOpacity(0.1),
-                      blurRadius: 10,
-                      spreadRadius: 0,
-                      offset: const Offset(0, 5),
-                    ),
-                  ],
-                ),
-                child: Icon(icon, size: 32, color: color),
-              ),
-              const SizedBox(height: 16),
-              Text(
-                title,
-                textAlign: TextAlign.center,
-                style: TextStyle(
-                  fontSize: 16,
-                  fontWeight: FontWeight.w600,
-                  color: color.withOpacity(0.9), // Warna teks yang sesuai
-                  letterSpacing: 0.5,
-                ),
-              ),
-              const SizedBox(height: 8),
-              Container(
-                padding:
-                    const EdgeInsets.symmetric(horizontal: 12, vertical: 4),
-                decoration: BoxDecoration(
-                  color:
-                      Colors.white.withOpacity(0.5), // Background lebih terang
-                  borderRadius: BorderRadius.circular(12),
-                ),
-                child: Text(
-                  'Open',
-                  style: TextStyle(
-                    fontSize: 11,
-                    fontWeight: FontWeight.w600,
-                    color: color, // Warna teks yang sama dengan ikon
-                  ),
-                ),
-              ),
-            ],
-          ),
-        ),
-      ),
-    );
-  }
+  // Widget _buildAppCard({
+  //   required BuildContext context,
+  //   required String title,
+  //   required IconData icon,
+  //   required Color color,
+  //   required VoidCallback onTap,
+  // }) {
+  //   // Buat versi lebih terang dari warna utama untuk background card
+  //   Color bgColor = Color.lerp(Colors.white, color, 0.30)!;
 
-  
+  //   return Card(
+  //     elevation: 0,
+  //     shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(24)),
+  //     child: InkWell(
+  //       onTap: onTap,
+  //       borderRadius: BorderRadius.circular(24),
+  //       child: Container(
+  //         decoration: BoxDecoration(
+  //           borderRadius: BorderRadius.circular(24),
+  //           // Gunakan warna solid (bukan gradasi)
+  //           color: bgColor, // Warna solid yang sesuai dengan tema card
+  //           boxShadow: [
+  //             BoxShadow(
+  //               color: color.withOpacity(0.15),
+  //               blurRadius: 20,
+  //               spreadRadius: 0,
+  //               offset: const Offset(5, 10),
+  //             ),
+  //           ],
+  //           border: Border.all(
+  //             color: color.withOpacity(0.3),
+  //             width: 1.5,
+  //           ),
+  //         ),
+  //         child: Column(
+  //           mainAxisAlignment: MainAxisAlignment.center,
+  //           children: [
+  //             Container(
+  //               padding: const EdgeInsets.all(16),
+  //               decoration: BoxDecoration(
+  //                 color: Colors.white
+  //                     .withOpacity(0.7), // Background putih semi-transparan
+  //                 shape: BoxShape.circle,
+  //                 boxShadow: [
+  //                   BoxShadow(
+  //                     color: color.withOpacity(0.1),
+  //                     blurRadius: 10,
+  //                     spreadRadius: 0,
+  //                     offset: const Offset(0, 5),
+  //                   ),
+  //                 ],
+  //               ),
+  //               child: Icon(icon, size: 32, color: color),
+  //             ),
+  //             const SizedBox(height: 16),
+  //             Text(
+  //               title,
+  //               textAlign: TextAlign.center,
+  //               style: TextStyle(
+  //                 fontSize: 16,
+  //                 fontWeight: FontWeight.w600,
+  //                 color: color.withOpacity(0.9), // Warna teks yang sesuai
+  //                 letterSpacing: 0.5,
+  //               ),
+  //             ),
+  //             const SizedBox(height: 8),
+  //             Container(
+  //                 padding:
+  //                     const EdgeInsets.symmetric(horizontal: 12, vertical: 4),
+  //                 child: Icon(
+  //                   Icons.open_in_new,
+  //                   size: 16,
+  //                   color: color,
+  //                 )),
+  //           ],
+  //         ),
+  //       ),
+  //     ),
+  //   );
+  // }
 
   void _showProfileDialog() {
     if (currentUser == null) return;
@@ -907,7 +886,8 @@ class _HomeDashboardUserState extends State<HomeDashboardUser>
                   ElevatedButton(
                     onPressed: () {
                       Navigator.pop(context);
-                      Provider.of<AuthService>(context, listen: false).signOut();
+                      Provider.of<AuthService>(context, listen: false)
+                          .signOut();
                     },
                     style: ElevatedButton.styleFrom(
                       backgroundColor: Colors.red,
@@ -1010,7 +990,8 @@ class _StatusTabState extends State<StatusTab>
                       color: Colors.blue.withOpacity(0.1),
                       shape: BoxShape.circle,
                     ),
-                    child: Icon(Icons.filter_list, color: Colors.blue[700], size: 20),
+                    child: Icon(Icons.filter_list,
+                        color: Colors.blue[700], size: 20),
                   ),
                   const SizedBox(width: 12),
                   Text(
@@ -1034,7 +1015,8 @@ class _StatusTabState extends State<StatusTab>
                 style: ElevatedButton.styleFrom(
                   backgroundColor: Theme.of(context).primaryColor,
                   foregroundColor: Colors.white,
-                  padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 12),
+                  padding:
+                      const EdgeInsets.symmetric(horizontal: 20, vertical: 12),
                   shape: RoundedRectangleBorder(
                     borderRadius: BorderRadius.circular(12),
                   ),
@@ -1047,7 +1029,7 @@ class _StatusTabState extends State<StatusTab>
       ),
     );
   }
-  
+
   Widget _buildFilterOption(String title, String value) {
     return InkWell(
       onTap: () {
@@ -1060,10 +1042,10 @@ class _StatusTabState extends State<StatusTab>
         child: Row(
           children: [
             Icon(
-              _selectedFilter == value 
+              _selectedFilter == value
                   ? Icons.radio_button_checked
                   : Icons.radio_button_unchecked,
-              color: _selectedFilter == value 
+              color: _selectedFilter == value
                   ? Theme.of(context).primaryColor
                   : Colors.grey[400],
               size: 20,
@@ -1074,7 +1056,7 @@ class _StatusTabState extends State<StatusTab>
               style: TextStyle(
                 fontSize: 16,
                 color: Colors.grey[800],
-                fontWeight: _selectedFilter == value 
+                fontWeight: _selectedFilter == value
                     ? FontWeight.w600
                     : FontWeight.normal,
               ),
@@ -1256,7 +1238,8 @@ class _StatusTabState extends State<StatusTab>
               width: 50,
               height: 50,
               child: CircularProgressIndicator(
-                valueColor: AlwaysStoppedAnimation<Color>(Theme.of(context).primaryColor),
+                valueColor: AlwaysStoppedAnimation<Color>(
+                    Theme.of(context).primaryColor),
                 strokeWidth: 3,
               ),
             ),
@@ -1372,7 +1355,8 @@ class _StatusTabState extends State<StatusTab>
                   const Spacer(),
                   TextButton.icon(
                     onPressed: _clearTimeFilter,
-                    icon: Icon(Icons.clear, color: Colors.purple[700], size: 16),
+                    icon:
+                        Icon(Icons.clear, color: Colors.purple[700], size: 16),
                     label: Text(
                       'Clear',
                       style: TextStyle(color: Colors.purple[700]),
@@ -1512,7 +1496,7 @@ class _StatusTabState extends State<StatusTab>
     final openCount =
         _combinedList.where((item) => item.status == 'open').length;
     final inProgressCount =
-        _combinedList.where((item) => item.status == 'inProgress' || item.status == 'approved').length;
+        _combinedList.where((item) => item.status == 'inProgress').length;
 
     return Padding(
       padding: const EdgeInsets.fromLTRB(16, 16, 16, 0),
@@ -1574,7 +1558,7 @@ class _StatusTabState extends State<StatusTab>
         // Filter Button
         Container(
           decoration: BoxDecoration(
-            color: _selectedFilter != 'all' 
+            color: _selectedFilter != 'all'
                 ? Colors.purple.withOpacity(0.1)
                 : Colors.grey[100],
             shape: BoxShape.circle,
@@ -1672,7 +1656,7 @@ class _StatusTabState extends State<StatusTab>
     );
   }
 
- Widget _buildStatusChip(String status) {
+  Widget _buildStatusChip(String status) {
     String text;
     Color color;
     Color backgroundColor;
@@ -1684,7 +1668,6 @@ class _StatusTabState extends State<StatusTab>
         backgroundColor = Colors.red.withOpacity(0.1);
         break;
       case 'inProgress':
-      case 'approved':
         text = 'IN PROGRESS';
         color = Colors.blue.shade700;
         backgroundColor = Colors.blue.withOpacity(0.1);
@@ -1712,579 +1695,102 @@ class _StatusTabState extends State<StatusTab>
       ),
     );
   }
-Widget _buildUnifiedReportCard(ReportModel report) {
-  return Card(
-    margin: const EdgeInsets.only(bottom: 16),
-    elevation: 0,
-    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
-    child: InkWell(
-      onTap: () => _navigateToDetail(report),
-      borderRadius: BorderRadius.circular(20),
-      child: Container(
-        decoration: BoxDecoration(
+
+  Widget _buildUnifiedReportCard(ReportModel report) {
+    return _AnimatedListItem(
+      child: Card(
+        margin: const EdgeInsets.only(bottom: 16),
+        elevation: 0,
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
+        child: InkWell(
+          onTap: () => _navigateToDetail(report),
           borderRadius: BorderRadius.circular(20),
-          color: Colors.white,
-          boxShadow: [
-            BoxShadow(
-              color: Colors.orange.withOpacity(0.15),
-              blurRadius: 10,
-              spreadRadius: 0,
-              offset: const Offset(0, 5),
-            ),
-          ],
-          border: Border.all(
-            color: Colors.orange.withOpacity(0.1),
-            width: 1.5,
-          ),
-        ),
-        child: Padding(
-          padding: const EdgeInsets.all(12.0), // Reduced padding
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            mainAxisSize: MainAxisSize.min, // Added to minimize height
-            children: [
-              // Header row
-              Row(
-                children: [
-                  Container(
-                    padding: const EdgeInsets.all(8), // Reduced padding
-                    decoration: BoxDecoration(
-                      color: Colors.orange.withOpacity(0.1),
-                      borderRadius: BorderRadius.circular(12),
-                    ),
-                    child: Icon(Icons.construction, color: Colors.orange[700], size: 18), // Smaller icon
-                  ),
-                  const SizedBox(width: 8), // Reduced spacing
-                  Expanded(
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        const Text(
-                          'Report Maintenance',
-                          style: TextStyle(
-                            fontWeight: FontWeight.bold,
-                            fontSize: 14, // Smaller font
-                            color: Color(0xFF2D3748),
-                          ),
-                        ),
-                        const SizedBox(height: 2), // Reduced spacing
-                        _buildStatusChip(report.status),
-                      ],
-                    ),
-                  ),
-                  Icon(Icons.arrow_forward_ios, size: 14, color: Colors.grey[400]), // Smaller icon
-                ],
-              ),
-              
-              // Optional image with fixed height
-              if (report.imageUrl != null && report.hasValidImage()) ...[
-                const SizedBox(height: 8), // Reduced spacing
-                SizedBox(
-                  height: 100, // Reduced height
-                  child: ClipRRect(
-                    borderRadius: BorderRadius.circular(12),
-                    child: FirebaseStorageImage(
-                      imageUrl: report.imageUrl!,
-                      fit: BoxFit.cover,
-                      width: double.infinity,
-                    ),
-                  ),
+          child: Container(
+            decoration: BoxDecoration(
+              borderRadius: BorderRadius.circular(20),
+              color: Colors.white,
+              boxShadow: [
+                BoxShadow(
+                  color: Colors.orange.withOpacity(0.15),
+                  blurRadius: 10,
+                  spreadRadius: 0,
+                  offset: const Offset(0, 5),
                 ),
               ],
-              
-              const SizedBox(height: 8), // Reduced spacing
-              
-              // Location info
-              Row(
-                children: [
-                  Icon(Icons.location_on, size: 14, color: Colors.grey[600]), // Smaller icon
-                  const SizedBox(width: 4), // Reduced spacing
-                  Expanded(
-                    child: Text(
-                      '${report.buildingName} - ${report.roomName}',
-                      style: TextStyle(
-                        fontWeight: FontWeight.w600,
-                        fontSize: 12, // Smaller font
-                        color: Colors.grey[800],
-                      ),
-                      maxLines: 1,
-                      overflow: TextOverflow.ellipsis,
-                    ),
-                  ),
-                ],
+              border: Border.all(
+                color: Colors.orange.withOpacity(0.1),
+                width: 1.5,
               ),
-              
-              const SizedBox(height: 6), // Reduced spacing
-              
-              // Description
-              Container(
-                width: double.infinity,
-                padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 8), // Reduced padding
-                decoration: BoxDecoration(
-                  color: Colors.grey[50],
-                  borderRadius: BorderRadius.circular(10),
-                  border: Border.all(
-                    color: Colors.grey[200]!,
-                    width: 1,
-                  ),
-                ),
-                child: Text(
-                  report.description,
-                  style: TextStyle(
-                    fontSize: 12, // Smaller font
-                    color: Colors.grey[700],
-                    height: 1.2, // Reduced line height
-                  ),
-                  maxLines: 2,
-                  overflow: TextOverflow.ellipsis,
-                ),
-              ),
-              
-              const SizedBox(height: 6), // Reduced spacing
-              
-              // Creation time
-              Row(
-                children: [
-                  Icon(Icons.access_time, size: 12, color: Colors.grey[500]), // Smaller icon
-                  const SizedBox(width: 4), // Reduced spacing
-                  Expanded(
-                    child: Text(
-                      'Created: ${DateFormat('dd MMM').format(report.createdAt)}', // Shorter date
-                      style: TextStyle(fontSize: 11, color: Colors.grey[600]), // Smaller font
-                      maxLines: 1,
-                      overflow: TextOverflow.ellipsis,
-                    ),
-                  ),
-                ],
-              ),
-            ],
-          ),
-        ),
-      ),
-    ),
-  );
-}
-
-// Replace the _buildUnifiedRequestCard method with this more compact version:
-Widget _buildUnifiedRequestCard(RequestModel request) {
-  final bool isResourceRequest = request.request == 'resource';
-
-  return Card(
-    margin: const EdgeInsets.only(bottom: 16),
-    elevation: 0,
-    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
-    child: InkWell(
-      onTap: () => _navigateToDetail(request),
-      borderRadius: BorderRadius.circular(20),
-      child: Container(
-        decoration: BoxDecoration(
-          borderRadius: BorderRadius.circular(20),
-          color: Colors.white,
-          boxShadow: [
-            BoxShadow(
-              color: Colors.cyan.withOpacity(0.15),
-              blurRadius: 10,
-              spreadRadius: 0,
-              offset: const Offset(0, 5),
             ),
-          ],
-          border: Border.all(
-            color: Colors.cyan.withOpacity(0.1),
-            width: 1.5,
-          ),
-        ),
-        child: Padding(
-          padding: const EdgeInsets.all(12.0), // Reduced padding
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            mainAxisSize: MainAxisSize.min, // Added to minimize height
-            children: [
-              // Header row
-              Row(
+            child: Padding(
+              padding: const EdgeInsets.all(12.0), // Reduced padding
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                mainAxisSize: MainAxisSize.min, // Added to minimize height
                 children: [
-                  Container(
-                    padding: const EdgeInsets.all(8), // Reduced padding
-                    decoration: BoxDecoration(
-                      color: Colors.cyan.withOpacity(0.1),
-                      borderRadius: BorderRadius.circular(12),
-                    ),
-                    child: Icon(
-                      isResourceRequest
-                          ? Icons.supervisor_account
-                          : Icons.inventory,
-                      size: 18, // Smaller icon
-                      color: Colors.cyan[700],
-                    ),
-                  ),
-                  const SizedBox(width: 8), // Reduced spacing
-                  Expanded(
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        const Text(
-                          'Request Resource/Item',
-                          style: TextStyle(
-                            fontWeight: FontWeight.bold,
-                            fontSize: 14, // Smaller font
-                            color: Color(0xFF2D3748),
-                          ),
+                  // Header row
+                  Row(
+                    children: [
+                      Container(
+                        padding: const EdgeInsets.all(8), // Reduced padding
+                        decoration: BoxDecoration(
+                          color: Colors.orange.withOpacity(0.1),
+                          borderRadius: BorderRadius.circular(12),
                         ),
-                        const SizedBox(height: 2), // Reduced spacing
-                        _buildStatusChip(request.status),
-                      ],
-                    ),
-                  ),
-                  Icon(Icons.arrow_forward_ios, size: 14, color: Colors.grey[400]), // Smaller icon
-                ],
-              ),
-              
-              const SizedBox(height: 8), // Reduced spacing
-              
-              // Optional image with fixed height
-              if (!isResourceRequest && request.hasValidImage()) ...[
-                SizedBox(
-                  height: 100, // Reduced height
-                  child: ClipRRect(
-                    borderRadius: BorderRadius.circular(12),
-                    child: FirebaseStorageImage(
-                      imageUrl: request.getNormalizedImageUrl(),
-                      fit: BoxFit.cover,
-                      placeholder: Container(
-                        color: Colors.grey[200],
-                        child: const Center(
-                          child: SizedBox(
-                            width: 20, // Smaller spinner
-                            height: 20,
-                            child: CircularProgressIndicator(
-                              strokeWidth: 2,
+                        child: Icon(Icons.construction,
+                            color: Colors.orange[700],
+                            size: 18), // Smaller icon
+                      ),
+                      const SizedBox(width: 8), // Reduced spacing
+                      Expanded(
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            const Text(
+                              'Report Maintenance',
+                              style: TextStyle(
+                                fontWeight: FontWeight.bold,
+                                fontSize: 14, // Smaller font
+                                color: Color(0xFF2D3748),
+                              ),
                             ),
-                          ),
+                            const SizedBox(height: 2), // Reduced spacing
+                            _buildStatusChip(report.status),
+                          ],
                         ),
                       ),
-                      errorWidget: Container(
-                        color: Colors.grey[200],
-                        child: Center(
-                          child: Icon(
-                            Icons.image_not_supported_outlined,
-                            color: Colors.grey[400],
-                            size: 30, // Smaller icon
-                          ),
+                      Icon(Icons.arrow_forward_ios,
+                          size: 14, color: Colors.grey[400]), // Smaller icon
+                    ],
+                  ),
+
+                  // Optional image with fixed height
+                  if (report.imageUrl != null && report.hasValidImage()) ...[
+                    const SizedBox(height: 8), // Reduced spacing
+                    SizedBox(
+                      height: 100, // Reduced height
+                      child: ClipRRect(
+                        borderRadius: BorderRadius.circular(12),
+                        child: FirebaseStorageImage(
+                          imageUrl: report.imageUrl!,
+                          fit: BoxFit.cover,
+                          width: double.infinity,
                         ),
                       ),
                     ),
-                  ),
-                ),
-                const SizedBox(height: 8), // Reduced spacing
-              ],
-              
-              // Description
-              Container(
-                width: double.infinity,
-                padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 8), // Reduced padding
-                decoration: BoxDecoration(
-                  color: Colors.grey[50],
-                  borderRadius: BorderRadius.circular(10),
-                  border: Border.all(
-                    color: Colors.grey[200]!,
-                    width: 1,
-                  ),
-                ),
-                child: Text(
-                  request.description,
-                  style: TextStyle(
-                    fontSize: 12, // Smaller font
-                    color: Colors.grey[700],
-                    height: 1.2, // Reduced line height
-                  ),
-                  maxLines: 2,
-                  overflow: TextOverflow.ellipsis,
-                ),
-              ),
-              
-              const SizedBox(height: 6), // Reduced spacing
-              
-              // Info row in two columns
-              Row(
-                children: [
-                  // First column
-                  Expanded(
-                    child: request.request == 'resource'
-                        ? _buildCompactInfoRow(Icons.supervisor_account, 'Resource')
-                        : _buildCompactInfoRow(Icons.inventory, 'Item'),
-                  ),
-                  // Second column
-                  Expanded(
-                    child: _buildCompactInfoRow(
-                      Icons.access_time,
-                      'Created: ${DateFormat('dd MMM').format(request.createdAt)}', // Shorter date
-                    ),
-                  ),
-                ],
-              ),
-              
-              // Optional time required
-              if (request.timeRequired != null && request.timeRequired!.isNotEmpty)
-                _buildCompactInfoRow(
-                  Icons.calendar_today_outlined,
-                  request.timeRequired!,
-                ),
-            ],
-          ),
-        ),
-      ),
-    ),
-  );
-}
+                  ],
 
-// Replace the _buildUnifiedOperasionalCard method with this more compact version:
-Widget _buildUnifiedOperasionalCard(RideRequestModel request) {
-  return Card(
-    margin: const EdgeInsets.only(bottom: 16),
-    elevation: 0,
-    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
-    child: InkWell(
-      onTap: () => _navigateToDetail(request),
-      borderRadius: BorderRadius.circular(20),
-      child: Container(
-        decoration: BoxDecoration(
-          borderRadius: BorderRadius.circular(20),
-          color: Colors.white,
-          boxShadow: [
-            BoxShadow(
-              color: Colors.red.withOpacity(0.15),
-              blurRadius: 10,
-              spreadRadius: 0,
-              offset: const Offset(0, 5),
-            ),
-          ],
-          border: Border.all(
-            color: Colors.red.withOpacity(0.1),
-            width: 1.5,
-          ),
-        ),
-        child: Padding(
-          padding: const EdgeInsets.all(12.0), // Reduced padding
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            mainAxisSize: MainAxisSize.min, // Added to minimize height
-            children: [
-              // Header row
-              Row(
-                children: [
-                  Container(
-                    padding: const EdgeInsets.all(8), // Reduced padding
-                    decoration: BoxDecoration(
-                      color: Colors.red.withOpacity(0.1),
-                      borderRadius: BorderRadius.circular(12),
-                    ),
-                    child: Icon(Icons.directions_car, color: Colors.red[700], size: 18), // Smaller icon
-                  ),
-                  const SizedBox(width: 8), // Reduced spacing
-                  Expanded(
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        const Text(
-                          'Request Operasional',
-                          style: TextStyle(
-                            fontWeight: FontWeight.bold,
-                            fontSize: 14, // Smaller font
-                            color: Color(0xFF2D3748),
-                          ),
-                        ),
-                        const SizedBox(height: 2), // Reduced spacing
-                        _buildStatusChip(request.status),
-                      ],
-                    ),
-                  ),
-                  Icon(Icons.arrow_forward_ios, size: 14, color: Colors.grey[400]), // Smaller icon
-                ],
-              ),
-              
-              const SizedBox(height: 8), // Reduced spacing
-              
-              // Locations in compact layout
-              Row(
-                children: [
-                  // Pickup location
-                  Expanded(
-                    child: Row(
-                      children: [
-                        Icon(Icons.my_location, size: 12, color: Colors.grey[600]), // Smaller icon
-                        const SizedBox(width: 4), // Reduced spacing
-                        Expanded(
-                          child: Text(
-                            'From: ${request.pickupLocation}',
-                            style: TextStyle(
-                              fontSize: 11, // Smaller font
-                              fontWeight: FontWeight.w600,
-                              color: Colors.grey[800],
-                            ),
-                            maxLines: 1,
-                            overflow: TextOverflow.ellipsis,
-                          ),
-                        ),
-                      ],
-                    ),
-                  ),
-                  const SizedBox(width: 8), // Reduced spacing
-                  // Dropoff location
-                  Expanded(
-                    child: Row(
-                      children: [
-                        Icon(Icons.location_on_outlined, size: 12, color: Colors.grey[600]), // Smaller icon
-                        const SizedBox(width: 4), // Reduced spacing
-                        Expanded(
-                          child: Text(
-                            'To: ${request.dropoffLocation}',
-                            style: TextStyle(
-                              fontSize: 11, // Smaller font
-                              fontWeight: FontWeight.w600,
-                              color: Colors.grey[800],
-                            ),
-                            maxLines: 1,
-                            overflow: TextOverflow.ellipsis,
-                          ),
-                        ),
-                      ],
-                    ),
-                  ),
-                ],
-              ),
-              
-              const SizedBox(height: 8), // Reduced spacing
-              
-              // Description
-              Container(
-                width: double.infinity,
-                padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 8), // Reduced padding
-                decoration: BoxDecoration(
-                  color: Colors.grey[50],
-                  borderRadius: BorderRadius.circular(10),
-                  border: Border.all(
-                    color: Colors.grey[200]!,
-                    width: 1,
-                  ),
-                ),
-                child: Text(
-                  request.description,
-                  style: TextStyle(
-                    fontSize: 12, // Smaller font
-                    color: Colors.grey[700],
-                    height: 1.2, // Reduced line height
-                  ),
-                  maxLines: 2,
-                  overflow: TextOverflow.ellipsis,
-                ),
-              ),
-              
-              const SizedBox(height: 6), // Reduced spacing
-              
-              // Dates in two columns
-              Row(
-                children: [
-                  // Pickup date
-                  Expanded(
-                    child: _buildCompactInfoRow(
-                      Icons.event,
-                      'Pickup: ${DateFormat('dd MMM').format(request.pickupDateTime)}', // Shorter date
-                    ),
-                  ),
-                  // Return date
-                  Expanded(
-                    child: _buildCompactInfoRow(
-                      Icons.event_available,
-                      'Return: ${DateFormat('dd MMM').format(request.pickupDateTime)}', // Shorter date
-                    ),
-                  ),
-                ],
-              ),
-            ],
-          ),
-        ),
-      ),
-    ),
-  );
-}
+                  const SizedBox(height: 8), // Reduced spacing
 
-// Replace the _buildUnifiedBookingCard method with this more compact version:
-Widget _buildUnifiedBookingCard(BookingModel booking) {
-  return Card(
-    margin: const EdgeInsets.only(bottom: 16),
-    elevation: 0,
-    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
-    child: InkWell(
-      onTap: () => _navigateToDetail(booking),
-      borderRadius: BorderRadius.circular(20),
-      child: Container(
-        decoration: BoxDecoration(
-          borderRadius: BorderRadius.circular(20),
-          color: Colors.white,
-          boxShadow: [
-            BoxShadow(
-              color: Colors.teal.withOpacity(0.15),
-              blurRadius: 10,
-              spreadRadius: 0,
-              offset: const Offset(0, 5),
-            ),
-          ],
-          border: Border.all(
-            color: Colors.teal.withOpacity(0.1),
-            width: 1.5,
-          ),
-        ),
-        child: Padding(
-          padding: const EdgeInsets.all(12.0), // Reduced padding
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            mainAxisSize: MainAxisSize.min, // Added to minimize height
-            children: [
-              // Header row
-              Row(
-                children: [
-                  Container(
-                    padding: const EdgeInsets.all(8), // Reduced padding
-                    decoration: BoxDecoration(
-                      color: Colors.teal.withOpacity(0.1),
-                      borderRadius: BorderRadius.circular(12),
-                    ),
-                    child: Icon(Icons.meeting_room, color: Colors.teal[700], size: 18), // Smaller icon
-                  ),
-                  const SizedBox(width: 8), // Reduced spacing
-                  Expanded(
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        const Text(
-                          'Booking Room',
-                          style: TextStyle(
-                            fontWeight: FontWeight.bold,
-                            fontSize: 14, // Smaller font
-                            color: Color(0xFF2D3748),
-                          ),
-                        ),
-                        const SizedBox(height: 2), // Reduced spacing
-                        _buildStatusChip(booking.status),
-                      ],
-                    ),
-                  ),
-                  Icon(Icons.arrow_forward_ios, size: 14, color: Colors.grey[400]), // Smaller icon
-                ],
-              ),
-              
-              const SizedBox(height: 8), // Reduced spacing
-              
-              // Room info in compact layout
-              Row(
-                children: [
-                  Icon(Icons.meeting_room_outlined, size: 14, color: Colors.teal[700]), // Smaller icon
-                  const SizedBox(width: 6), // Reduced spacing
-                  Expanded(
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        Text(
-                          booking.roomName.isEmpty ? 'Room not specified' : booking.roomName,
+                  // Location info
+                  Row(
+                    children: [
+                      Icon(Icons.location_on,
+                          size: 14, color: Colors.grey[600]), // Smaller icon
+                      const SizedBox(width: 4), // Reduced spacing
+                      Expanded(
+                        child: Text(
+                          '${report.buildingName} - ${report.roomName}',
                           style: TextStyle(
                             fontWeight: FontWeight.w600,
                             fontSize: 12, // Smaller font
@@ -2293,103 +1799,749 @@ Widget _buildUnifiedBookingCard(BookingModel booking) {
                           maxLines: 1,
                           overflow: TextOverflow.ellipsis,
                         ),
-                        Text(
-                          _formatCompactBookingDuration(
-                            booking.usageStartDate,
-                            booking.usageEndDate,
-                          ),
+                      ),
+                    ],
+                  ),
+
+                  const SizedBox(height: 6), // Reduced spacing
+
+                  // Description
+                  Container(
+                    width: double.infinity,
+                    padding: const EdgeInsets.symmetric(
+                        horizontal: 10, vertical: 8), // Reduced padding
+                    decoration: BoxDecoration(
+                      color: Colors.grey[50],
+                      borderRadius: BorderRadius.circular(10),
+                      border: Border.all(
+                        color: Colors.grey[200]!,
+                        width: 1,
+                      ),
+                    ),
+                    child: Text(
+                      report.description,
+                      style: TextStyle(
+                        fontSize: 12, // Smaller font
+                        color: Colors.grey[700],
+                        height: 1.2, // Reduced line height
+                      ),
+                      maxLines: 2,
+                      overflow: TextOverflow.ellipsis,
+                    ),
+                  ),
+
+                  const SizedBox(height: 6), // Reduced spacing
+
+                  // Creation time
+                  Row(
+                    children: [
+                      Icon(Icons.access_time,
+                          size: 12, color: Colors.grey[500]), // Smaller icon
+                      const SizedBox(width: 4), // Reduced spacing
+                      Expanded(
+                        child: Text(
+                          'Created: ${DateFormat('dd MMM').format(report.createdAt)}', // Shorter date
                           style: TextStyle(
-                            fontSize: 11, // Smaller font
-                            color: Colors.grey[600],
-                          ),
+                              fontSize: 11,
+                              color: Colors.grey[600]), // Smaller font
                           maxLines: 1,
                           overflow: TextOverflow.ellipsis,
                         ),
-                      ],
-                    ),
+                      ),
+                    ],
                   ),
                 ],
               ),
-              
-              const SizedBox(height: 8), // Reduced spacing
-              
-              // Description
-              Container(
-                width: double.infinity,
-                padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 8), // Reduced padding
-                decoration: BoxDecoration(
-                  color: Colors.grey[50],
-                  borderRadius: BorderRadius.circular(10),
-                  border: Border.all(
-                    color: Colors.grey[200]!,
-                    width: 1,
-                  ),
-                ),
-                child: Text(
-                  booking.eventAgenda,
-                  style: TextStyle(
-                    fontSize: 12, // Smaller font
-                    color: Colors.grey[700],
-                    height: 1.2, // Reduced line height
-                  ),
-                  maxLines: 2,
-                  overflow: TextOverflow.ellipsis,
-                ),
-              ),
-              
-              const SizedBox(height: 6), // Reduced spacing
-              
-              // Creation date
-              _buildCompactInfoRow(
-                Icons.access_time,
-                'Created: ${DateFormat('dd MMM').format(booking.createdAt)}', // Shorter date
-              ),
-            ],
+            ),
           ),
         ),
       ),
-    ),
-  );
-}
+    );
+  }
+
+// Replace the _buildUnifiedRequestCard method with this more compact version:
+  Widget _buildUnifiedRequestCard(RequestModel request) {
+    final bool isResourceRequest = request.request == 'resource';
+
+    return _AnimatedListItem(
+      child: Card(
+        margin: const EdgeInsets.only(bottom: 16),
+        elevation: 0,
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
+        child: InkWell(
+          onTap: () => _navigateToDetail(request),
+          borderRadius: BorderRadius.circular(20),
+          child: Container(
+            decoration: BoxDecoration(
+              borderRadius: BorderRadius.circular(20),
+              color: Colors.white,
+              boxShadow: [
+                BoxShadow(
+                  color: Colors.cyan.withOpacity(0.15),
+                  blurRadius: 10,
+                  spreadRadius: 0,
+                  offset: const Offset(0, 5),
+                ),
+              ],
+              border: Border.all(
+                color: Colors.cyan.withOpacity(0.1),
+                width: 1.5,
+              ),
+            ),
+            child: Padding(
+              padding: const EdgeInsets.all(12.0), // Reduced padding
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                mainAxisSize: MainAxisSize.min, // Added to minimize height
+                children: [
+                  // Header row
+                  Row(
+                    children: [
+                      Container(
+                        padding: const EdgeInsets.all(8), // Reduced padding
+                        decoration: BoxDecoration(
+                          color: Colors.cyan.withOpacity(0.1),
+                          borderRadius: BorderRadius.circular(12),
+                        ),
+                        child: Icon(
+                          isResourceRequest
+                              ? Icons.supervisor_account
+                              : Icons.inventory,
+                          size: 18, // Smaller icon
+                          color: Colors.cyan[700],
+                        ),
+                      ),
+                      const SizedBox(width: 8), // Reduced spacing
+                      Expanded(
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            const Text(
+                              'Request Resource/Item',
+                              style: TextStyle(
+                                fontWeight: FontWeight.bold,
+                                fontSize: 14, // Smaller font
+                                color: Color(0xFF2D3748),
+                              ),
+                            ),
+                            const SizedBox(height: 2), // Reduced spacing
+                            _buildStatusChip(request.status),
+                          ],
+                        ),
+                      ),
+                      Icon(Icons.arrow_forward_ios,
+                          size: 14, color: Colors.grey[400]), // Smaller icon
+                    ],
+                  ),
+
+                  const SizedBox(height: 8), // Reduced spacing
+
+                  // Optional image with fixed height
+                  if (!isResourceRequest && request.hasValidImage()) ...[
+                    SizedBox(
+                      height: 100, // Reduced height
+                      child: ClipRRect(
+                        borderRadius: BorderRadius.circular(12),
+                        child: FirebaseStorageImage(
+                          imageUrl: request.getNormalizedImageUrl(),
+                          fit: BoxFit.cover,
+                          width: double.infinity,
+                          placeholder: Container(
+                            color: Colors.grey[200],
+                            child: const Center(
+                              child: SizedBox(
+                                width: 20, // Smaller spinner
+                                height: 20,
+                                child: CircularProgressIndicator(
+                                  strokeWidth: 2,
+                                ),
+                              ),
+                            ),
+                          ),
+                          errorWidget: Container(
+                            color: Colors.grey[200],
+                            child: Center(
+                              child: Icon(
+                                Icons.image_not_supported_outlined,
+                                color: Colors.grey[400],
+                                size: 30, // Smaller icon
+                              ),
+                            ),
+                          ),
+                        ),
+                      ),
+                    ),
+                    const SizedBox(height: 8), // Reduced spacing
+                  ],
+
+                  // Description
+                  Container(
+                    width: double.infinity,
+                    padding: const EdgeInsets.symmetric(
+                        horizontal: 10, vertical: 8), // Reduced padding
+                    decoration: BoxDecoration(
+                      color: Colors.grey[50],
+                      borderRadius: BorderRadius.circular(10),
+                      border: Border.all(
+                        color: Colors.grey[200]!,
+                        width: 1,
+                      ),
+                    ),
+                    child: Text(
+                      request.description,
+                      style: TextStyle(
+                        fontSize: 12, // Smaller font
+                        color: Colors.grey[700],
+                        height: 1.2, // Reduced line height
+                      ),
+                      maxLines: 2,
+                      overflow: TextOverflow.ellipsis,
+                    ),
+                  ),
+
+                  const SizedBox(height: 6), // Reduced spacing
+
+                  // Info row in two columns
+                  Row(
+                    children: [
+                      // First column
+                      Expanded(
+                        child: request.request == 'resource'
+                            ? _buildCompactInfoRow(
+                                Icons.supervisor_account, 'Resource')
+                            : _buildCompactInfoRow(Icons.inventory, 'Item'),
+                      ),
+                      // Second column
+                      Expanded(
+                        child: _buildCompactInfoRow(
+                          Icons.access_time,
+                          'Created: ${DateFormat('dd MMM').format(request.createdAt)}', // Shorter date
+                        ),
+                      ),
+                    ],
+                  ),
+
+                  // Optional time required
+                  if (request.timeRequired != null &&
+                      request.timeRequired!.isNotEmpty)
+                    _buildCompactInfoRow(
+                      Icons.calendar_today_outlined,
+                      request.timeRequired!,
+                    ),
+                ],
+              ),
+            ),
+          ),
+        ),
+      ),
+    );
+  }
+
+// Replace the _buildUnifiedOperasionalCard method with this more compact version:
+  Widget _buildUnifiedOperasionalCard(RideRequestModel request) {
+    return _AnimatedListItem(
+      child: Card(
+        margin: const EdgeInsets.only(bottom: 16),
+        elevation: 0,
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
+        child: InkWell(
+          onTap: () => _navigateToDetail(request),
+          borderRadius: BorderRadius.circular(20),
+          child: Container(
+            decoration: BoxDecoration(
+              borderRadius: BorderRadius.circular(20),
+              color: Colors.white,
+              boxShadow: [
+                BoxShadow(
+                  color: Colors.red.withOpacity(0.15),
+                  blurRadius: 10,
+                  spreadRadius: 0,
+                  offset: const Offset(0, 5),
+                ),
+              ],
+              border: Border.all(
+                color: Colors.red.withOpacity(0.1),
+                width: 1.5,
+              ),
+            ),
+            child: Padding(
+              padding: const EdgeInsets.all(12.0), // Reduced padding
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                mainAxisSize: MainAxisSize.min, // Added to minimize height
+                children: [
+                  // Header row
+                  Row(
+                    children: [
+                      Container(
+                        padding: const EdgeInsets.all(8), // Reduced padding
+                        decoration: BoxDecoration(
+                          color: Colors.red.withOpacity(0.1),
+                          borderRadius: BorderRadius.circular(12),
+                        ),
+                        child: Icon(Icons.directions_car,
+                            color: Colors.red[700], size: 18), // Smaller icon
+                      ),
+                      const SizedBox(width: 8), // Reduced spacing
+                      Expanded(
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            const Text(
+                              'Request Operasional',
+                              style: TextStyle(
+                                fontWeight: FontWeight.bold,
+                                fontSize: 14, // Smaller font
+                                color: Color(0xFF2D3748),
+                              ),
+                            ),
+                            const SizedBox(height: 2), // Reduced spacing
+                            _buildStatusChip(request.status),
+                          ],
+                        ),
+                      ),
+                      Icon(Icons.arrow_forward_ios,
+                          size: 14, color: Colors.grey[400]), // Smaller icon
+                    ],
+                  ),
+
+                  const SizedBox(height: 8), // Reduced spacing
+
+                  // Locations in compact layout
+                  Row(
+                    children: [
+                      // Pickup location
+                      Expanded(
+                        child: Row(
+                          children: [
+                            Icon(Icons.my_location,
+                                size: 12,
+                                color: Colors.grey[600]), // Smaller icon
+                            const SizedBox(width: 4), // Reduced spacing
+                            Expanded(
+                              child: Text(
+                                'From: ${request.pickupLocation}',
+                                style: TextStyle(
+                                  fontSize: 11, // Smaller font
+                                  fontWeight: FontWeight.w600,
+                                  color: Colors.grey[800],
+                                ),
+                                maxLines: 1,
+                                overflow: TextOverflow.ellipsis,
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
+                      const SizedBox(width: 8), // Reduced spacing
+                      // Dropoff location
+                      Expanded(
+                        child: Row(
+                          children: [
+                            Icon(Icons.location_on_outlined,
+                                size: 12,
+                                color: Colors.grey[600]), // Smaller icon
+                            const SizedBox(width: 4), // Reduced spacing
+                            Expanded(
+                              child: Text(
+                                'To: ${request.dropoffLocation}',
+                                style: TextStyle(
+                                  fontSize: 11, // Smaller font
+                                  fontWeight: FontWeight.w600,
+                                  color: Colors.grey[800],
+                                ),
+                                maxLines: 1,
+                                overflow: TextOverflow.ellipsis,
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
+                    ],
+                  ),
+
+                  const SizedBox(height: 8), // Reduced spacing
+
+                  // Description
+                  Container(
+                    width: double.infinity,
+                    padding: const EdgeInsets.symmetric(
+                        horizontal: 10, vertical: 8), // Reduced padding
+                    decoration: BoxDecoration(
+                      color: Colors.grey[50],
+                      borderRadius: BorderRadius.circular(10),
+                      border: Border.all(
+                        color: Colors.grey[200]!,
+                        width: 1,
+                      ),
+                    ),
+                    child: Text(
+                      request.description,
+                      style: TextStyle(
+                        fontSize: 12, // Smaller font
+                        color: Colors.grey[700],
+                        height: 1.2, // Reduced line height
+                      ),
+                      maxLines: 2,
+                      overflow: TextOverflow.ellipsis,
+                    ),
+                  ),
+
+                  const SizedBox(height: 6), // Reduced spacing
+
+                  // Dates in two columns
+                  Row(
+                    children: [
+                      // Pickup date
+                      Expanded(
+                        child: _buildCompactInfoRow(
+                          Icons.event,
+                          'Pickup: ${DateFormat('dd MMM').format(request.pickupDateTime)}', // Shorter date
+                        ),
+                      ),
+                      // Return date
+                      Expanded(
+                        child: _buildCompactInfoRow(
+                          Icons.event_available,
+                          'Return: ${DateFormat('dd MMM').format(request.pickupDateTime)}', // Shorter date
+                        ),
+                      ),
+                    ],
+                  ),
+                ],
+              ),
+            ),
+          ),
+        ),
+      ),
+    );
+  }
+
+// Replace the _buildUnifiedBookingCard method with this more compact version:
+  Widget _buildUnifiedBookingCard(BookingModel booking) {
+    return _AnimatedListItem(
+      child: Card(
+        margin: const EdgeInsets.only(bottom: 16),
+        elevation: 0,
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
+        child: InkWell(
+          onTap: () => _navigateToDetail(booking),
+          borderRadius: BorderRadius.circular(20),
+          child: Container(
+            decoration: BoxDecoration(
+              borderRadius: BorderRadius.circular(20),
+              color: Colors.white,
+              boxShadow: [
+                BoxShadow(
+                  color: Colors.teal.withOpacity(0.15),
+                  blurRadius: 10,
+                  spreadRadius: 0,
+                  offset: const Offset(0, 5),
+                ),
+              ],
+              border: Border.all(
+                color: Colors.teal.withOpacity(0.1),
+                width: 1.5,
+              ),
+            ),
+            child: Padding(
+              padding: const EdgeInsets.all(12.0), // Reduced padding
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                mainAxisSize: MainAxisSize.min, // Added to minimize height
+                children: [
+                  // Header row
+                  Row(
+                    children: [
+                      Container(
+                        padding: const EdgeInsets.all(8), // Reduced padding
+                        decoration: BoxDecoration(
+                          color: Colors.teal.withOpacity(0.1),
+                          borderRadius: BorderRadius.circular(12),
+                        ),
+                        child: Icon(Icons.meeting_room,
+                            color: Colors.teal[700], size: 18), // Smaller icon
+                      ),
+                      const SizedBox(width: 8), // Reduced spacing
+                      Expanded(
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            const Text(
+                              'Booking Room',
+                              style: TextStyle(
+                                fontWeight: FontWeight.bold,
+                                fontSize: 14, // Smaller font
+                                color: Color(0xFF2D3748),
+                              ),
+                            ),
+                            const SizedBox(height: 2), // Reduced spacing
+                            _buildStatusChip(booking.status),
+                          ],
+                        ),
+                      ),
+                      Icon(Icons.arrow_forward_ios,
+                          size: 14, color: Colors.grey[400]), // Smaller icon
+                    ],
+                  ),
+
+                  const SizedBox(height: 8), // Reduced spacing
+
+                  // Room info in compact layout
+                  Row(
+                    children: [
+                      Icon(Icons.meeting_room_outlined,
+                          size: 14, color: Colors.teal[700]), // Smaller icon
+                      const SizedBox(width: 6), // Reduced spacing
+                      Expanded(
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Text(
+                              booking.roomName.isEmpty
+                                  ? 'Room not specified'
+                                  : booking.roomName,
+                              style: TextStyle(
+                                fontWeight: FontWeight.w600,
+                                fontSize: 12, // Smaller font
+                                color: Colors.grey[800],
+                              ),
+                              maxLines: 1,
+                              overflow: TextOverflow.ellipsis,
+                            ),
+                            Text(
+                              _formatCompactBookingDuration(
+                                booking.usageStartDate,
+                                booking.usageEndDate,
+                              ),
+                              style: TextStyle(
+                                fontSize: 11, // Smaller font
+                                color: Colors.grey[600],
+                              ),
+                              maxLines: 1,
+                              overflow: TextOverflow.ellipsis,
+                            ),
+                          ],
+                        ),
+                      ),
+                    ],
+                  ),
+
+                  const SizedBox(height: 8), // Reduced spacing
+
+                  // Description
+                  Container(
+                    width: double.infinity,
+                    padding: const EdgeInsets.symmetric(
+                        horizontal: 10, vertical: 8), // Reduced padding
+                    decoration: BoxDecoration(
+                      color: Colors.grey[50],
+                      borderRadius: BorderRadius.circular(10),
+                      border: Border.all(
+                        color: Colors.grey[200]!,
+                        width: 1,
+                      ),
+                    ),
+                    child: Text(
+                      booking.eventAgenda,
+                      style: TextStyle(
+                        fontSize: 12, // Smaller font
+                        color: Colors.grey[700],
+                        height: 1.2, // Reduced line height
+                      ),
+                      maxLines: 2,
+                      overflow: TextOverflow.ellipsis,
+                    ),
+                  ),
+
+                  const SizedBox(height: 6), // Reduced spacing
+
+                  // Creation date
+                  _buildCompactInfoRow(
+                    Icons.access_time,
+                    'Created: ${DateFormat('dd MMM').format(booking.createdAt)}', // Shorter date
+                  ),
+                ],
+              ),
+            ),
+          ),
+        ),
+      ),
+    );
+  }
 
 // Add these new helper methods:
 
 // Helper for compact info rows
-Widget _buildCompactInfoRow(IconData icon, String text) {
-  return Row(
-    crossAxisAlignment: CrossAxisAlignment.center,
-    children: [
-      Icon(icon, size: 12, color: Colors.grey[500]), // Smaller icon
-      const SizedBox(width: 4), // Reduced spacing
-      Expanded(
-        child: Text(
-          text,
-          style: TextStyle(fontSize: 11, color: Colors.grey[600]), // Smaller font
-          maxLines: 1,
-          overflow: TextOverflow.ellipsis,
+  Widget _buildCompactInfoRow(IconData icon, String text) {
+    return Row(
+      crossAxisAlignment: CrossAxisAlignment.center,
+      children: [
+        Icon(icon, size: 12, color: Colors.grey[500]), // Smaller icon
+        const SizedBox(width: 4), // Reduced spacing
+        Expanded(
+          child: Text(
+            text,
+            style: TextStyle(
+                fontSize: 11, color: Colors.grey[600]), // Smaller font
+            maxLines: 1,
+            overflow: TextOverflow.ellipsis,
+          ),
         ),
-      ),
-    ],
-  );
-}
+      ],
+    );
+  }
 
 // Helper for more compact booking duration format
-String _formatCompactBookingDuration(DateTime start, DateTime end) {
-  final isSingleDay = start.year == end.year &&
-      start.month == end.month &&
-      start.day == end.day;
+  String _formatCompactBookingDuration(DateTime start, DateTime end) {
+    final isSingleDay = start.year == end.year &&
+        start.month == end.month &&
+        start.day == end.day;
 
-  if (isSingleDay) {
-    // Format for single day: "4 Aug, 09:00-11:30"
-    final date = DateFormat('d MMM', 'id_ID').format(start);
-    final startTime = DateFormat('HH:mm').format(start);
-    final endTime = DateFormat('HH:mm').format(end);
-    return '$date, $startTime-$endTime';
-  } else {
-    // Format for multi-day: "4 Aug-6 Aug"
-    final startDate = DateFormat('d MMM', 'id_ID').format(start);
-    final endDate = DateFormat('d MMM', 'id_ID').format(end);
-    return '$startDate to $endDate';
+    if (isSingleDay) {
+      // Format for single day: "4 Aug, 09:00-11:30"
+      final date = DateFormat('d MMM', 'id_ID').format(start);
+      final startTime = DateFormat('HH:mm').format(start);
+      final endTime = DateFormat('HH:mm').format(end);
+      return '$date, $startTime-$endTime';
+    } else {
+      // Format for multi-day: "4 Aug-6 Aug"
+      final startDate = DateFormat('d MMM', 'id_ID').format(start);
+      final endDate = DateFormat('d MMM', 'id_ID').format(end);
+      return '$startDate to $endDate';
+    }
   }
-}   
+}
+
+class _AnimatedAppCard extends StatefulWidget {
+  const _AnimatedAppCard({
+    required this.title,
+    required this.icon,
+    required this.color,
+    required this.onTap,
+  });
+
+  final String title;
+  final IconData icon;
+  final Color color;
+  final VoidCallback onTap;
+
+  @override
+  State<_AnimatedAppCard> createState() => _AnimatedAppCardState();
+}
+
+class _AnimatedAppCardState extends State<_AnimatedAppCard> {
+  bool _isPressed = false;
+
+  @override
+  Widget build(BuildContext context) {
+    final scale = _isPressed ? 0.95 : 1.0;
+    final bgColor = Color.lerp(Colors.white, widget.color, 0.30)!;
+
+    return AnimatedScale(
+      scale: scale,
+      duration: const Duration(milliseconds: 150),
+      curve: Curves.fastOutSlowIn,
+      child: Card(
+        elevation: 0,
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(24)),
+        child: InkWell(
+          onTap: widget.onTap,
+          onHighlightChanged: (isHighlighted) {
+            setState(() {
+              _isPressed = isHighlighted;
+            });
+          },
+          borderRadius: BorderRadius.circular(24),
+          child: Container(
+            decoration: BoxDecoration(
+              borderRadius: BorderRadius.circular(24),
+              color: bgColor,
+              boxShadow: [
+                BoxShadow(
+                  color: widget.color.withOpacity(0.15),
+                  blurRadius: 20,
+                  spreadRadius: 0,
+                  offset: const Offset(5, 10),
+                ),
+              ],
+              border: Border.all(
+                color: widget.color.withOpacity(0.3),
+                width: 1.5,
+              ),
+            ),
+            child: Column(
+              mainAxisAlignment: MainAxisAlignment.center,
+              children: [
+                Container(
+                  padding: const EdgeInsets.all(16),
+                  decoration: BoxDecoration(
+                    color: Colors.white.withOpacity(0.7),
+                    shape: BoxShape.circle,
+                    boxShadow: [
+                      BoxShadow(
+                        color: widget.color.withOpacity(0.1),
+                        blurRadius: 10,
+                        spreadRadius: 0,
+                        offset: const Offset(0, 5),
+                      ),
+                    ],
+                  ),
+                  child: Icon(widget.icon, size: 32, color: widget.color),
+                ),
+                const SizedBox(height: 16),
+                Text(
+                  widget.title,
+                  textAlign: TextAlign.center,
+                  style: TextStyle(
+                    fontSize: 16,
+                    fontWeight: FontWeight.w600,
+                    color: widget.color.withOpacity(0.9),
+                    letterSpacing: 0.5,
+                  ),
+                ),
+                const SizedBox(height: 8),
+                Container(
+                    padding:
+                        const EdgeInsets.symmetric(horizontal: 12, vertical: 4),
+                    child: Icon(
+                      Icons.open_in_new,
+                      size: 16,
+                      color: widget.color,
+                    )),
+              ],
+            ),
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+class _AnimatedListItem extends StatefulWidget {
+  final Widget child;
+  const _AnimatedListItem({required this.child});
+
+  @override
+  State<_AnimatedListItem> createState() => _AnimatedListItemState();
+}
+
+class _AnimatedListItemState extends State<_AnimatedListItem> {
+  bool _isPressed = false;
+
+  @override
+  Widget build(BuildContext context) {
+    final scale = _isPressed ? 0.96 : 1.0;
+    return GestureDetector(
+      onTapDown: (_) => setState(() => _isPressed = true),
+      onTapUp: (_) => setState(() => _isPressed = false),
+      onTapCancel: () => setState(() => _isPressed = false),
+      child: AnimatedScale(
+        scale: scale,
+        duration: const Duration(milliseconds: 150),
+        curve: Curves.fastOutSlowIn,
+        child: widget.child,
+      ),
+    );
+  }
 }
