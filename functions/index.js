@@ -821,3 +821,236 @@ exports.getVehicleRatingStats = onCall({ region: "asia-southeast1" }, async (req
     throw new functions.https.HttpsError("internal", `Failed to get stats: ${error.message}`);
   }
 });
+/**
+ * Cloud Function untuk admin mereset password user secara langsung
+ * tanpa memerlukan verifikasi email
+ */
+exports.resetPasswordByAdmin = onCall({ region: "asia-southeast1" }, async (request) => {
+  try {
+    // 1. Verifikasi bahwa pengguna sudah login
+    if (!request.auth) {
+      logger.error("Fungsi dipanggil oleh pengguna yang tidak terautentikasi.");
+      throw new functions.https.HttpsError(
+        "unauthenticated",
+        "Anda harus login untuk menggunakan fungsi ini."
+      );
+    }
+
+    const callerUid = request.auth.uid;
+    
+    // 2. Verifikasi bahwa caller adalah admin
+    const callerDoc = await db.collection("users").doc(callerUid).get();
+    if (!callerDoc.exists || callerDoc.data().role !== "admin") {
+      logger.warn(`Pengguna non-admin (UID: ${callerUid}) mencoba mereset password.`);
+      throw new functions.https.HttpsError(
+        "permission-denied", 
+        "Hanya admin yang dapat mereset password pengguna."
+      );
+    }
+
+    // 3. Ambil dan validasi parameter
+    const { uid, newPassword } = request.data;
+    
+    if (!uid || !newPassword) {
+      logger.error("Parameter tidak lengkap.", { data: request.data });
+      throw new functions.https.HttpsError(
+        "invalid-argument",
+        "Parameter uid dan newPassword harus disediakan."
+      );
+    }
+
+    // Validasi password
+    if (newPassword.length < 6) {
+      throw new functions.https.HttpsError(
+        "invalid-argument",
+        "Password harus minimal 6 karakter."
+      );
+    }
+
+    // 4. Verifikasi bahwa target user exists
+    let targetUserDoc;
+    try {
+      targetUserDoc = await db.collection("users").doc(uid).get();
+      if (!targetUserDoc.exists) {
+        throw new functions.https.HttpsError(
+          "not-found",
+          "User dengan UID tersebut tidak ditemukan."
+        );
+      }
+    } catch (error) {
+      logger.error(`Error mengecek target user: ${error.message}`);
+      throw new functions.https.HttpsError(
+        "internal",
+        "Gagal memverifikasi target user."
+      );
+    }
+
+    const targetUserData = targetUserDoc.data();
+    logger.info(`Admin ${callerUid} mereset password untuk user: ${targetUserData.name} (${targetUserData.email})`);
+
+    // 5. Reset password menggunakan Firebase Admin SDK
+    try {
+      await admin.auth().updateUser(uid, {
+        password: newPassword
+      });
+      logger.info(`✅ Password berhasil direset untuk UID: ${uid}`);
+    } catch (authError) {
+      logger.error(`❌ Gagal mereset password: ${authError.message}`);
+      
+      // Handle specific auth errors
+      if (authError.code === 'auth/user-not-found') {
+        throw new functions.https.HttpsError(
+          "not-found",
+          "User tidak ditemukan dalam sistem autentikasi."
+        );
+      } else if (authError.code === 'auth/weak-password') {
+        throw new functions.https.HttpsError(
+          "invalid-argument",
+          "Password terlalu lemah."
+        );
+      } else {
+        throw new functions.https.HttpsError(
+          "internal",
+          `Gagal mereset password: ${authError.message}`
+        );
+      }
+    }
+
+    // 6. Log audit trail
+    try {
+      await db.collection("admin_actions").add({
+        adminUid: callerUid,
+        adminEmail: callerDoc.data().email || '',
+        adminName: callerDoc.data().name || '',
+        action: 'reset_password',
+        targetUserUid: uid,
+        targetUserEmail: targetUserData.email || '',
+        targetUserName: targetUserData.name || '',
+        timestamp: admin.firestore.FieldValue.serverTimestamp(),
+        success: true,
+        details: 'Password reset by admin without email verification'
+      });
+    } catch (auditError) {
+      logger.warn(`⚠️ Gagal mencatat audit trail: ${auditError.message}`);
+      // Tidak gagalkan seluruh proses jika audit gagal
+    }
+
+    logger.info(`✅ Password reset completed successfully by admin ${callerUid} for user ${uid}`);
+
+    return {
+      success: true,
+      message: `Password untuk ${targetUserData.name} berhasil direset`,
+      targetUserName: targetUserData.name,
+      targetUserEmail: targetUserData.email
+    };
+
+  } catch (error) {
+    // Log error untuk debugging
+    logger.error(`❌ Error pada resetPasswordByAdmin: ${error.message}`, error);
+    
+    // Jika error bukan HttpsError, wrap dalam HttpsError
+    if (!(error instanceof functions.https.HttpsError)) {
+      throw new functions.https.HttpsError(
+        "internal",
+        `Terjadi kesalahan tidak terduga: ${error.message}`
+      );
+    }
+    
+    // Re-throw HttpsError
+    throw error;
+  }
+});
+
+/**
+ * Cloud Function untuk admin mereset password menggunakan email
+ * (alternatif jika UID tidak diketahui)
+ */
+exports.resetPasswordByEmailAdmin = onCall({ region: "asia-southeast1" }, async (request) => {
+  try {
+    // 1. Verifikasi admin
+    if (!request.auth) {
+      throw new functions.https.HttpsError("unauthenticated", "Harus login sebagai admin");
+    }
+
+    const callerUid = request.auth.uid;
+    const callerDoc = await db.collection("users").doc(callerUid).get();
+    if (!callerDoc.exists || callerDoc.data().role !== "admin") {
+      throw new functions.https.HttpsError("permission-denied", "Hanya admin yang dapat mereset password");
+    }
+
+    // 2. Validasi parameter
+    const { email, newPassword } = request.data;
+    
+    if (!email || !newPassword) {
+      throw new functions.https.HttpsError("invalid-argument", "Email dan password baru harus disediakan");
+    }
+
+    if (newPassword.length < 6) {
+      throw new functions.https.HttpsError("invalid-argument", "Password harus minimal 6 karakter");
+    }
+
+    // 3. Cari user berdasarkan email di Firestore
+    const userQuery = await db.collection("users").where("email", "==", email).limit(1).get();
+    
+    if (userQuery.empty) {
+      throw new functions.https.HttpsError("not-found", "User dengan email tersebut tidak ditemukan");
+    }
+
+    const userDoc = userQuery.docs[0];
+    const userData = userDoc.data();
+    const uid = userDoc.id;
+
+    logger.info(`Admin ${callerUid} mereset password untuk user: ${userData.name} (${email}) via email lookup`);
+
+    // 4. Reset password
+    try {
+      await admin.auth().updateUser(uid, {
+        password: newPassword
+      });
+      logger.info(`✅ Password berhasil direset untuk email: ${email}`);
+    } catch (authError) {
+      logger.error(`❌ Gagal mereset password: ${authError.message}`);
+      
+      if (authError.code === 'auth/user-not-found') {
+        throw new functions.https.HttpsError("not-found", "User tidak ditemukan dalam sistem autentikasi");
+      } else {
+        throw new functions.https.HttpsError("internal", `Gagal mereset password: ${authError.message}`);
+      }
+    }
+
+    // 5. Log audit trail
+    try {
+      await db.collection("admin_actions").add({
+        adminUid: callerUid,
+        adminEmail: callerDoc.data().email || '',
+        adminName: callerDoc.data().name || '',
+        action: 'reset_password_by_email',
+        targetUserUid: uid,
+        targetUserEmail: email,
+        targetUserName: userData.name || '',
+        timestamp: admin.firestore.FieldValue.serverTimestamp(),
+        success: true,
+        details: 'Password reset by admin using email lookup'
+      });
+    } catch (auditError) {
+      logger.warn(`⚠️ Gagal mencatat audit trail: ${auditError.message}`);
+    }
+
+    return {
+      success: true,
+      message: `Password untuk ${userData.name} (${email}) berhasil direset`,
+      targetUserName: userData.name,
+      targetUserEmail: email,
+      targetUserUid: uid
+    };
+
+  } catch (error) {
+    logger.error(`❌ Error pada resetPasswordByEmailAdmin: ${error.message}`, error);
+    
+    if (!(error instanceof functions.https.HttpsError)) {
+      throw new functions.https.HttpsError("internal", `Terjadi kesalahan: ${error.message}`);
+    }
+    
+    throw error;
+  }
+});

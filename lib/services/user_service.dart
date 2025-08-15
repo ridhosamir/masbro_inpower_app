@@ -54,6 +54,103 @@ class UserService extends ChangeNotifier {
     }
   }
 
+  // Tambahkan method ini ke dalam class UserService (user_service.dart)
+
+// Reset password user by admin (using UID)
+  Future<String?> resetPasswordByAdmin(String uid, String newPassword) async {
+    try {
+      print('🔐 Admin resetting password for UID: $uid');
+
+      final HttpsCallable callable =
+          _functions.httpsCallable('resetPasswordByAdmin');
+      final result = await callable.call<Map<String, dynamic>>({
+        'uid': uid,
+        'newPassword': newPassword,
+      });
+
+      if (result.data['success'] == true) {
+        print('✅ Password reset successful: ${result.data['message']}');
+        return null; // Success
+      } else {
+        throw Exception('Reset password failed: ${result.data['message']}');
+      }
+    } on FirebaseFunctionsException catch (e) {
+      print('❌ Cloud Function error: [${e.code}] ${e.message}');
+
+      switch (e.code) {
+        case 'permission-denied':
+          return 'Hanya admin yang dapat mereset password pengguna';
+        case 'not-found':
+          return 'User tidak ditemukan';
+        case 'invalid-argument':
+          return e.message ?? 'Parameter tidak valid';
+        case 'unauthenticated':
+          return 'Anda harus login sebagai admin';
+        default:
+          return 'Gagal mereset password: ${e.message}';
+      }
+    } catch (e) {
+      print('❌ Error resetting password: $e');
+      return 'Terjadi kesalahan saat mereset password: $e';
+    }
+  }
+
+// Reset password user by admin (using email)
+  Future<String?> resetPasswordByEmail(String email, String newPassword) async {
+    try {
+      print('🔐 Admin resetting password for email: $email');
+
+      final HttpsCallable callable =
+          _functions.httpsCallable('resetPasswordByEmailAdmin');
+      final result = await callable.call<Map<String, dynamic>>({
+        'email': email,
+        'newPassword': newPassword,
+      });
+
+      if (result.data['success'] == true) {
+        print(
+            '✅ Password reset successful via email: ${result.data['message']}');
+        return null; // Success
+      } else {
+        throw Exception('Reset password failed: ${result.data['message']}');
+      }
+    } on FirebaseFunctionsException catch (e) {
+      print('❌ Cloud Function error: [${e.code}] ${e.message}');
+
+      switch (e.code) {
+        case 'permission-denied':
+          return 'Hanya admin yang dapat mereset password pengguna';
+        case 'not-found':
+          return 'User dengan email tersebut tidak ditemukan';
+        case 'invalid-argument':
+          return e.message ?? 'Parameter tidak valid';
+        case 'unauthenticated':
+          return 'Anda harus login sebagai admin';
+        default:
+          return 'Gagal mereset password: ${e.message}';
+      }
+    } catch (e) {
+      print('❌ Error resetting password by email: $e');
+      return 'Terjadi kesalahan saat mereset password: $e';
+    }
+  }
+
+// Validate password strength
+  bool isPasswordValid(String password) {
+    return password.length >= 6;
+  }
+
+// Generate random password (optional helper)
+  String generateRandomPassword({int length = 8}) {
+    const String chars =
+        'abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789';
+    return String.fromCharCodes(Iterable.generate(
+        length,
+        (_) => chars.codeUnitAt((DateTime.now().millisecondsSinceEpoch *
+                DateTime.now().microsecond) %
+            chars.length)));
+  }
+
   // Get all users (for admin)
   Future<List<UserModel>> getAllUsers() async {
     try {
