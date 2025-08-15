@@ -171,6 +171,276 @@ class _AdminDashboardState extends State<AdminDashboard> {
     }
   }
 
+    void _showResetPasswordDialog(
+      BuildContext context, Map<String, dynamic> userData, String userId) {
+    final TextEditingController passwordController = TextEditingController();
+    final TextEditingController confirmPasswordController =
+        TextEditingController();
+    final _formKey =
+        GlobalKey<FormState>(); // Tambahkan GlobalKey untuk validasi
+    bool showPassword = false;
+    bool isLoading = false;
+
+    showGeneralDialog(
+      context: context,
+      barrierDismissible: true,
+      barrierLabel: 'Reset Password',
+      transitionDuration: const Duration(milliseconds: 300),
+      transitionBuilder: (context, anim1, anim2, child) {
+        return FadeTransition(
+          opacity: anim1,
+          child: ScaleTransition(
+            scale: CurvedAnimation(parent: anim1, curve: Curves.easeOutBack),
+            child: child,
+          ),
+        );
+      },
+      pageBuilder: (context, anim1, anim2) {
+        return StatefulBuilder(
+          builder: (context, setState) {
+            return AlertDialog(
+              shape: RoundedRectangleBorder(
+                borderRadius: BorderRadius.circular(24),
+              ),
+              titlePadding: EdgeInsets.zero,
+              contentPadding:
+                  const EdgeInsets.symmetric(horizontal: 24, vertical: 20),
+              actionsPadding:
+                  const EdgeInsets.only(bottom: 16, right: 16, left: 16),
+              title: Container(
+                padding: const EdgeInsets.all(20),
+                decoration: BoxDecoration(
+                  color: Colors.blue,
+                  borderRadius:
+                      const BorderRadius.vertical(top: Radius.circular(24)),
+                ),
+                child: Row(
+                  children: const [
+                    Icon(Icons.lock_reset, color: Colors.white),
+                    SizedBox(width: 12),
+                    Text(
+                      'Reset User Password',
+                      style: TextStyle(color: Colors.white, fontSize: 18),
+                    ),
+                  ],
+                ),
+              ),
+              content: SingleChildScrollView(
+                child: Form(
+                  key: _formKey,
+                  child: Column(
+                    mainAxisSize: MainAxisSize.min,
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      // User Info
+                      ListTile(
+                        contentPadding: EdgeInsets.zero,
+                        leading: CircleAvatar(
+                          backgroundColor: _getRoleColor(userData['role']),
+                          child: Icon(_getRoleIcon(userData['role']),
+                              color: Colors.white),
+                        ),
+                        title: Text(
+                          userData['name'] ?? 'Unknown',
+                          style: const TextStyle(fontWeight: FontWeight.bold),
+                        ),
+                        subtitle: Text(userData['email'] ?? 'No email'),
+                      ),
+                      const Divider(height: 24),
+
+                      // New Password Section
+                      Row(
+                        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                        children: [
+                          const Text(
+                            'New Password',
+                            style: TextStyle(
+                                fontWeight: FontWeight.bold, fontSize: 16),
+                          ),
+                          Tooltip(
+                            message: 'Generate Random Password',
+                            child: IconButton(
+                              onPressed: isLoading
+                                  ? null
+                                  : () {
+                                      final randomPassword =
+                                          Provider.of<UserService>(context,
+                                                  listen: false)
+                                              .generateRandomPassword(
+                                                  length: 10);
+                                      setState(() {
+                                        passwordController.text =
+                                            randomPassword;
+                                        confirmPasswordController.text =
+                                            randomPassword;
+                                      });
+                                    },
+                              icon: Icon(Icons.auto_awesome,
+                                  color: Colors.purple.shade300),
+                              splashRadius: 20,
+                            ),
+                          )
+                        ],
+                      ),
+                      const SizedBox(height: 4),
+                      TextFormField(
+                        controller: passwordController,
+                        obscureText: !showPassword,
+                        decoration: InputDecoration(
+                          hintText: 'Enter new password',
+                          border: OutlineInputBorder(
+                              borderRadius: BorderRadius.circular(12)),
+                          prefixIcon: const Icon(Icons.lock),
+                          suffixIcon: IconButton(
+                            icon: Icon(showPassword
+                                ? Icons.visibility
+                                : Icons.visibility_off),
+                            onPressed: () =>
+                                setState(() => showPassword = !showPassword),
+                          ),
+                        ),
+                        enabled: !isLoading,
+                        validator: (value) {
+                          if (value == null || value.isEmpty) {
+                            return 'Password cannot be empty';
+                          }
+                          if (value.length < 6) {
+                            return 'Password must be at least 6 characters';
+                          }
+                          return null;
+                        },
+                      ),
+                      const SizedBox(height: 16),
+                      TextFormField(
+                        controller: confirmPasswordController,
+                        obscureText: !showPassword,
+                        decoration: InputDecoration(
+                          hintText: 'Confirm new password',
+                          border: OutlineInputBorder(
+                              borderRadius: BorderRadius.circular(12)),
+                          prefixIcon: const Icon(Icons.lock_outline),
+                        ),
+                        enabled: !isLoading,
+                        validator: (value) {
+                          if (value != passwordController.text) {
+                            return 'Passwords do not match';
+                          }
+
+                          return null;
+                        },
+                      ),
+                      const SizedBox(height: 20),
+
+                      // Warning Notice
+                      Container(
+                        padding: const EdgeInsets.all(12),
+                        decoration: BoxDecoration(
+                          color: Colors.amber.shade50,
+                          borderRadius: BorderRadius.circular(8),
+                        ),
+                        child: Row(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Icon(Icons.info_outline,
+                                color: Colors.blue.shade800, size: 20),
+                            const SizedBox(width: 10),
+                            Expanded(
+                              child: Text(
+                                'This action is irreversible. Ensure you inform the user about their new password.',
+                                style: TextStyle(
+                                  color: Colors.blue.shade900,
+                                  fontSize: 13,
+                                ),
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+              ),
+              actions: [
+                TextButton(
+                  onPressed: isLoading ? null : () => Navigator.pop(context),
+                  child: const Text('Cancel'),
+                ),
+                ElevatedButton.icon(
+                  onPressed: isLoading
+                      ? null
+                      : () async {
+                          if (!_formKey.currentState!.validate()) return;
+
+                          setState(() => isLoading = true);
+
+                          try {
+                            final userService = Provider.of<UserService>(
+                                context,
+                                listen: false);
+                            String? error =
+                                await userService.resetPasswordByAdmin(
+                                    userId, passwordController.text.trim());
+
+                            if (!mounted) return;
+
+                            Navigator.pop(context);
+
+                            if (error == null) {
+                              ScaffoldMessenger.of(context).showSnackBar(
+                                SnackBar(
+                                  content: Text(
+                                      'Password for ${userData['name']} has been reset successfully.'),
+                                  backgroundColor: Colors.green,
+                                  behavior: SnackBarBehavior.floating,
+                                ),
+                              );
+                            } else {
+                              ScaffoldMessenger.of(context).showSnackBar(
+                                SnackBar(
+                                  content: Text('Error: $error'),
+                                  backgroundColor: Colors.red,
+                                  behavior: SnackBarBehavior.floating,
+                                ),
+                              );
+                            }
+                          } catch (e) {
+                            if (!mounted) return;
+                            Navigator.pop(context);
+                            ScaffoldMessenger.of(context).showSnackBar(
+                              SnackBar(
+                                content:
+                                    Text('An unexpected error occurred: $e'),
+                                backgroundColor: Colors.red,
+                                behavior: SnackBarBehavior.floating,
+                              ),
+                            );
+                          }
+                        },
+                  icon: isLoading
+                      ? Container(
+                          width: 18,
+                          height: 18,
+                          child: const CircularProgressIndicator(
+                              strokeWidth: 2.5, color: Colors.white),
+                        )
+                      : const Icon(Icons.lock_reset),
+                  label: Text(isLoading ? 'Resetting...' : 'Reset Now'),
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: Colors.blue,
+                    foregroundColor: Colors.white,
+                    shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(12)),
+                  ),
+                ),
+              ],
+            );
+          },
+        );
+      },
+    );
+  }
+
+
   Future<void> _viewAllDrivers() async {
     showDialog(
       context: context,
@@ -1062,25 +1332,52 @@ class _AdminDashboardState extends State<AdminDashboard> {
                                 ),
                               ],
                             ),
-                            trailing: Row(
-                              mainAxisSize: MainAxisSize.min,
-                              children: [
-                                IconButton(
-                                  icon: Icon(Icons.edit, color: Colors.blue),
-                                  onPressed: () {
-                                    _showEditUserDialog(
-                                        context, userData, userId);
-                                  },
+                            
+
+
+                            trailing: PopupMenuButton<String>(
+                              onSelected: (value) {
+                                if (value == 'edit') {
+                                  _showEditUserDialog(
+                                      context, userData, userId);
+                                } else if (value == 'reset_password') {
+                                  _showResetPasswordDialog(
+                                      context, userData, userId);
+                                } else if (value == 'delete') {
+                                  _showDeleteConfirmDialog(
+                                      context, userData, userId, isDriver);
+                                }
+                              },
+                              itemBuilder: (BuildContext context) =>
+                                  <PopupMenuEntry<String>>[
+                                const PopupMenuItem<String>(
+                                  value: 'edit',
+                                  child: ListTile(
+                                    leading:
+                                        Icon(Icons.edit, color: Colors.blue),
+                                    title: Text('Edit User'),
+                                  ),
                                 ),
-                                IconButton(
-                                  icon: Icon(Icons.delete, color: Colors.red),
-                                  onPressed: () {
-                                    _showDeleteConfirmDialog(
-                                        context, userData, userId, isDriver);
-                                  },
+                                const PopupMenuItem<String>(
+                                  value: 'reset_password',
+                                  child: ListTile(
+                                    leading: Icon(Icons.lock_reset,
+                                        color: Colors.orange),
+                                    title: Text('Reset Password'),
+                                  ),
+                                ),
+                                const PopupMenuDivider(),
+                                const PopupMenuItem<String>(
+                                  value: 'delete',
+                                  child: ListTile(
+                                    leading:
+                                        Icon(Icons.delete, color: Colors.red),
+                                    title: Text('Delete User'),
+                                  ),
                                 ),
                               ],
                             ),
+
                           ),
                         );
                       },
