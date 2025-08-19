@@ -4,10 +4,10 @@ class UserModel {
   final String uid;
   final String name;
   final String email;
-  final String role; // 'admin', 'employee', 'technician', 'officer'
+  final String role;
   final DateTime createdAt;
-  final double? averageRating; // Rating rata-rata teknisi
-  final int? totalRatings; // Jumlah total rating yang diterima
+  final double? averageRating;
+  final int? totalRatings;
 
   UserModel({
     required this.uid,

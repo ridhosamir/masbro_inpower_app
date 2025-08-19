@@ -171,7 +171,7 @@ class _AdminDashboardState extends State<AdminDashboard> {
     }
   }
 
-    void _showResetPasswordDialog(
+  void _showResetPasswordDialog(
       BuildContext context, Map<String, dynamic> userData, String userId) {
     final TextEditingController passwordController = TextEditingController();
     final TextEditingController confirmPasswordController =
@@ -440,7 +440,6 @@ class _AdminDashboardState extends State<AdminDashboard> {
     );
   }
 
-
   Future<void> _viewAllDrivers() async {
     showDialog(
       context: context,
@@ -540,16 +539,63 @@ class _AdminDashboardState extends State<AdminDashboard> {
     );
   }
 
-  void _showEditUserDialog(
+// Helper method to extract username from email (hide @gmail.com)
+  String _getEmailUsername(String email) {
+    if (email.isEmpty || !email.contains('@')) {
+      return email;
+    }
+    return email.split('@')[0];
+  }
+
+// Helper method to get email suffix
+  String _getEmailSuffix(String email) {
+    if (email.isEmpty || !email.contains('@')) {
+      return '@gmail.com'; // Default
+    }
+    return '@${email.split('@')[1]}';
+  }
+
+// Helper method to build full email
+  String _buildFullEmail(String username, String suffix) {
+    if (username.isEmpty) return '';
+
+    // Clean username (remove any @ symbols)
+    username = username.trim().replaceAll('@', '');
+
+    // Ensure suffix starts with @
+    if (!suffix.startsWith('@')) {
+      suffix = '@$suffix';
+    }
+
+    return '$username$suffix';
+  }
+
+// UPDATED: Edit user dialog dengan hidden @gmail.com
+void _showEditUserDialog(
       BuildContext context, Map<String, dynamic> userData, String userId) {
     final TextEditingController nameController =
         TextEditingController(text: userData['name']);
-    final TextEditingController emailController =
-        TextEditingController(text: userData['email']);
+
+    // Extract username dari email (hide @gmail.com)
+    final String currentEmail = userData['email'] ?? '';
+    final String emailUsername = _getEmailUsername(currentEmail);
+    final String emailSuffix = _getEmailSuffix(currentEmail);
+
+    // Controller untuk username saja (tanpa @gmail.com)
+    final TextEditingController emailUsernameController =
+        TextEditingController(text: emailUsername);
+
+    // Create a form key for validation
+    final _formKey = GlobalKey<FormState>();
+
     String selectedRole = userData['role'] ?? Constants.ROLE_EMPLOYEE;
     bool isDriver = false;
     bool isDriverNameOrEmail =
         _isDriverUser(userData['name'] ?? '', userData['email'] ?? '');
+    bool isLoading = false;
+
+    // Email suffix yang digunakan
+    final String _emailSuffix = "@gmail.com";
 
     _checkIfUserIsDriver(userId).then((result) {
       if (result) {
@@ -562,6 +608,11 @@ class _AdminDashboardState extends State<AdminDashboard> {
     showDialog(
       context: context,
       builder: (dialogContext) => StatefulBuilder(builder: (context, setState) {
+        // Construct full email for comparison
+        final String currentFullEmail =
+            _buildFullEmail(emailUsernameController.text.trim(), _emailSuffix);
+        final bool emailChanged = currentFullEmail != currentEmail;
+
         return AlertDialog(
           title: Row(
             children: [
@@ -571,243 +622,555 @@ class _AdminDashboardState extends State<AdminDashboard> {
             ],
           ),
           content: SingleChildScrollView(
-            child: Column(
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                TextField(
-                  controller: nameController,
-                  decoration: InputDecoration(
-                    labelText: 'Name',
-                    border: OutlineInputBorder(),
-                    prefixIcon: Icon(Icons.person),
+            child: Form(
+              // Wrap in a Form widget
+              key: _formKey,
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  // Name field
+                  TextField(
+                    controller: nameController,
+                    decoration: InputDecoration(
+                      labelText: 'Name',
+                      border: OutlineInputBorder(),
+                      prefixIcon: Icon(Icons.person),
+                    ),
+                    enabled: !isLoading,
                   ),
-                ),
-                SizedBox(height: 16),
-                TextField(
-                  controller: emailController,
-                  decoration: InputDecoration(
-                    labelText: 'Email',
-                    border: OutlineInputBorder(),
-                    prefixIcon: Icon(Icons.email),
-                  ),
-                  enabled: false,
-                ),
-                SizedBox(height: 16),
-                DropdownButtonFormField<String>(
-                  value: selectedRole,
-                  decoration: InputDecoration(
-                    labelText: 'Role',
-                    border: OutlineInputBorder(),
-                    prefixIcon: Icon(Icons.work),
-                  ),
-                  items: [
-                    DropdownMenuItem(
-                      value: Constants.ROLE_EMPLOYEE,
-                      child: Text('Employee'),
-                    ),
-                    DropdownMenuItem(
-                      value: Constants.ROLE_OFFICER,
-                      child: Text('Officer'),
-                    ),
-                    DropdownMenuItem(
-                      value: Constants.ROLE_TECHNICIAN,
-                      child: Text('Technician'),
-                    ),
-                    DropdownMenuItem(
-                      value: Constants.ROLE_ADMIN,
-                      child: Text('Admin'),
-                    ),
-                  ],
-                  onChanged: (value) {
-                    setState(() {
-                      selectedRole = value!;
-                      if (value != Constants.ROLE_TECHNICIAN) {
-                        isDriver = false;
-                      }
-                    });
-                  },
-                ),
-                if (selectedRole == Constants.ROLE_TECHNICIAN) ...[
                   SizedBox(height: 16),
-                  Container(
-                    padding: EdgeInsets.all(12),
-                    decoration: BoxDecoration(
-                      color: isDriver ? Colors.green[50] : Colors.blue[50],
-                      borderRadius: BorderRadius.circular(8),
-                      border: Border.all(
-                        color:
-                            isDriver ? Colors.green[300]! : Colors.blue[200]!,
+
+                  // Email field (username only with @gmail.com hidden)
+                  Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      TextFormField(
+                        controller: emailUsernameController,
+                        decoration: InputDecoration(
+                          labelText: 'Username',
+                          hintText: 'Enter username (without @gmail.com)',
+                          border: OutlineInputBorder(),
+                          prefixIcon: Icon(Icons.email),
+                          suffixText: _emailSuffix,
+                          suffixStyle: TextStyle(
+                            color: Colors.grey[600],
+                            fontSize: 14,
+                            fontWeight: FontWeight.w500,
+                          ),
+                          helperText:
+                              'Domain @gmail.com will be added automatically',
+                          helperStyle:
+                              TextStyle(fontSize: 12, color: Colors.grey[600]),
+                        ),
+                        keyboardType: TextInputType.text,
+                        enabled: !isLoading,
+                        onChanged: (value) {
+                          setState(() {}); // Refresh to update email preview
+                        },
+                        validator: (value) {
+                          if (value == null || value.isEmpty) {
+                            return 'Please enter username';
+                          }
+
+                          // Validasi format username
+                          final username = value
+                              .split('@')[0]; // Ambil bagian sebelum @ jika ada
+                          if (!RegExp(r'^[a-zA-Z0-9_.]+$').hasMatch(username)) {
+                            return 'Username can only contain letters, numbers, underscores and dots';
+                          }
+
+                          return null;
+                        },
                       ),
-                    ),
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        Row(
-                          children: [
-                            Icon(
-                              Icons.drive_eta,
-                              color: isDriver
-                                  ? Colors.green[700]
-                                  : Colors.blue[700],
-                              size: 20,
+
+                      // Replace the email preview with this improved version:
+                      if (emailUsernameController.text.isNotEmpty) ...[
+                        SizedBox(height: 12),
+                        Container(
+                          width: double.infinity,
+                          padding: EdgeInsets.symmetric(
+                              vertical: 10, horizontal: 12),
+                          decoration: BoxDecoration(
+                            color: emailChanged
+                                ? Colors.orange[50]
+                                : Colors.blue[50],
+                            borderRadius: BorderRadius.circular(8),
+                            border: Border.all(
+                              color: emailChanged
+                                  ? Colors.orange[200]!
+                                  : Colors.blue[200]!,
                             ),
-                            SizedBox(width: 8),
-                            Text(
-                              'Driver Capabilities',
+                          ),
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              Row(
+                                children: [
+                                  Icon(
+                                    emailChanged
+                                        ? Icons.warning
+                                        : Icons.info_outline,
+                                    color: emailChanged
+                                        ? Colors.orange[700]
+                                        : Colors.blue[700],
+                                    size: 16,
+                                  ),
+                                  SizedBox(width: 8),
+                                  Text(
+                                    emailChanged
+                                        ? 'Email will be changed:'
+                                        : 'Complete email:',
+                                    style: TextStyle(
+                                      color: emailChanged
+                                          ? Colors.orange[700]
+                                          : Colors.blue[700],
+                                      fontSize: 12,
+                                      fontWeight: FontWeight.w500,
+                                    ),
+                                  ),
+                                ],
+                              ),
+                              SizedBox(height: 6),
+
+                              // Current or new email display
+                              Row(
+                                children: [
+                                  Container(
+                                    padding: EdgeInsets.symmetric(
+                                        horizontal: 8, vertical: 4),
+                                    decoration: BoxDecoration(
+                                      color: Colors.white,
+                                      borderRadius: BorderRadius.circular(4),
+                                      border: Border.all(
+                                        color: emailChanged
+                                            ? Colors.orange[300]!
+                                            : Colors.blue[300]!,
+                                      ),
+                                    ),
+                                    child: Row(
+                                      mainAxisSize: MainAxisSize.min,
+                                      children: [
+                                        Text(
+                                          emailUsernameController.text.trim(),
+                                          style: TextStyle(
+                                            fontWeight: FontWeight.bold,
+                                            color: emailChanged
+                                                ? Colors.orange[800]
+                                                : Colors.blue[800],
+                                          ),
+                                        ),
+                                        Text(
+                                          _emailSuffix,
+                                          style: TextStyle(
+                                            fontWeight: FontWeight.normal,
+                                            color: Colors.grey[600],
+                                          ),
+                                        ),
+                                      ],
+                                    ),
+                                  ),
+                                ],
+                              ),
+
+                              // Show old email if changed
+                              if (emailChanged) ...[
+                                SizedBox(height: 6),
+                                Row(
+                                  children: [
+                                    Text(
+                                      'Original: ',
+                                      style: TextStyle(
+                                        fontSize: 11,
+                                        color: Colors.orange[700],
+                                      ),
+                                    ),
+                                    Text(
+                                      currentEmail,
+                                      style: TextStyle(
+                                        fontSize: 11,
+                                        color: Colors.orange[700],
+                                        decoration: TextDecoration.lineThrough,
+                                      ),
+                                    ),
+                                  ],
+                                ),
+                                SizedBox(height: 2),
+                                Text(
+                                  'User must login with the new email address',
+                                  style: TextStyle(
+                                    fontSize: 11,
+                                    fontStyle: FontStyle.italic,
+                                    color: Colors.orange[800],
+                                  ),
+                                ),
+                              ],
+                            ],
+                          ),
+                        ),
+                      ],
+                    ],
+                  ),
+
+                  SizedBox(height: 16),
+
+                  // Role dropdown
+                  DropdownButtonFormField<String>(
+                    value: selectedRole,
+                    decoration: InputDecoration(
+                      labelText: 'Role',
+                      border: OutlineInputBorder(),
+                      prefixIcon: Icon(Icons.work),
+                    ),
+                    items: [
+                      DropdownMenuItem(
+                        value: Constants.ROLE_EMPLOYEE,
+                        child: Text('Employee'),
+                      ),
+                      DropdownMenuItem(
+                        value: Constants.ROLE_OFFICER,
+                        child: Text('Officer'),
+                      ),
+                      DropdownMenuItem(
+                        value: Constants.ROLE_TECHNICIAN,
+                        child: Text('Technician'),
+                      ),
+                      DropdownMenuItem(
+                        value: Constants.ROLE_ADMIN,
+                        child: Text('Admin'),
+                      ),
+                    ],
+                    onChanged: isLoading
+                        ? null
+                        : (value) {
+                            setState(() {
+                              selectedRole = value!;
+                              if (value != Constants.ROLE_TECHNICIAN) {
+                                isDriver = false;
+                              }
+                            });
+                          },
+                  ),
+
+                  // Driver capabilities section
+                  if (selectedRole == Constants.ROLE_TECHNICIAN) ...[
+                    SizedBox(height: 16),
+                    Container(
+                      padding: EdgeInsets.all(12),
+                      decoration: BoxDecoration(
+                        color: isDriver ? Colors.green[50] : Colors.blue[50],
+                        borderRadius: BorderRadius.circular(8),
+                        border: Border.all(
+                          color:
+                              isDriver ? Colors.green[300]! : Colors.blue[200]!,
+                        ),
+                      ),
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Row(
+                            children: [
+                              Icon(
+                                Icons.drive_eta,
+                                color: isDriver
+                                    ? Colors.green[700]
+                                    : Colors.blue[700],
+                                size: 20,
+                              ),
+                              SizedBox(width: 8),
+                              Text(
+                                'Driver Capabilities',
+                                style: TextStyle(
+                                  fontWeight: FontWeight.bold,
+                                  color: isDriver
+                                      ? Colors.green[700]
+                                      : Colors.blue[700],
+                                ),
+                              ),
+                            ],
+                          ),
+                          SizedBox(height: 8),
+                          Text(
+                            'Enable this technician to drive vehicles and fulfill transportation requests',
+                            style: TextStyle(
+                              fontSize: 13,
+                              color: isDriver
+                                  ? Colors.green[800]
+                                  : Colors.blue[800],
+                            ),
+                          ),
+                          SizedBox(height: 8),
+                          SwitchListTile(
+                            title: Text(
+                              'Enable Driver Role',
                               style: TextStyle(
-                                fontWeight: FontWeight.bold,
+                                fontSize: 14,
+                                fontWeight: FontWeight.w500,
                                 color: isDriver
                                     ? Colors.green[700]
                                     : Colors.blue[700],
                               ),
                             ),
-                          ],
-                        ),
-                        SizedBox(height: 8),
-                        Text(
-                          'Enable this technician to drive vehicles and fulfill transportation requests',
-                          style: TextStyle(
-                            fontSize: 13,
-                            color:
-                                isDriver ? Colors.green[800] : Colors.blue[800],
+                            value: isDriver,
+                            onChanged: isLoading
+                                ? null
+                                : (value) {
+                                    setState(() {
+                                      isDriver = value;
+                                    });
+                                  },
+                            activeColor: Colors.green,
+                            contentPadding: EdgeInsets.zero,
+                            dense: true,
                           ),
-                        ),
-                        SizedBox(height: 8),
-                        SwitchListTile(
-                          title: Text(
-                            'Enable Driver Role',
-                            style: TextStyle(
-                              fontSize: 14,
-                              fontWeight: FontWeight.w500,
-                              color: isDriver
-                                  ? Colors.green[700]
-                                  : Colors.blue[700],
+                        ],
+                      ),
+                    ),
+                  ],
+
+                  // Auto-driver detection info
+                  if (isDriverNameOrEmail &&
+                      selectedRole == Constants.ROLE_TECHNICIAN) ...[
+                    SizedBox(height: 12),
+                    Container(
+                      padding: EdgeInsets.all(10),
+                      decoration: BoxDecoration(
+                        color: Colors.blue[50],
+                        borderRadius: BorderRadius.circular(8),
+                        border: Border.all(color: Colors.blue[200]!),
+                      ),
+                      child: Row(
+                        children: [
+                          Icon(Icons.info, color: Colors.blue[700], size: 16),
+                          SizedBox(width: 8),
+                          Expanded(
+                            child: Text(
+                              'Auto-detected driver from name/email containing "driver"',
+                              style: TextStyle(
+                                color: Colors.blue[700],
+                                fontSize: 12,
+                              ),
                             ),
                           ),
-                          value: isDriver,
-                          onChanged: (value) {
-                            setState(() {
-                              isDriver = value;
-                            });
-                          },
-                          activeColor: Colors.green,
-                          contentPadding: EdgeInsets.zero,
-                          dense: true,
-                        ),
-                      ],
+                        ],
+                      ),
                     ),
-                  ),
+                  ],
+
+                  // Email change warning
+                  if (emailChanged) ...[
+                    SizedBox(height: 16),
+                    Container(
+                      padding: EdgeInsets.all(12),
+                      decoration: BoxDecoration(
+                        color: Colors.orange[50],
+                        borderRadius: BorderRadius.circular(8),
+                        border: Border.all(color: Colors.orange[200]!),
+                      ),
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Row(
+                            children: [
+                              Icon(Icons.warning,
+                                  color: Colors.orange[700], size: 16),
+                              SizedBox(width: 8),
+                              Text(
+                                'Email Change Warning',
+                                style: TextStyle(
+                                  color: Colors.orange[700],
+                                  fontSize: 13,
+                                  fontWeight: FontWeight.bold,
+                                ),
+                              ),
+                            ],
+                          ),
+                          SizedBox(height: 6),
+                          Text(
+                            'Old: $currentEmail',
+                            style: TextStyle(
+                              color: Colors.orange[600],
+                              fontSize: 11,
+                              decoration: TextDecoration.lineThrough,
+                            ),
+                          ),
+                          Text(
+                            'New: $currentFullEmail',
+                            style: TextStyle(
+                              color: Colors.orange[800],
+                              fontSize: 11,
+                              fontWeight: FontWeight.bold,
+                            ),
+                          ),
+                          SizedBox(height: 4),
+                          Text(
+                            'User must login with the new email address.',
+                            style: TextStyle(
+                              color: Colors.orange[700],
+                              fontSize: 11,
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                  ],
                 ],
-                if (isDriverNameOrEmail &&
-                    selectedRole == Constants.ROLE_TECHNICIAN)
-                  Container(
-                    margin: EdgeInsets.only(top: 16),
-                    padding: EdgeInsets.all(12),
-                    decoration: BoxDecoration(
-                      color: Colors.blue[50],
-                      borderRadius: BorderRadius.circular(8),
-                      border: Border.all(color: Colors.blue[200]!),
-                    ),
-                    child: Row(
-                      children: [
-                        Icon(Icons.info, color: Colors.blue[700], size: 16),
-                        SizedBox(width: 8),
-                        Expanded(
-                          child: Text(
-                            'This user has "driver" in name/email which will automatically enable driver capabilities',
-                            style: TextStyle(
-                              color: Colors.blue[700],
-                              fontSize: 12,
-                            ),
-                          ),
-                        ),
-                      ],
-                    ),
-                  ),
-              ],
+              ),
             ),
           ),
           actions: [
             TextButton.icon(
-              onPressed: () => Navigator.pop(context),
+              onPressed: isLoading ? null : () => Navigator.pop(context),
               icon: Icon(Icons.cancel, size: 18),
               label: Text('Cancel'),
             ),
             ElevatedButton.icon(
-              onPressed: () async {
-                try {
-                  await FirebaseFirestore.instance
-                      .collection('users')
-                      .doc(userId)
-                      .update({
-                    'name': nameController.text.trim(),
-                    'role': selectedRole,
-                  });
+              onPressed: isLoading
+                  ? null
+                  : () async {
+                      // Validate form first
+                      if (_formKey.currentState!.validate()) {
+                        // Now proceed with the existing validation
+                        if (nameController.text.trim().isEmpty) {
+                          ScaffoldMessenger.of(this.context).showSnackBar(
+                            SnackBar(
+                              content: Text('Name cannot be empty'),
+                              backgroundColor: Colors.red,
+                            ),
+                          );
+                          return;
+                        }
 
-                  bool shouldBeDriver =
-                      selectedRole == Constants.ROLE_TECHNICIAN &&
-                          (isDriver ||
-                              _isDriverUser(nameController.text.trim(),
-                                  userData['email'] ?? ''));
+                        if (emailUsernameController.text.trim().isEmpty) {
+                          ScaffoldMessenger.of(this.context).showSnackBar(
+                            SnackBar(
+                              content: Text('Username cannot be empty'),
+                              backgroundColor: Colors.red,
+                            ),
+                          );
+                          return;
+                        }
 
-                  bool isCurrentlyDriver = await _checkIfUserIsDriver(userId);
+                        // Validate username format
+                        final username = emailUsernameController.text.trim();
+                        if (!RegExp(r'^[a-zA-Z0-9_.]+$').hasMatch(username)) {
+                          ScaffoldMessenger.of(this.context).showSnackBar(
+                            SnackBar(
+                              content: Text(
+                                  'Username can only contain letters, numbers, underscores and dots'),
+                              backgroundColor: Colors.red,
+                            ),
+                          );
+                          return;
+                        }
 
-                  if (shouldBeDriver && !isCurrentlyDriver) {
-                    await FirebaseFirestore.instance
-                        .collection('drivers')
-                        .doc(userId)
-                        .set({
-                      'createdAt': Timestamp.now(),
-                      'currentVehicleId': null,
-                      'currentVehicleName': null,
-                      'email': userData['email'] ?? '',
-                      'isAvailable': true,
-                      'name': nameController.text.trim(),
-                      'status': 'active',
-                      'uid': userId,
-                      'updatedAt': Timestamp.now(),
-                    });
-                  } else if (isCurrentlyDriver && !shouldBeDriver) {
-                    await FirebaseFirestore.instance
-                        .collection('drivers')
-                        .doc(userId)
-                        .update({
-                      'isAvailable': false,
-                      'status': 'inactive',
-                      'updatedAt': Timestamp.now(),
-                    });
-                  } else if (isCurrentlyDriver && shouldBeDriver) {
-                    await FirebaseFirestore.instance
-                        .collection('drivers')
-                        .doc(userId)
-                        .update({
-                      'name': nameController.text.trim(),
-                      'updatedAt': Timestamp.now(),
-                    });
-                  }
+                        setState(() => isLoading = true);
 
-                  Navigator.pop(context);
-                  ScaffoldMessenger.of(this.context).showSnackBar(
-                    SnackBar(
-                      content: Text('User updated successfully'),
-                      backgroundColor: Colors.green,
-                      behavior: SnackBarBehavior.floating,
-                    ),
-                  );
+                        try {
+                          final userService =
+                              Provider.of<UserService>(context, listen: false);
 
-                  setState(() {});
-                } catch (e) {
-                  ScaffoldMessenger.of(this.context).showSnackBar(
-                    SnackBar(
-                      content: Text('Error updating user: $e'),
-                      backgroundColor: Colors.red,
-                      behavior: SnackBarBehavior.floating,
-                    ),
-                  );
-                }
-              },
-              icon: Icon(Icons.save),
-              label: Text('Update'),
+                          // Build full email with @gmail.com
+                          final String newFullEmail = _buildFullEmail(
+                              emailUsernameController.text.trim(),
+                              _emailSuffix);
+
+                          print(
+                              '🔄 Updating user: ${nameController.text.trim()}');
+                          print('📧 Email: $currentEmail -> $newFullEmail');
+
+                          // Update user with new email
+                          String? error = await userService.updateUserWithEmail(
+                              userId,
+                              nameController.text.trim(),
+                              newFullEmail,
+                              selectedRole);
+
+                          if (error != null) {
+                            throw Exception(error);
+                          }
+
+                          // Handle driver status
+                          bool shouldBeDriver =
+                              selectedRole == Constants.ROLE_TECHNICIAN &&
+                                  (isDriver ||
+                                      _isDriverUser(nameController.text.trim(),
+                                          newFullEmail));
+
+                          bool isCurrentlyDriver =
+                              await _checkIfUserIsDriver(userId);
+
+                          if (shouldBeDriver && !isCurrentlyDriver) {
+                            await FirebaseFirestore.instance
+                                .collection('drivers')
+                                .doc(userId)
+                                .set({
+                              'createdAt': Timestamp.now(),
+                              'currentVehicleId': null,
+                              'currentVehicleName': null,
+                              'email': newFullEmail,
+                              'isAvailable': true,
+                              'name': nameController.text.trim(),
+                              'status': 'active',
+                              'uid': userId,
+                              'updatedAt': Timestamp.now(),
+                            });
+                          } else if (isCurrentlyDriver && !shouldBeDriver) {
+                            await FirebaseFirestore.instance
+                                .collection('drivers')
+                                .doc(userId)
+                                .update({
+                              'isAvailable': false,
+                              'status': 'inactive',
+                              'updatedAt': Timestamp.now(),
+                            });
+                          } else if (isCurrentlyDriver && shouldBeDriver) {
+                            await FirebaseFirestore.instance
+                                .collection('drivers')
+                                .doc(userId)
+                                .update({
+                              'name': nameController.text.trim(),
+                              'email': newFullEmail,
+                              'updatedAt': Timestamp.now(),
+                            });
+                          }
+
+                          Navigator.pop(context);
+
+                          // Show success message
+                          ScaffoldMessenger.of(this.context).showSnackBar(
+                            SnackBar(
+                              content: Text(emailChanged
+                                  ? 'User updated! Email changed - user must login with new email.'
+                                  : 'User updated successfully'),
+                              backgroundColor: Colors.green,
+                              behavior: SnackBarBehavior.floating,
+                            ),
+                          );
+
+                          // Refresh the list
+                          this.setState(() {});
+                        } catch (e) {
+                          setState(() => isLoading = false);
+                          print('❌ Error updating user: $e');
+                          ScaffoldMessenger.of(this.context).showSnackBar(
+                            SnackBar(
+                              content: Text('Error updating user: $e'),
+                              backgroundColor: Colors.red,
+                              behavior: SnackBarBehavior.floating,
+                            ),
+                          );
+                        }
+                      }
+                    },
+              icon: isLoading
+                  ? Container(
+                      width: 18,
+                      height: 18,
+                      child: CircularProgressIndicator(
+                          strokeWidth: 2.5, color: Colors.white),
+                    )
+                  : Icon(Icons.save),
+              label: Text(isLoading ? 'Updating...' : 'Update'),
               style: ElevatedButton.styleFrom(
                 backgroundColor: Theme.of(context).primaryColor,
                 foregroundColor: Colors.white,
@@ -818,7 +1181,6 @@ class _AdminDashboardState extends State<AdminDashboard> {
       }),
     );
   }
-
   void _showDeleteConfirmDialog(BuildContext context,
       Map<String, dynamic> userData, String userId, bool isDriver) {
     showDialog(
@@ -869,21 +1231,19 @@ class _AdminDashboardState extends State<AdminDashboard> {
                 borderRadius: BorderRadius.circular(8),
                 border: Border.all(color: Colors.red[200]!),
               ),
-              child: Row(
-                children: [
-                  Icon(Icons.error_outline, color: Colors.red[700], size: 16),
-                  SizedBox(width: 8),
-                  Expanded(
-                    child: Text(
-                      'This action cannot be undone.',
-                      style: TextStyle(
-                        color: Colors.red[600],
-                        fontWeight: FontWeight.w500,
-                      ),
+              child: Row(children: [
+                Icon(Icons.error_outline, color: Colors.red[700], size: 16),
+                SizedBox(width: 8),
+                Expanded(
+                  child: Text(
+                    'This action cannot be undone.',
+                    style: TextStyle(
+                      color: Colors.red[600],
+                      fontWeight: FontWeight.w500,
                     ),
                   ),
-                ],
-              ),
+                ),
+              ]),
             ),
           ],
         ),
@@ -1332,9 +1692,6 @@ class _AdminDashboardState extends State<AdminDashboard> {
                                 ),
                               ],
                             ),
-                            
-
-
                             trailing: PopupMenuButton<String>(
                               onSelected: (value) {
                                 if (value == 'edit') {
@@ -1377,7 +1734,6 @@ class _AdminDashboardState extends State<AdminDashboard> {
                                 ),
                               ],
                             ),
-
                           ),
                         );
                       },

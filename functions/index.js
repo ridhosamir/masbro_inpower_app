@@ -1388,3 +1388,355 @@ async function markUserNotificationAsRead(docId, employeeId) {
     logger.error(`Error marking user notification as read for docId ${docId}:`, error);
   }
 }
+/**
+ * Cloud Function untuk mengupdate user termasuk email oleh admin
+ * ADDED: Fungsi baru untuk mendukung edit email
+ */
+exports.updateUserByAdmin = onCall({ region: "asia-southeast1" }, async (request) => {
+  try {
+    // 1. Verifikasi bahwa pengguna sudah login
+    if (!request.auth) {
+      logger.error("Fungsi dipanggil oleh pengguna yang tidak terautentikasi.");
+      throw new functions.https.HttpsError(
+        "unauthenticated",
+        "Anda harus login untuk menggunakan fungsi ini."
+      );
+    }
+
+    const callerUid = request.auth.uid;
+    
+    // 2. Verifikasi bahwa caller adalah admin
+    const callerDoc = await db.collection("users").doc(callerUid).get();
+    if (!callerDoc.exists || callerDoc.data().role !== "admin") {
+      logger.warn(`Pengguna non-admin (UID: ${callerUid}) mencoba mengupdate user.`);
+      throw new functions.https.HttpsError(
+        "permission-denied", 
+        "Hanya admin yang dapat mengupdate user."
+      );
+    }
+
+    // 3. Ambil dan validasi parameter
+    const { uid, name, email, role } = request.data;
+    
+    if (!uid || !name || !email || !role) {
+      logger.error("Parameter tidak lengkap.", { data: request.data });
+      throw new functions.https.HttpsError(
+        "invalid-argument",
+        "Parameter uid, name, email, dan role harus disediakan."
+      );
+    }
+
+    // Validasi email format
+    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+    if (!emailRegex.test(email)) {
+      throw new functions.https.HttpsError(
+        "invalid-argument",
+        "Format email tidak valid."
+      );
+    }
+
+    // Validasi role
+    const validRoles = ['employee', 'officer', 'technician', 'admin'];
+    if (!validRoles.includes(role)) {
+      throw new functions.https.HttpsError(
+        "invalid-argument",
+        `Role harus salah satu dari: ${validRoles.join(', ')}`
+      );
+    }
+
+    // 4. Verifikasi bahwa target user exists
+    const targetUserDoc = await db.collection("users").doc(uid).get();
+    if (!targetUserDoc.exists) {
+      throw new functions.https.HttpsError(
+        "not-found",
+        "User dengan UID tersebut tidak ditemukan."
+      );
+    }
+
+    const currentUserData = targetUserDoc.data();
+    const currentEmail = currentUserData.email;
+    const emailChanged = currentEmail !== email;
+
+    logger.info(`Admin ${callerUid} updating user: ${name} (${currentEmail} -> ${email}), role: ${role}`);
+
+    try {
+      // 5. Update Firebase Auth jika email berubah
+      if (emailChanged) {
+        logger.info(`Updating email in Firebase Auth from ${currentEmail} to ${email}`);
+        
+        // Check if new email is already in use
+        try {
+          await admin.auth().getUserByEmail(email);
+          // If we get here, email is already in use
+          throw new functions.https.HttpsError(
+            "already-exists",
+            "Email sudah digunakan oleh user lain."
+          );
+        } catch (authError) {
+          // If user-not-found, that's good - email is available
+          if (authError.code !== 'auth/user-not-found') {
+            throw authError;
+          }
+        }
+
+        // Update email in Firebase Auth
+        await admin.auth().updateUser(uid, {
+          email: email,
+          displayName: name
+        });
+        
+        logger.info(`✅ Email updated in Firebase Auth for UID: ${uid}`);
+      } else {
+        // Just update display name if email didn't change
+        await admin.auth().updateUser(uid, {
+          displayName: name
+        });
+        logger.info(`✅ Display name updated in Firebase Auth for UID: ${uid}`);
+      }
+    } catch (authError) {
+      logger.error(`❌ Failed to update Firebase Auth: ${authError.message}`);
+      
+      // Handle specific auth errors
+      if (authError.code === 'auth/user-not-found') {
+        throw new functions.https.HttpsError(
+          "not-found",
+          "User tidak ditemukan dalam sistem autentikasi."
+        );
+      } else if (authError.code === 'auth/email-already-exists') {
+        throw new functions.https.HttpsError(
+          "already-exists",
+          "Email sudah digunakan oleh user lain."
+        );
+      } else if (authError.code === 'auth/invalid-email') {
+        throw new functions.https.HttpsError(
+          "invalid-argument",
+          "Format email tidak valid."
+        );
+      } else {
+        throw new functions.https.HttpsError(
+          "internal",
+          `Gagal mengupdate autentikasi: ${authError.message}`
+        );
+      }
+    }
+
+    try {
+      // 6. Update Firestore document
+      await db.collection("users").doc(uid).update({
+        name: name,
+        email: email,
+        role: role,
+        updatedAt: admin.firestore.FieldValue.serverTimestamp(),
+      });
+      
+      logger.info(`✅ User document updated in Firestore for UID: ${uid}`);
+
+      // 7. Update driver document if exists and email changed
+      if (emailChanged) {
+        const driverDoc = await db.collection("drivers").doc(uid).get();
+        if (driverDoc.exists) {
+          await db.collection("drivers").doc(uid).update({
+            name: name,
+            email: email,
+            updatedAt: admin.firestore.FieldValue.serverTimestamp(),
+          });
+          logger.info(`✅ Driver document email updated for UID: ${uid}`);
+        }
+      }
+
+    } catch (firestoreError) {
+      logger.error(`❌ Failed to update Firestore: ${firestoreError.message}`);
+      
+      // If Firestore fails, we might want to revert the Auth changes
+      // But for now, we'll just report the error
+      throw new functions.https.HttpsError(
+        "internal",
+        `Gagal mengupdate database: ${firestoreError.message}`
+      );
+    }
+
+    // 8. Log audit trail
+    try {
+      await db.collection("admin_actions").add({
+        adminUid: callerUid,
+        adminEmail: callerDoc.data().email || '',
+        adminName: callerDoc.data().name || '',
+        action: 'update_user',
+        targetUserUid: uid,
+        targetUserEmail: email,
+        targetUserName: name,
+        targetUserRole: role,
+        emailChanged: emailChanged,
+        oldEmail: currentEmail,
+        newEmail: email,
+        timestamp: admin.firestore.FieldValue.serverTimestamp(),
+        success: true,
+        details: emailChanged ? 'User updated with email change' : 'User updated without email change'
+      });
+    } catch (auditError) {
+      logger.warn(`⚠️ Gagal mencatat audit trail: ${auditError.message}`);
+      // Tidak gagalkan seluruh proses jika audit gagal
+    }
+
+    logger.info(`✅ User update completed successfully by admin ${callerUid} for user ${uid}`);
+
+    return {
+      success: true,
+      message: emailChanged 
+        ? `User ${name} berhasil diupdate dengan email baru: ${email}` 
+        : `User ${name} berhasil diupdate`,
+      emailChanged: emailChanged,
+      oldEmail: currentEmail,
+      newEmail: email
+    };
+
+  } catch (error) {
+    // Log error untuk debugging
+    logger.error(`❌ Error pada updateUserByAdmin: ${error.message}`, error);
+    
+    // Jika error bukan HttpsError, wrap dalam HttpsError
+    if (!(error instanceof functions.https.HttpsError)) {
+      throw new functions.https.HttpsError(
+        "internal",
+        `Terjadi kesalahan tidak terduga: ${error.message}`
+      );
+    }
+    
+    // Re-throw HttpsError
+    throw error;
+  }
+});
+
+/**
+ * Cloud Function untuk batch update email untuk multiple users
+ * ADDED: Fungsi untuk batch update (opsional)
+ */
+exports.batchUpdateUserEmails = onCall({ region: "asia-southeast1" }, async (request) => {
+  try {
+    // 1. Verifikasi admin
+    if (!request.auth) {
+      throw new functions.https.HttpsError("unauthenticated", "Harus login sebagai admin");
+    }
+
+    const callerUid = request.auth.uid;
+    const callerDoc = await db.collection("users").doc(callerUid).get();
+    if (!callerDoc.exists || callerDoc.data().role !== "admin") {
+      throw new functions.https.HttpsError("permission-denied", "Hanya admin yang dapat melakukan batch update");
+    }
+
+    // 2. Validasi parameter
+    const { updates } = request.data;
+    
+    if (!Array.isArray(updates) || updates.length === 0) {
+      throw new functions.https.HttpsError("invalid-argument", "Parameter 'updates' harus berupa array yang tidak kosong");
+    }
+
+    if (updates.length > 50) {
+      throw new functions.https.HttpsError("invalid-argument", "Maksimal 50 updates per batch");
+    }
+
+    logger.info(`Admin ${callerUid} starting batch update for ${updates.length} users`);
+
+    const results = [];
+    
+    // 3. Process each update
+    for (let i = 0; i < updates.length; i++) {
+      const update = updates[i];
+      const { uid, name, email, role } = update;
+
+      try {
+        // Validate each update
+        if (!uid || !name || !email || !role) {
+          throw new Error("Missing required fields");
+        }
+
+        const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+        if (!emailRegex.test(email)) {
+          throw new Error("Invalid email format");
+        }
+
+        // Update Firebase Auth
+        await admin.auth().updateUser(uid, {
+          email: email,
+          displayName: name
+        });
+
+        // Update Firestore
+        await db.collection("users").doc(uid).update({
+          name: name,
+          email: email,
+          role: role,
+          updatedAt: admin.firestore.FieldValue.serverTimestamp(),
+        });
+
+        // Update driver document if exists
+        const driverDoc = await db.collection("drivers").doc(uid).get();
+        if (driverDoc.exists) {
+          await db.collection("drivers").doc(uid).update({
+            name: name,
+            email: email,
+            updatedAt: admin.firestore.FieldValue.serverTimestamp(),
+          });
+        }
+
+        results.push({
+          uid: uid,
+          success: true,
+          message: `User ${name} updated successfully`
+        });
+
+        logger.info(`✅ Batch update success for user ${uid}: ${name} (${email})`);
+
+      } catch (error) {
+        logger.error(`❌ Batch update failed for user ${uid}: ${error.message}`);
+        
+        results.push({
+          uid: uid,
+          success: false,
+          error: error.message
+        });
+      }
+    }
+
+    // 4. Log audit trail
+    try {
+      await db.collection("admin_actions").add({
+        adminUid: callerUid,
+        adminEmail: callerDoc.data().email || '',
+        adminName: callerDoc.data().name || '',
+        action: 'batch_update_users',
+        totalUpdates: updates.length,
+        successCount: results.filter(r => r.success).length,
+        failureCount: results.filter(r => !r.success).length,
+        timestamp: admin.firestore.FieldValue.serverTimestamp(),
+        success: true,
+        details: 'Batch update completed'
+      });
+    } catch (auditError) {
+      logger.warn(`⚠️ Gagal mencatat audit trail: ${auditError.message}`);
+    }
+
+    const successCount = results.filter(r => r.success).length;
+    const failureCount = results.filter(r => !r.success).length;
+
+    logger.info(`✅ Batch update completed: ${successCount} success, ${failureCount} failures`);
+
+    return {
+      success: true,
+      message: `Batch update completed: ${successCount} success, ${failureCount} failures`,
+      totalCount: updates.length,
+      successCount: successCount,
+      failureCount: failureCount,
+      results: results
+    };
+
+  } catch (error) {
+    logger.error(`❌ Error in batchUpdateUserEmails: ${error.message}`, error);
+    
+    if (!(error instanceof functions.https.HttpsError)) {
+      throw new functions.https.HttpsError("internal", `Batch update failed: ${error.message}`);
+    }
+    
+    throw error;
+  }
+});
