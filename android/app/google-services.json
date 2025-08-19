@@ -1,0 +1,48 @@
+{
+  "project_info": {
+    "project_number": "197775411969",
+    "project_id": "test-4fa2a",
+    "storage_bucket": "test-4fa2a.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:197775411969:android:b2b87609dbfc42b3ebe900",
+        "android_client_info": {
+          "package_name": "com.example.lontar_application"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyD3ZM2lo0FvsszS5CLDC8JM5ZFmGMCrAoo"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    },
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:197775411969:android:9605bca5fcdc2921ebe900",
+        "android_client_info": {
+          "package_name": "com.example.masbro_inpower_app"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyD3ZM2lo0FvsszS5CLDC8JM5ZFmGMCrAoo"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}

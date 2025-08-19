@@ -1,5 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:firebase_core/firebase_core.dart';
+import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:flutter_local_notifications/flutter_local_notifications.dart';
 import 'package:masbro_inpower_app/screens/homeDashboard/dashboard_user.dart';
 import 'package:masbro_inpower_app/screens/homeDashboard/dashboard_officer.dart';
 import 'package:masbro_inpower_app/screens/homeDashboard/dashboard_technician.dart';
@@ -15,22 +17,94 @@ import 'package:device_preview/device_preview.dart';
 import 'package:flutter/foundation.dart';
 import 'package:intl/date_symbol_data_local.dart';
 import 'package:flutter_localizations/flutter_localizations.dart';
+import 'package:firebase_messaging/firebase_messaging.dart';
+import 'package:masbro_inpower_app/services/navigation_service.dart';
+import 'package:masbro_inpower_app/services/statusNotifications/notif_status_helper.dart';
+import 'package:masbro_inpower_app/services/notification_list_service.dart';
+import 'models/user_model.dart';
+
+final NavigationService navigationService = NavigationService();
+final UserService userService = UserService();
+final NotificationService notificationService =
+    NotificationService(navigationService, userService);
+final NotificationListService notificationListService =
+    NotificationListService();
+
+@pragma('vm:entry-point')
+Future<void> _firebaseMessagingBackgroundHandler(RemoteMessage message) async {
+  // Inisialisasi Firebase untuk background handler
+  await Firebase.initializeApp(
+    options: DefaultFirebaseOptions.currentPlatform,
+  );
+
+  print('[BACKGROUND] Pesan diterima: ${message.notification?.title}');
+  print('[BACKGROUND] Data: ${message.data}');
+
+  // Simpan notifikasi ke database jika perlu
+  if (message.data.isNotEmpty) {
+    try {
+      await FirebaseFirestore.instance.collection('notifications').add({
+        'title': message.notification?.title ?? '',
+        'body': message.notification?.body ?? '',
+        'data': message.data,
+        'timestamp': FieldValue.serverTimestamp(),
+        'isRead': false,
+      });
+    } catch (e) {
+      print('[BACKGROUND] Error menyimpan notifikasi: $e');
+    }
+  }
+}
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
-  await initializeDateFormatting('id_ID', null);
+
+  // Pindahkan inisialisasi Firebase ke atas agar bisa digunakan oleh setup notifikasi
   try {
     await Firebase.initializeApp(
       options: DefaultFirebaseOptions.currentPlatform,
     );
     print('[MAIN] Firebase berhasil diinisialisasi');
-    // Verifikasi bucket Storage
+  } catch (e) {
+    print('[MAIN] Gagal menginisialisasi Firebase: $e');
+  }
+
+  FirebaseMessaging.onBackgroundMessage(_firebaseMessagingBackgroundHandler);
+
+  // Setup notifikasi lokal untuk non-web platform
+  if (!kIsWeb) {
+    try {
+      await FirebaseFirestore.instance.enablePersistence(
+        const PersistenceSettings(synchronizeTabs: true),
+      );
+    } catch (e) {
+      print('[MAIN] Persistence tidak bisa diaktifkan: $e');
+    }
+  }
+
+  await initializeDateFormatting('id_ID', null);
+
+  // Blok try-catch ini sedikit diubah karena Firebase.initializeApp sudah dipanggil di atas
+  try {
+    if (!kIsWeb) {
+      try {
+        await FirebaseFirestore.instance.enablePersistence(
+          const PersistenceSettings(synchronizeTabs: true),
+        );
+      } catch (e) {
+        print('[MAIN] Persistence tidak bisa diaktifkan: $e');
+      }
+    }
+
+    await notificationService.setupInteractedMessage();
+
     final storage = FirebaseStorage.instanceFor(
         bucket: 'gs://test-4fa2a.firebasestorage.app');
     print('[MAIN] Bucket Storage yang digunakan: ${storage.bucket}');
   } catch (e) {
-    print('[MAIN] Gagal menginisialisasi Firebase: $e');
+    print('[MAIN] Error pada setup lanjutan: $e');
   }
+
   runApp(DevicePreview(
     enabled: !kReleaseMode,
     builder: (context) => const MyApp(),
@@ -39,18 +113,27 @@ void main() async {
 
 class MyApp extends StatelessWidget {
   const MyApp({super.key});
+
   @override
   Widget build(BuildContext context) {
     return MultiProvider(
       providers: [
         ChangeNotifierProvider(create: (_) => AuthService()),
-        ChangeNotifierProvider(create: (_) => UserService()),
+        ChangeNotifierProvider.value(value: userService),
+        Provider.value(value: navigationService),
+        Provider.value(value: notificationService),
+        Provider.value(value: notificationListService),
       ],
       child: MaterialApp(
-        title: 'Masbro App',
+        title: 'MasBro InPower App',
         theme: AppTheme.lightTheme,
-        home: const SplashScreen(),
         debugShowCheckedModeBanner: false,
+        navigatorKey: navigationService.navigatorKey,
+        initialRoute: '/',
+        routes: {
+          '/': (context) => const SplashScreen(),
+          '/auth_wrapper': (context) => const AuthWrapper(),
+        },
         localizationsDelegates: const [
           GlobalMaterialLocalizations.delegate,
           GlobalWidgetsLocalizations.delegate,
@@ -58,8 +141,10 @@ class MyApp extends StatelessWidget {
         ],
         supportedLocales: const [
           Locale('id', 'ID'),
+          Locale('en', 'US'),
         ],
-        locale: const Locale('id', 'ID'),
+        locale: DevicePreview.locale(context),
+        builder: DevicePreview.appBuilder,
       ),
     );
   }
@@ -670,6 +755,10 @@ class AuthWrapper extends StatelessWidget {
 
             final userData = snapshot.data!;
             print('[AUTH_WRAPPER] Peran pengguna: ${userData.role}');
+
+            final notificationService =
+                Provider.of<NotificationService>(context, listen: false);
+            notificationService.initNotifications(userData.uid);
 
             // Navigate based on role
             switch (userData.role) {
