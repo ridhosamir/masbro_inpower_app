@@ -204,7 +204,7 @@ class _RatingDetailScreenState extends State<RatingDetailScreen>
               .where(FieldPath.documentId, whereIn: requestIds.toList())
               .get();
           final rideDetails = rideDetailsSnap.docs
-              .map((d) => RideRequestModel.fromSnapshot(d))
+              .map((d) => RideRequestModel.fromFirestore(d))
               .toList();
           for (var ride in rideDetails) {
             if (ride.driverRating != null && ride.completedAt != null) {
@@ -236,7 +236,7 @@ class _RatingDetailScreenState extends State<RatingDetailScreen>
             .where(FieldPath.documentId, whereIn: requestIds.toList())
             .get();
         final rideDetails = rideDetailsSnap.docs
-            .map((d) => RideRequestModel.fromSnapshot(d))
+            .map((d) => RideRequestModel.fromFirestore(d))
             .toList();
 
         for (var ride in rideDetails) {

@@ -33,7 +33,7 @@ class OperasionalFirestoreService {
         .snapshots()
         .map((snapshot) {
       return snapshot.docs
-          .map((doc) => RideRequestModel.fromSnapshot(doc))
+          .map((doc) => RideRequestModel.fromFirestore(doc))
           .toList();
     });
   }
@@ -46,7 +46,7 @@ class OperasionalFirestoreService {
         .snapshots()
         .map((snapshot) {
       return snapshot.docs
-          .map((doc) => RideRequestModel.fromSnapshot(doc))
+          .map((doc) => RideRequestModel.fromFirestore(doc))
           .toList();
     });
   }
@@ -59,7 +59,7 @@ class OperasionalFirestoreService {
         .snapshots()
         .map((snapshot) {
       return snapshot.docs
-          .map((doc) => RideRequestModel.fromSnapshot(doc))
+          .map((doc) => RideRequestModel.fromFirestore(doc))
           .toList();
     });
   }
@@ -630,7 +630,7 @@ class OperasionalFirestoreService {
     try {
       final doc = await _rideRequestsCollection.doc(requestId).get();
       if (doc.exists) {
-        final request = RideRequestModel.fromSnapshot(doc);
+        final request = RideRequestModel.fromFirestore(doc);
         print(
             'Retrieved request $requestId with driver rating: ${request.driverRating}, vehicle rating: ${request.vehicleRating}');
         return request;

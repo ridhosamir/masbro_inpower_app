@@ -2,6 +2,7 @@ import 'dart:io';
 import 'package:image_picker/image_picker.dart';
 import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
+import 'package:masbro_inpower_app/services/statusNotifications/notif_status_helper.dart';
 import 'package:masbro_inpower_app/models/maintenanceApp/task_model.dart'
     as maintenance_task;
 import 'package:masbro_inpower_app/models/operasionalApp/ride_request_model.dart'
@@ -19,6 +20,9 @@ import 'package:masbro_inpower_app/services/operasionalApp/firestore_service.dar
     as operasional_service;
 import 'package:masbro_inpower_app/services/resourceApp/firestore_service.dart'
     as resource_service;
+import 'package:masbro_inpower_app/screens/homeDashboard/list_notifications.dart';
+import 'package:masbro_inpower_app/services/notification_list_service.dart';
+import 'package:badges/badges.dart' as badges;
 import 'package:masbro_inpower_app/services/user_service.dart';
 import 'package:masbro_inpower_app/utils/firebase_storage_image.dart';
 import 'package:provider/provider.dart';
@@ -26,9 +30,13 @@ import '../../../services/storage_service.dart';
 import 'package:flutter/foundation.dart' show kIsWeb;
 import 'dart:typed_data';
 import 'dart:ui'; // Needed for ImageFilter
+import 'dart:async';
+import 'package:rxdart/rxdart.dart';
 
 class HomeDashboardTechnician extends StatefulWidget {
-  const HomeDashboardTechnician({super.key});
+  final int initialTabIndex;
+
+  const HomeDashboardTechnician({super.key, this.initialTabIndex = 0});
 
   @override
   State<HomeDashboardTechnician> createState() =>
@@ -41,10 +49,14 @@ class _HomeDashboardTechnicianState extends State<HomeDashboardTechnician>
   final _searchController = TextEditingController();
   late TabController _tabController;
 
+  late final NotificationListService _notificationListService;
+
   @override
   void initState() {
     super.initState();
-    _tabController = TabController(length: 2, vsync: this);
+    _tabController = TabController(
+        length: 2, vsync: this, initialIndex: widget.initialTabIndex);
+    _notificationListService = NotificationListService();
     _loadUserData();
 
     _tabController.addListener(() {
@@ -71,6 +83,13 @@ class _HomeDashboardTechnicianState extends State<HomeDashboardTechnician>
         setState(() {
           currentUser = userData;
         });
+
+        if (currentUser != null) {
+          // Inisialisasi notifikasi dan simpan/update FCM token ke Firestore
+          final notificationService =
+              Provider.of<NotificationService>(context, listen: false);
+          notificationService.initNotifications(currentUser!.uid);
+        }
       }
     }
   }
@@ -151,8 +170,8 @@ class _HomeDashboardTechnicianState extends State<HomeDashboardTechnician>
                       unselectedLabelStyle: const TextStyle(
                           fontWeight: FontWeight.normal, fontSize: 16),
                       tabs: const [
-                        Tab(text: 'My Task'),
-                        Tab(text: 'Application'),
+                        Tab(icon: Icon(Icons.list_alt)),
+                        Tab(icon: Icon(Icons.apps)),
                       ],
                       indicator: const UnderlineTabIndicator(
                         borderSide: BorderSide(width: 4.0, color: Colors.white),
@@ -232,19 +251,58 @@ class _HomeDashboardTechnicianState extends State<HomeDashboardTechnician>
   }
 
   Widget _buildProfileButton() {
-    return Container(
-      decoration: BoxDecoration(
-        shape: BoxShape.circle,
-        gradient: LinearGradient(
-          colors: [
-            Colors.white.withOpacity(0.2),
-            Colors.white.withOpacity(0.1),
-          ],
-          begin: Alignment.topLeft,
-          end: Alignment.bottomRight,
+    return Row(
+      mainAxisSize: MainAxisSize.min,
+      children: [
+        StreamBuilder<int>(
+          stream: _notificationListService.getUnreadCountStream(),
+          builder: (context, snapshot) {
+            final unreadCount = snapshot.data ?? 0;
+            return badges.Badge(
+              position: badges.BadgePosition.topEnd(top: -4, end: -4),
+              showBadge: unreadCount > 0,
+              badgeContent: Text(
+                unreadCount.toString(),
+                style: const TextStyle(color: Colors.white, fontSize: 10),
+              ),
+              child: Container(
+                margin: const EdgeInsets.only(right: 8),
+                decoration: BoxDecoration(
+                  shape: BoxShape.circle,
+                  color: Colors.white.withOpacity(0.15),
+                ),
+                child: IconButton(
+                  icon: const Icon(Icons.notifications_outlined,
+                      color: Colors.white),
+                  onPressed: () {
+                    Navigator.push(
+                      context,
+                      MaterialPageRoute(
+                        builder: (context) => const NotificationListScreen(),
+                      ),
+                    );
+                  },
+                  tooltip: 'Notifications',
+                ),
+              ),
+            );
+          },
         ),
-      ),
-      child: _buildProfileMenu(),
+        Container(
+          decoration: BoxDecoration(
+            shape: BoxShape.circle,
+            gradient: LinearGradient(
+              colors: [
+                Colors.white.withOpacity(0.2),
+                Colors.white.withOpacity(0.1),
+              ],
+              begin: Alignment.topLeft,
+              end: Alignment.bottomRight,
+            ),
+          ),
+          child: _buildProfileMenu(),
+        ),
+      ],
     );
   }
 
@@ -962,17 +1020,20 @@ class _TechnicianStatusTabState extends State<TechnicianStatusTab>
   int _currentPage = 1;
   final int _itemsPerPage = 5;
 
+  StreamSubscription? _dataSubscription;
+
   @override
   void initState() {
     super.initState();
     _statusTabController = TabController(length: 2, vsync: this);
-    _fetchData();
+    _listenToDataStreams();
     _searchController.addListener(_onSearchChanged);
     _statusTabController.addListener(_filterData); // Re-filter on tab change
   }
 
   @override
   void dispose() {
+    _dataSubscription?.cancel();
     _statusTabController.dispose();
     _searchController.dispose();
     _completionMaintncNoteController.dispose();
@@ -1032,48 +1093,110 @@ class _TechnicianStatusTabState extends State<TechnicianStatusTab>
   }
 
   Future<void> _fetchData() async {
-    setState(() {
-      _isLoading = true;
-    });
+    // Tampilkan loading, meskipun RefreshIndicator sudah punya UI sendiri
+    if (mounted) {
+      setState(() {
+        _isLoading = true;
+      });
+    }
 
     final String technicianId = widget.currentUser.uid;
 
-    final maintenanceFuture =
-        _maintenanceFirestoreService.getTasksByTechnician(technicianId).first;
-    final resourceFuture =
-        _resourceFirestoreService.getTasksByTechnician(technicianId).first;
-    final operationalFuture = _operasionalFirestoreService
-        .getRideRequestsByDriver(technicianId)
-        .first;
+    try {
+      // Ambil data terbaru satu kali dari semua sumber
+      final maintenanceFuture =
+          _maintenanceFirestoreService.getTasksByTechnician(technicianId).first;
+      final resourceFuture =
+          _resourceFirestoreService.getTasksByTechnician(technicianId).first;
+      final operationalFuture = _operasionalFirestoreService
+          .getRideRequestsByDriver(technicianId)
+          .first;
 
-    final results = await Future.wait([
-      maintenanceFuture,
-      resourceFuture,
-      operationalFuture,
-    ]);
+      final results = await Future.wait([
+        maintenanceFuture,
+        resourceFuture,
+        operationalFuture,
+      ]);
 
-    final maintenanceTasks = results[0] as List<maintenance_task.TaskModel>;
-    final resourceTasks = results[1] as List<resource_task.TaskModel>;
-    final operationalRequests =
-        results[2] as List<operasional_task.RideRequestModel>;
+      // Proses dan perbarui UI sama seperti logika sebelumnya
+      if (mounted) {
+        final maintenanceTasks = results[0] as List<maintenance_task.TaskModel>;
+        final resourceTasks = results[1] as List<resource_task.TaskModel>;
+        final operationalRequests =
+            results[2] as List<operasional_task.RideRequestModel>;
 
-    setState(() {
-      _combinedList = [
-        ...maintenanceTasks,
-        ...resourceTasks,
-        ...operationalRequests,
-      ];
-      _combinedList.sort((a, b) {
-        DateTime dateA = a is operasional_task.RideRequestModel
-            ? a.assignedAt!
-            : (a as dynamic).assignedAt;
-        DateTime dateB = b is operasional_task.RideRequestModel
-            ? b.assignedAt!
-            : (b as dynamic).assignedAt;
-        return dateB.compareTo(dateA); // Sort descending by date
+        setState(() {
+          _combinedList = [
+            ...maintenanceTasks,
+            ...resourceTasks,
+            ...operationalRequests,
+          ];
+          _combinedList.sort((a, b) {
+            DateTime dateA = a is operasional_task.RideRequestModel
+                ? a.assignedAt!
+                : (a as dynamic).assignedAt;
+            DateTime dateB = b is operasional_task.RideRequestModel
+                ? b.assignedAt!
+                : (b as dynamic).assignedAt;
+            return dateB.compareTo(dateA);
+          });
+          _filterData();
+          _isLoading = false;
+        });
+      }
+    } catch (e) {
+      // Tangani jika ada error saat refresh manual
+      if (mounted) {
+        setState(() => _isLoading = false);
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text("Failed to refresh data: $e")),
+        );
+      }
+    }
+  }
+
+  void _listenToDataStreams() {
+    setState(() => _isLoading = true);
+    final String technicianId = widget.currentUser.uid;
+
+    // Menggabungkan 3 stream tugas menjadi satu
+    _dataSubscription = CombineLatestStream.combine3(
+      _maintenanceFirestoreService.getTasksByTechnician(technicianId),
+      _resourceFirestoreService.getTasksByTechnician(technicianId),
+      _operasionalFirestoreService.getRideRequestsByDriver(technicianId),
+      (List<maintenance_task.TaskModel> maintenance,
+          List<resource_task.TaskModel> resource,
+          List<operasional_task.RideRequestModel> operational) {
+        // Fungsi ini akan menggabungkan hasil dari ketiga stream
+        return [maintenance, resource, operational];
+      },
+    ).listen((data) {
+      // .listen akan terpanggil setiap kali ada perubahan data
+      if (!mounted) return;
+
+      final maintenanceTasks = data[0] as List<maintenance_task.TaskModel>;
+      final resourceTasks = data[1] as List<resource_task.TaskModel>;
+      final operationalRequests =
+          data[2] as List<operasional_task.RideRequestModel>;
+
+      setState(() {
+        _combinedList = [
+          ...maintenanceTasks,
+          ...resourceTasks,
+          ...operationalRequests,
+        ];
+        _combinedList.sort((a, b) {
+          DateTime dateA = a is operasional_task.RideRequestModel
+              ? a.assignedAt!
+              : (a as dynamic).assignedAt;
+          DateTime dateB = b is operasional_task.RideRequestModel
+              ? b.assignedAt!
+              : (b as dynamic).assignedAt;
+          return dateB.compareTo(dateA);
+        });
+        _filterData();
+        _isLoading = false;
       });
-      _filterData();
-      _isLoading = false;
     });
   }
 
