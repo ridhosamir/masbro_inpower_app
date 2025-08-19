@@ -1,0 +1,1 @@
+C:\dev\flutter\masbro_inpower_app\android\app\build\intermediates\cxx\RelWithDebInfo\6b1a2e4j\obj\armeabi-v7a

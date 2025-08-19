@@ -1,0 +1,2 @@
+C:/dev/flutter/masbro_inpower_app/android/app/.cxx/RelWithDebInfo/1d4z5p2r/x86_64/CMakeFiles/edit_cache.dir
+C:/dev/flutter/masbro_inpower_app/android/app/.cxx/RelWithDebInfo/1d4z5p2r/x86_64/CMakeFiles/rebuild_cache.dir
