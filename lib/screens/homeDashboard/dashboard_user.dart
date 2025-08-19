@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
+import 'package:masbro_inpower_app/services/statusNotifications/notif_status_helper.dart';
 import 'package:masbro_inpower_app/models/maintenanceApp/report_model.dart';
 import 'package:masbro_inpower_app/models/resourceApp/request_model.dart';
 import 'package:masbro_inpower_app/models/operasionalApp/ride_request_model.dart';
@@ -22,10 +23,15 @@ import 'package:masbro_inpower_app/services/operasionalApp/firestore_service.dar
     as operasional_service;
 import 'package:masbro_inpower_app/services/bookingroomApp/firestore_service.dart'
     as booking_service;
+import 'package:masbro_inpower_app/screens/homeDashboard/list_notifications.dart';
+import 'package:masbro_inpower_app/services/notification_list_service.dart';
+import 'package:badges/badges.dart' as badges;
 import 'package:masbro_inpower_app/services/user_service.dart';
 import 'package:masbro_inpower_app/utils/firebase_storage_image.dart';
 import 'package:provider/provider.dart';
 import 'dart:ui';
+import 'dart:async';
+import 'package:rxdart/rxdart.dart';
 
 class HomeDashboardUser extends StatefulWidget {
   const HomeDashboardUser({super.key});
@@ -43,11 +49,14 @@ class _HomeDashboardUserState extends State<HomeDashboardUser>
   double _headerHeight = 300.0;
   bool _showFloatingSearchBar = false;
 
+  late final NotificationListService _notificationListService;
+
   @override
   void initState() {
     super.initState();
     _tabController = TabController(length: 2, vsync: this);
     _scrollController = ScrollController();
+    _notificationListService = NotificationListService();
     _loadUserData();
 
     _tabController.addListener(() {
@@ -87,6 +96,13 @@ class _HomeDashboardUserState extends State<HomeDashboardUser>
         setState(() {
           currentUser = userData;
         });
+
+        if (currentUser != null) {
+          // Inisialisasi notifikasi dan simpan/update FCM token ke Firestore
+          final notificationService =
+              Provider.of<NotificationService>(context, listen: false);
+          notificationService.initNotifications(currentUser!.uid);
+        }
       }
     }
   }
@@ -259,19 +275,58 @@ class _HomeDashboardUserState extends State<HomeDashboardUser>
   }
 
   Widget _buildProfileButton() {
-    return Container(
-      decoration: BoxDecoration(
-        shape: BoxShape.circle,
-        gradient: LinearGradient(
-          colors: [
-            Colors.white.withOpacity(0.2),
-            Colors.white.withOpacity(0.1),
-          ],
-          begin: Alignment.topLeft,
-          end: Alignment.bottomRight,
+    return Row(
+      mainAxisSize: MainAxisSize.min,
+      children: [
+        StreamBuilder<int>(
+          stream: _notificationListService.getUnreadCountStream(),
+          builder: (context, snapshot) {
+            final unreadCount = snapshot.data ?? 0;
+            return badges.Badge(
+              position: badges.BadgePosition.topEnd(top: -4, end: -4),
+              showBadge: unreadCount > 0,
+              badgeContent: Text(
+                unreadCount.toString(),
+                style: const TextStyle(color: Colors.white, fontSize: 10),
+              ),
+              child: Container(
+                margin: const EdgeInsets.only(right: 8),
+                decoration: BoxDecoration(
+                  shape: BoxShape.circle,
+                  color: Colors.white.withOpacity(0.15),
+                ),
+                child: IconButton(
+                  icon: const Icon(Icons.notifications_outlined,
+                      color: Colors.white),
+                  onPressed: () {
+                    Navigator.push(
+                      context,
+                      MaterialPageRoute(
+                        builder: (context) => const NotificationListScreen(),
+                      ),
+                    );
+                  },
+                  tooltip: 'Notifications',
+                ),
+              ),
+            );
+          },
         ),
-      ),
-      child: _buildProfileMenu(),
+        Container(
+          decoration: BoxDecoration(
+            shape: BoxShape.circle,
+            gradient: LinearGradient(
+              colors: [
+                Colors.white.withOpacity(0.2),
+                Colors.white.withOpacity(0.1),
+              ],
+              begin: Alignment.topLeft,
+              end: Alignment.bottomRight,
+            ),
+          ),
+          child: _buildProfileMenu(),
+        ),
+      ],
     );
   }
 
@@ -935,17 +990,20 @@ class _StatusTabState extends State<StatusTab>
   int _currentPage = 1;
   final int _itemsPerPage = 5;
 
+  StreamSubscription? _dataSubscription;
+
   @override
   void initState() {
     super.initState();
     _statusTabController = TabController(length: 2, vsync: this);
-    _fetchData();
+    _listenToDataStreams();
     _searchController.addListener(_onSearchChanged);
     _statusTabController.addListener(_filterByStatus);
   }
 
   @override
   void dispose() {
+    _dataSubscription?.cancel();
     _statusTabController.dispose();
     _searchController.dispose();
     super.dispose();
@@ -1068,9 +1126,80 @@ class _StatusTabState extends State<StatusTab>
   }
 
   Future<void> _fetchData() async {
-    setState(() {
-      _isLoading = true;
-    });
+    // Fungsi ini sekarang hanya untuk refresh manual (tarik ke bawah)
+    if (mounted) {
+      setState(() {
+        _isLoading = true;
+      });
+    }
+
+    try {
+      final maintenanceService = maintenance_service.FirestoreService();
+      final resourceService = resource_service.FirestoreServiceResource();
+      final operasionalService =
+          operasional_service.OperasionalFirestoreService();
+      final bookingService = booking_service.FirestoreService();
+
+      final reportsFuture =
+          maintenanceService.getReportsByEmployee(widget.currentUser.uid).first;
+      final requestsFuture =
+          resourceService.getRequestsByEmployee(widget.currentUser.uid).first;
+      final operationalFuture = operasionalService
+          .getRideRequestsByEmployee(widget.currentUser.uid)
+          .first;
+      final bookingFuture =
+          bookingService.getBookingsByEmployee(widget.currentUser.uid).first;
+
+      final results = await Future.wait([
+        reportsFuture,
+        requestsFuture,
+        operationalFuture,
+        bookingFuture,
+      ]);
+
+      if (mounted) {
+        final reports = results[0] as List<ReportModel>;
+        final requests = results[1] as List<RequestModel>;
+        final operationalRequests = results[2] as List<RideRequestModel>;
+        final bookingRequests = results[3] as List<BookingModel>;
+
+        final openAndInProgressReports = reports
+            .where((r) => r.status == 'open' || r.status == 'inProgress')
+            .toList();
+        final openAndInProgressRequests = requests
+            .where((r) => r.status == 'open' || r.status == 'inProgress')
+            .toList();
+        final openAndInProgressOperational = operationalRequests
+            .where((r) => r.status == 'open' || r.status == 'inProgress')
+            .toList();
+        final openAndInProgressBooking = bookingRequests
+            .where((r) => r.status == 'open' || r.status == 'approved')
+            .toList();
+
+        setState(() {
+          _combinedList = [
+            ...openAndInProgressReports,
+            ...openAndInProgressRequests,
+            ...openAndInProgressOperational,
+            ...openAndInProgressBooking,
+          ];
+          _combinedList.sort((a, b) => b.createdAt.compareTo(a.createdAt));
+          _filterData();
+          _isLoading = false;
+        });
+      }
+    } catch (e) {
+      if (mounted) {
+        setState(() => _isLoading = false);
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text("Failed to refresh data: $e")),
+        );
+      }
+    }
+  }
+
+  void _listenToDataStreams() {
+    setState(() => _isLoading = true);
 
     final maintenanceService = maintenance_service.FirestoreService();
     final resourceService = resource_service.FirestoreServiceResource();
@@ -1078,54 +1207,47 @@ class _StatusTabState extends State<StatusTab>
         operasional_service.OperasionalFirestoreService();
     final bookingService = booking_service.FirestoreService();
 
-    final reportsFuture =
-        maintenanceService.getReportsByEmployee(widget.currentUser.uid).first;
-    final requestsFuture =
-        resourceService.getRequestsByEmployee(widget.currentUser.uid).first;
-    final operationalFuture = operasionalService
-        .getRideRequestsByEmployee(widget.currentUser.uid)
-        .first;
-    final bookingFuture =
-        bookingService.getBookingsByEmployee(widget.currentUser.uid).first;
+    _dataSubscription = CombineLatestStream.combine4(
+      maintenanceService.getReportsByEmployee(widget.currentUser.uid),
+      resourceService.getRequestsByEmployee(widget.currentUser.uid),
+      operasionalService.getRideRequestsByEmployee(widget.currentUser.uid),
+      bookingService.getBookingsByEmployee(widget.currentUser.uid),
+      (List<ReportModel> reports, List<RequestModel> requests,
+          List<RideRequestModel> operational, List<BookingModel> bookings) {
+        return [reports, requests, operational, bookings];
+      },
+    ).listen((data) {
+      if (!mounted) return;
 
-    // Wait for all data to be fetched
-    final results = await Future.wait([
-      reportsFuture,
-      requestsFuture,
-      operationalFuture,
-      bookingFuture,
-    ]);
+      final reports = data[0] as List<ReportModel>;
+      final requests = data[1] as List<RequestModel>;
+      final operationalRequests = data[2] as List<RideRequestModel>;
+      final bookingRequests = data[3] as List<BookingModel>;
 
-    final reports = results[0] as List<ReportModel>;
-    final requests = results[1] as List<RequestModel>;
-    final operationalRequests = results[2] as List<RideRequestModel>;
-    final bookingRequests = results[3] as List<BookingModel>;
+      final openAndInProgressReports = reports
+          .where((r) => r.status == 'open' || r.status == 'inProgress')
+          .toList();
+      final openAndInProgressRequests = requests
+          .where((r) => r.status == 'open' || r.status == 'inProgress')
+          .toList();
+      final openAndInProgressOperational = operationalRequests
+          .where((r) => r.status == 'open' || r.status == 'inProgress')
+          .toList();
+      final openAndInProgressBooking = bookingRequests
+          .where((r) => r.status == 'open' || r.status == 'approved')
+          .toList();
 
-    // Filter data based on 'open' or 'inProgress' status
-    final openAndInProgressReports = reports
-        .where((r) => r.status == 'open' || r.status == 'inProgress')
-        .toList();
-    final openAndInProgressRequests = requests
-        .where((r) => r.status == 'open' || r.status == 'inProgress')
-        .toList();
-    final openAndInProgressOperational = operationalRequests
-        .where((r) => r.status == 'open' || r.status == 'inProgress')
-        .toList();
-    // Note: Booking status is 'open' and 'approved'
-    final openAndInProgressBooking = bookingRequests
-        .where((r) => r.status == 'open' || r.status == 'approved')
-        .toList();
-
-    setState(() {
-      _combinedList = [
-        ...openAndInProgressReports,
-        ...openAndInProgressRequests,
-        ...openAndInProgressOperational,
-        ...openAndInProgressBooking,
-      ];
-      _combinedList.sort((a, b) => b.createdAt.compareTo(a.createdAt));
-      _filterData();
-      _isLoading = false;
+      setState(() {
+        _combinedList = [
+          ...openAndInProgressReports,
+          ...openAndInProgressRequests,
+          ...openAndInProgressOperational,
+          ...openAndInProgressBooking,
+        ];
+        _combinedList.sort((a, b) => b.createdAt.compareTo(a.createdAt));
+        _filterData();
+        _isLoading = false;
+      });
     });
   }
 

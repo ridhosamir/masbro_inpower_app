@@ -52,7 +52,7 @@ class RideRequestModel {
     this.vehicleReview,
   });
 
-  factory RideRequestModel.fromSnapshot(DocumentSnapshot doc) {
+  factory RideRequestModel.fromFirestore(DocumentSnapshot doc) {
     final data = doc.data() as Map<String, dynamic>;
     return RideRequestModel(
       id: doc.id,
