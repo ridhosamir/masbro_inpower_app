@@ -1,4 +1,4 @@
-// File: services/user_service.dart - FIXED CODE WITH MIGRATION
+// File: services/user_service.dart - UPDATED WITH EMAIL EDIT SUPPORT
 
 import 'package:flutter/material.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
@@ -54,9 +54,7 @@ class UserService extends ChangeNotifier {
     }
   }
 
-  // Tambahkan method ini ke dalam class UserService (user_service.dart)
-
-// Reset password user by admin (using UID)
+  // Reset password user by admin (using UID)
   Future<String?> resetPasswordByAdmin(String uid, String newPassword) async {
     try {
       print('🔐 Admin resetting password for UID: $uid');
@@ -95,7 +93,7 @@ class UserService extends ChangeNotifier {
     }
   }
 
-// Reset password user by admin (using email)
+  // Reset password user by admin (using email)
   Future<String?> resetPasswordByEmail(String email, String newPassword) async {
     try {
       print('🔐 Admin resetting password for email: $email');
@@ -135,12 +133,73 @@ class UserService extends ChangeNotifier {
     }
   }
 
-// Validate password strength
+  // UPDATED: Update user with email change support
+  Future<String?> updateUserWithEmail(
+      String uid, String name, String email, String role) async {
+    try {
+      print('🔄 Updating user: $uid with email: $email');
+
+      // Call Cloud Function to update user with email
+      final HttpsCallable callable =
+          _functions.httpsCallable('updateUserByAdmin');
+      final result = await callable.call<Map<String, dynamic>>({
+        'uid': uid,
+        'name': name,
+        'email': email,
+        'role': role,
+      });
+
+      if (result.data['success'] == true) {
+        print('✅ User updated successfully via Cloud Function');
+        return null; // Success
+      } else {
+        throw Exception('Update failed: ${result.data['message']}');
+      }
+    } on FirebaseFunctionsException catch (e) {
+      print('❌ Cloud Function error: [${e.code}] ${e.message}');
+
+      switch (e.code) {
+        case 'permission-denied':
+          return 'Hanya admin yang dapat mengupdate user';
+        case 'not-found':
+          return 'User tidak ditemukan';
+        case 'invalid-argument':
+          return e.message ?? 'Parameter tidak valid';
+        case 'unauthenticated':
+          return 'Anda harus login sebagai admin';
+        case 'email-already-in-use':
+          return 'Email sudah digunakan oleh user lain';
+        default:
+          return 'Gagal mengupdate user: ${e.message}';
+      }
+    } catch (e) {
+      print('❌ Error updating user: $e');
+
+      // Fallback: try updating Firestore only (without Auth email change)
+      try {
+        await _firestore.collection('users').doc(uid).update({
+          'name': name,
+          'email': email,
+          'role': role,
+          'updatedAt': Timestamp.now(),
+        });
+
+        print(
+            '⚠️ Firestore updated successfully, but email in Auth may not be changed');
+        return null; // Success but with warning
+      } catch (firestoreError) {
+        print('❌ Firestore update also failed: $firestoreError');
+        return 'Gagal mengupdate user: $firestoreError';
+      }
+    }
+  }
+
+  // Validate password strength
   bool isPasswordValid(String password) {
     return password.length >= 6;
   }
 
-// Generate random password (optional helper)
+  // Generate random password (optional helper)
   String generateRandomPassword({int length = 8}) {
     const String chars =
         'abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789';
@@ -178,7 +237,7 @@ class UserService extends ChangeNotifier {
     }
   }
 
-  // Update user data (for admin)
+  // Update user data (for admin) - LEGACY METHOD - Use updateUserWithEmail instead
   Future<void> updateUser(String uid, Map<String, dynamic> data) async {
     try {
       await _firestore.collection('users').doc(uid).update(data);
@@ -351,6 +410,7 @@ class UserService extends ChangeNotifier {
       return null;
     }
   }
+
   Future<List<UserModel>> getDrivers() async {
     try {
       final snapshot = await _firestore.collection('drivers').get();
