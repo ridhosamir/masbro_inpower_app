@@ -115,7 +115,7 @@ class _HomeDashboardOfficerState extends State<HomeDashboardOfficer>
                     (BuildContext context, bool innerBoxIsScrolled) {
                   return <Widget>[
                     SliverAppBar(
-                      backgroundColor: const Color.fromARGB(255, 4, 117, 217),
+                      backgroundColor: const Color(0xFF0277BD),
                       expandedHeight: 360.0,
                       floating: false,
                       pinned: true,
@@ -158,20 +158,7 @@ class _HomeDashboardOfficerState extends State<HomeDashboardOfficer>
                                     ),
                                   ),
                                 ),
-                                Container(
-                                  decoration: BoxDecoration(
-                                    shape: BoxShape.circle,
-                                    gradient: LinearGradient(
-                                      colors: [
-                                        Colors.white.withOpacity(0.2),
-                                        Colors.white.withOpacity(0.1),
-                                      ],
-                                      begin: Alignment.topLeft,
-                                      end: Alignment.bottomRight,
-                                    ),
-                                  ),
-                                  child: _buildProfileMenu(),
-                                ),
+                                _buildProfileButton(),
                               ],
                             ),
                           );
@@ -4263,12 +4250,19 @@ class _OfficerRatingTabState extends State<OfficerRatingTab>
   @override
   Widget build(BuildContext context) {
     return ListView(
-      padding: EdgeInsets.zero, // Hapus padding default dari ListView
+      padding: EdgeInsets.zero,
       children: [
-        _buildStatisticsCards(),
-        Padding(
-          padding: const EdgeInsets.all(16.0),
-          child: _buildSearchAndFilterBar(),
+        Container(
+          color: Colors.white,
+          child: Column(
+            children: [
+              _buildStatisticsCards(),
+              Padding(
+                padding: const EdgeInsets.all(16.0),
+                child: _buildSearchAndFilterBar(),
+              ),
+            ],
+          ),
         ),
         Container(
           color: Colors.white,
