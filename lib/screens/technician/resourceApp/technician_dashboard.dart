@@ -925,6 +925,35 @@ class _TechnicianDashboardResourceState
                           ),
                         ),
                       ),
+                      if (task.afterImageUrl != null &&
+                          task.afterImageUrl!.isNotEmpty) ...[
+                        const SizedBox(height: 20),
+                        Text(
+                          'Completion Photo',
+                          style: TextStyle(
+                            fontWeight: FontWeight.bold,
+                            fontSize: 16,
+                            color: Colors.green[700],
+                          ),
+                        ),
+                        const SizedBox(height: 8),
+                        GestureDetector(
+                          onTap: () => _showFullScreenImage(
+                              context, task.afterImageUrl!),
+                          child: ClipRRect(
+                            borderRadius: BorderRadius.circular(12),
+                            child: Container(
+                              height: 200,
+                              width: double.infinity,
+                              color: Colors.grey[200],
+                              child: FirebaseStorageImage(
+                                imageUrl: task.afterImageUrl!,
+                                fit: BoxFit.cover,
+                              ),
+                            ),
+                          ),
+                        ),
+                      ],
                     ],
                   ],
                 ),
@@ -938,6 +967,21 @@ class _TechnicianDashboardResourceState
                   onPressed: () => _showCompleteDialog(task),
                   backgroundColor: Colors.green,
                   icon: Icons.check_circle,
+                ),
+              ),
+            if (task.status == 'completed')
+              Padding(
+                padding: const EdgeInsets.all(16),
+                child: ElevatedButton.icon(
+                  onPressed: () => Navigator.pop(context),
+                  icon: const Icon(Icons.keyboard_return),
+                  label: const Text('Back to Tasks'),
+                  style: ElevatedButton.styleFrom(
+                    minimumSize: const Size(double.infinity, 50),
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(12),
+                    ),
+                  ),
                 ),
               ),
           ],
@@ -1308,6 +1352,7 @@ class _TechnicianDashboardResourceState
   }
 
   void _showCompleteDialog(TaskModel task) {
+    final _formKey = GlobalKey<FormState>();
     _completionNoteController.clear();
     _selectedImage = null;
     _selectedImageBytes = null;
@@ -1321,79 +1366,92 @@ class _TechnicianDashboardResourceState
             return AlertDialog(
               title: const Text('Complete the Task'),
               content: SingleChildScrollView(
-                child: Column(
-                  mainAxisSize: MainAxisSize.min,
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    CustomTextField(
-                      labelText: 'Completion Notes',
-                      hintText: 'Masukkan catatan pekerjaan...',
-                      controller: _completionNoteController,
-                      maxLines: 3,
-                    ),
-                    if (task.request == 'item') ...[
-                      const SizedBox(height: 16),
-                      Text('Item Photo (Optional)',
-                          style: TextStyle(
-                              fontWeight: FontWeight.bold,
-                              color: Colors.grey[700])),
-                      const SizedBox(height: 8),
-                      Container(
-                        height: 150,
-                        width: double.infinity,
-                        decoration: BoxDecoration(
-                          color: Colors.grey[200],
-                          borderRadius: BorderRadius.circular(12),
-                          border: Border.all(color: Colors.grey[300]!),
+                child: Form(
+                  key: _formKey,
+                  child: Column(
+                    mainAxisSize: MainAxisSize.min,
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      TextFormField(
+                        controller: _completionNoteController,
+                        maxLines: 3,
+                        decoration: const InputDecoration(
+                          labelText: 'Completion Notes',
+                          hintText: 'Masukkan catatan pekerjaan...',
+                          border: OutlineInputBorder(),
                         ),
-                        child: ClipRRect(
-                          borderRadius: BorderRadius.circular(12),
-                          child: kIsWeb
-                              ? (_selectedImageBytes != null
-                                  ? Image.memory(_selectedImageBytes!,
-                                      fit: BoxFit.cover)
-                                  : Center(
-                                      child: Icon(
-                                          Icons.photo_camera_back_outlined,
-                                          color: Colors.grey[400],
-                                          size: 40)))
-                              : (_selectedImage != null
-                                  ? Image.file(File(_selectedImage!.path),
-                                      fit: BoxFit.cover)
-                                  : Center(
-                                      child: Icon(
-                                          Icons.photo_camera_back_outlined,
-                                          color: Colors.grey[400],
-                                          size: 40))),
+                        validator: (value) {
+                          if (value == null || value.trim().isEmpty) {
+                            return 'Completion notes are required.';
+                          }
+                          return null;
+                        },
+                      ),
+                      if (task.request == 'item') ...[
+                        const SizedBox(height: 16),
+                        Text('Item Photo (Optional)',
+                            style: TextStyle(
+                                fontWeight: FontWeight.bold,
+                                color: Colors.grey[700])),
+                        const SizedBox(height: 8),
+                        Container(
+                          height: 150,
+                          width: double.infinity,
+                          decoration: BoxDecoration(
+                            color: Colors.grey[200],
+                            borderRadius: BorderRadius.circular(12),
+                            border: Border.all(color: Colors.grey[300]!),
+                          ),
+                          child: ClipRRect(
+                            borderRadius: BorderRadius.circular(12),
+                            child: kIsWeb
+                                ? (_selectedImageBytes != null
+                                    ? Image.memory(_selectedImageBytes!,
+                                        fit: BoxFit.cover)
+                                    : Center(
+                                        child: Icon(
+                                            Icons.photo_camera_back_outlined,
+                                            color: Colors.grey[400],
+                                            size: 40)))
+                                : (_selectedImage != null
+                                    ? Image.file(File(_selectedImage!.path),
+                                        fit: BoxFit.cover)
+                                    : Center(
+                                        child: Icon(
+                                            Icons.photo_camera_back_outlined,
+                                            color: Colors.grey[400],
+                                            size: 40))),
+                          ),
                         ),
-                      ),
-                      const SizedBox(height: 8),
-                      Row(
-                        mainAxisAlignment: MainAxisAlignment.spaceEvenly,
-                        children: [
-                          TextButton.icon(
-                            icon: const Icon(Icons.photo_library),
-                            label: const Text('Gallery'),
-                            onPressed: () =>
-                                _pickImage(ImageSource.gallery, setStateDialog),
-                          ),
-                          TextButton.icon(
-                            icon: const Icon(Icons.camera_alt),
-                            label: const Text('Camera'),
-                            onPressed: () =>
-                                _pickImage(ImageSource.camera, setStateDialog),
-                          ),
-                        ],
-                      ),
+                        const SizedBox(height: 8),
+                        Row(
+                          mainAxisAlignment: MainAxisAlignment.spaceEvenly,
+                          children: [
+                            TextButton.icon(
+                              icon: const Icon(Icons.photo_library),
+                              label: const Text('Gallery'),
+                              onPressed: () => _pickImage(
+                                  ImageSource.gallery, setStateDialog),
+                            ),
+                            TextButton.icon(
+                              icon: const Icon(Icons.camera_alt),
+                              label: const Text('Camera'),
+                              onPressed: () => _pickImage(
+                                  ImageSource.camera, setStateDialog),
+                            ),
+                          ],
+                        ),
+                      ],
+                      if (dialogErrorText != null) ...[
+                        const SizedBox(height: 8),
+                        Text(
+                          dialogErrorText!,
+                          style:
+                              const TextStyle(color: Colors.red, fontSize: 12),
+                        ),
+                      ]
                     ],
-                    if (dialogErrorText != null) ...[
-                      const SizedBox(height: 8),
-                      Text(
-                        dialogErrorText!,
-                        style: const TextStyle(color: Colors.red, fontSize: 12),
-                      ),
-                    ]
-                  ],
+                  ),
                 ),
               ),
               actions: [
@@ -1403,11 +1461,7 @@ class _TechnicianDashboardResourceState
                 ),
                 TextButton(
                   onPressed: () {
-                    if (_completionNoteController.text.trim().isEmpty) {
-                      setStateDialog(() {
-                        dialogErrorText = 'Please provide completion notes';
-                      });
-                    } else {
+                    if (_formKey.currentState!.validate()) {
                       _completeTask(task);
                     }
                   },
@@ -1450,6 +1504,7 @@ class _TechnicianDashboardResourceState
 
       if (mounted) {
         Navigator.pop(context);
+        Navigator.pop(context);
         ScaffoldMessenger.of(context).showSnackBar(
           const SnackBar(
               content: Text('Task successfully completed!'),
@@ -1458,6 +1513,7 @@ class _TechnicianDashboardResourceState
       }
     } catch (e) {
       if (mounted) {
+        Navigator.pop(context);
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
               content: Text('Error: ${e.toString()}'),

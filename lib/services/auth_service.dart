@@ -1,3 +1,4 @@
+import 'package:firebase_messaging/firebase_messaging.dart';
 import 'package:flutter/material.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
@@ -157,6 +158,14 @@ class AuthService extends ChangeNotifier {
       final currentUser = _auth.currentUser;
       print('📝 Current user before logout: ${currentUser?.email ?? 'null'}');
 
+      if (currentUser != null) {
+        // Asumsi Anda memiliki instance NotificationService yang bisa diakses
+        // atau Anda bisa membuat instance baru jika diperlukan.
+        // Cara terbaik adalah menyediakannya melalui Provider.
+        // Untuk contoh ini, kita akan membuat instance helper-nya.
+        await _removeFcmToken(currentUser.uid);
+      }
+
       _isLoading = true;
       notifyListeners();
 
@@ -182,6 +191,25 @@ class AuthService extends ChangeNotifier {
       _isLoading = false;
       notifyListeners();
       rethrow;
+    }
+  }
+
+  Future<void> _removeFcmToken(String userId) async {
+    try {
+      final currentToken = await FirebaseMessaging.instance.getToken();
+      if (currentToken == null) {
+        print(
+            '[FCM] Tidak bisa mendapatkan token perangkat saat ini untuk dihapus.');
+        return;
+      }
+      print('[FCM] Menghapus token $currentToken untuk user: $userId');
+      await _firestore.collection('users').doc(userId).update({
+        'fcmTokens': FieldValue.arrayRemove([currentToken]),
+      });
+      print('[FCM] Token berhasil dihapus dari database.');
+    } catch (e) {
+      print('[FCM] Gagal menghapus token saat logout: $e');
+      // Gagal menghapus token tidak boleh menghentikan proses logout
     }
   }
 

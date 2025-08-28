@@ -165,8 +165,7 @@ class _AssignDriverVehicleScreenState extends State<AssignDriverVehicleScreen> {
 
       if (mounted) {
         setState(() => _isAssigning = false);
-        Navigator.pop(context, true);
-        Navigator.pop(context);
+        Navigator.of(context).pop(true);
       }
     } catch (e) {
       if (mounted) {

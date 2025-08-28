@@ -571,7 +571,7 @@ class _AdminDashboardState extends State<AdminDashboard> {
   }
 
 // UPDATED: Edit user dialog dengan hidden @gmail.com
-void _showEditUserDialog(
+  void _showEditUserDialog(
       BuildContext context, Map<String, dynamic> userData, String userId) {
     final TextEditingController nameController =
         TextEditingController(text: userData['name']);
@@ -1181,6 +1181,7 @@ void _showEditUserDialog(
       }),
     );
   }
+
   void _showDeleteConfirmDialog(BuildContext context,
       Map<String, dynamic> userData, String userId, bool isDriver) {
     showDialog(
@@ -1295,6 +1296,8 @@ void _showEditUserDialog(
 
   @override
   Widget build(BuildContext context) {
+    final currentAdminUid =
+        Provider.of<AuthService>(context, listen: false).user?.uid;
     return Scaffold(
       appBar: AppBar(
         title: Text('Admin Dashboard'),
@@ -1705,34 +1708,42 @@ void _showEditUserDialog(
                                       context, userData, userId, isDriver);
                                 }
                               },
-                              itemBuilder: (BuildContext context) =>
-                                  <PopupMenuEntry<String>>[
-                                const PopupMenuItem<String>(
-                                  value: 'edit',
-                                  child: ListTile(
-                                    leading:
-                                        Icon(Icons.edit, color: Colors.blue),
-                                    title: Text('Edit User'),
+                              itemBuilder: (BuildContext context) {
+                                // List item menu yang selalu ada
+                                List<PopupMenuEntry<String>> menuItems = [
+                                  const PopupMenuItem<String>(
+                                    value: 'edit',
+                                    child: ListTile(
+                                      leading:
+                                          Icon(Icons.edit, color: Colors.blue),
+                                      title: Text('Edit User'),
+                                    ),
                                   ),
-                                ),
-                                const PopupMenuItem<String>(
-                                  value: 'reset_password',
-                                  child: ListTile(
-                                    leading: Icon(Icons.lock_reset,
-                                        color: Colors.orange),
-                                    title: Text('Reset Password'),
+                                  const PopupMenuItem<String>(
+                                    value: 'reset_password',
+                                    child: ListTile(
+                                      leading: Icon(Icons.lock_reset,
+                                          color: Colors.orange),
+                                      title: Text('Reset Password'),
+                                    ),
                                   ),
-                                ),
-                                const PopupMenuDivider(),
-                                const PopupMenuItem<String>(
-                                  value: 'delete',
-                                  child: ListTile(
-                                    leading:
-                                        Icon(Icons.delete, color: Colors.red),
-                                    title: Text('Delete User'),
-                                  ),
-                                ),
-                              ],
+                                ];
+
+                                if (userId != currentAdminUid) {
+                                  menuItems.addAll([
+                                    const PopupMenuDivider(),
+                                    const PopupMenuItem<String>(
+                                      value: 'delete',
+                                      child: ListTile(
+                                        leading: Icon(Icons.delete,
+                                            color: Colors.red),
+                                        title: Text('Delete User'),
+                                      ),
+                                    ),
+                                  ]);
+                                }
+                                return menuItems;
+                              },
                             ),
                           ),
                         );

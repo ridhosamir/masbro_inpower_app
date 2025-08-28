@@ -182,7 +182,6 @@ class _ReportDetailScreenState extends State<ReportDetailScreen> {
             onPressed: _refreshReportData,
             tooltip: 'Refresh Report',
           ),
-         
         ],
       ),
       body: SingleChildScrollView(
@@ -865,7 +864,7 @@ class _ReportDetailScreenState extends State<ReportDetailScreen> {
     );
   }
 
-  void _assignTechnician() {
+  Future<void> _assignTechnician() async {
     // Check if report already has an assigned technician
     if (widget.report.assignedTechnicianId != null) {
       ScaffoldMessenger.of(context).showSnackBar(
@@ -879,12 +878,27 @@ class _ReportDetailScreenState extends State<ReportDetailScreen> {
       return;
     }
 
-    Navigator.push(
+    // Await the result from AssignTechnicianScreen
+    final result = await Navigator.push<bool>(
       context,
       MaterialPageRoute(
         builder: (context) => AssignTechnicianScreen(report: widget.report),
       ),
     );
+
+    // If technician was successfully assigned, refresh the report data
+    if (result == true && mounted) {
+      await _refreshReportData();
+
+      // Show success message if not already shown
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text('Report updated successfully'),
+          backgroundColor: Colors.green,
+          behavior: SnackBarBehavior.floating,
+        ),
+      );
+    }
   }
 
   void _showCompleteDialog() {

@@ -184,8 +184,7 @@ class _AssignTechnicianScreenState extends State<AssignTechnicianScreen> {
         );
 
         // Go back to detail screen and dashboard
-        Navigator.pop(context);
-        Navigator.pop(context);
+        Navigator.of(context).pop(true);
       }
     } catch (e) {
       if (mounted) {

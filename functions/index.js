@@ -1,5 +1,6 @@
 const { onCall } = require("firebase-functions/v2/https");
 const { onDocumentCreated, onDocumentUpdated } = require("firebase-functions/v2/firestore");
+const { onSchedule } = require("firebase-functions/v2/scheduler");
 const admin = require("firebase-admin");
 const logger = require("firebase-functions/logger");
 admin.initializeApp();
@@ -989,9 +990,20 @@ async function sendNotification(userId, title, body, data = {}) {
     await db.collection("notifications").add(notificationData);
     logger.info(`Notification saved to Firestore for user ${userId}.`);
 
-    const fcmToken = userDoc.data().fcmToken;
-    if (!fcmToken) {
-      logger.warn(`FCM Token not found for user: ${userId}`);
+    const userData = userDoc.data();
+    // Coba ambil dari field array 'fcmTokens' yang baru
+    const tokens = userData.fcmTokens;
+    // Cek juga field 'fcmToken' yang lama untuk jaga-jaga jika ada user dengan app versi lama
+    const singleToken = userData.fcmToken;
+
+    // Gabungkan keduanya menjadi satu array token yang valid
+    const validTokens = Array.isArray(tokens) ? tokens.filter((t) => t) : [];
+    if (singleToken && !validTokens.includes(singleToken)) {
+      validTokens.push(singleToken);
+    }
+
+    if (validTokens.length === 0) {
+      logger.warn(`Tidak ada FCM Token yang valid ditemukan untuk pengguna: ${userId}`);
       return;
     }
 
@@ -1001,27 +1013,33 @@ async function sendNotification(userId, title, body, data = {}) {
         body: body,
       },
       data: data,
-      token: fcmToken,
-      android: {
-        notification: {
-          channelId: "masbroapp_channel",
-          icon: "logo_masbro",
-          sound: "default",
-        },
-      },
-      // Jika nanti butuh untuk iOS
-      apns: {
-        payload: {
-          aps: {
-            sound: "default",
-          },
-        },
-      },
+      tokens: validTokens,
     };
 
-    logger.info(`Sending notification to user ${userId} (token: ${fcmToken.substring(0, 10)}...) with title: "${title}"`);
-    await admin.messaging().send(message);
-    logger.info(`Successfully sent notification to user ${userId}.`);
+    logger.info(`Mengirim notifikasi ke ${validTokens.length} perangkat untuk pengguna ${userId}.`);
+    // 'sendToDevice' (atau 'sendMulticast') lebih efisien untuk mengirim ke banyak token
+    const response = await admin.messaging().sendEachForMulticast(message);
+
+    // Bagian ini sangat penting: Membersihkan token yang sudah tidak valid dari database
+    const tokensToRemove = [];
+    response.responses.forEach((result, index) => {
+      if (!result.success) {
+        const error = result.error;
+        logger.error(`Gagal mengirim ke token: ${validTokens[index]}`, error);
+        // Jika errornya adalah karena token sudah tidak terdaftar, kita tandai untuk dihapus
+        if (["messaging/invalid-registration-token", "messaging/registration-token-not-registered"].includes(error.code)) {
+          tokensToRemove.push(validTokens[index]);
+        }
+      }
+    });
+
+    // Jika ada token yang perlu dihapus, update dokumen pengguna
+    if (tokensToRemove.length > 0) {
+      logger.info(`Menghapus ${tokensToRemove.length} token yang tidak valid dari database.`);
+      await userDoc.ref.update({
+        fcmTokens: admin.firestore.FieldValue.arrayRemove(...tokensToRemove),
+      });
+    }
   } catch (error) {
     logger.error(`Failed to send notification to user ${userId}:`, error);
   }
@@ -1032,144 +1050,162 @@ async function sendNotification(userId, title, body, data = {}) {
  * 'ride_requests', atau 'bookings' di-update.
  */
 exports.sendStatusUpdateNotifications = onDocumentUpdated("{collectionId}/{docId}", async (event) => {
+  const { collectionId, docId } = event.params;
+  const validCollections = ["reports", "requests_resource", "ride_requests", "bookings"];
+  if (!validCollections.includes(collectionId)) {
+    return null;
+  }
+
   try {
-    const { collectionId, docId } = event.params;
-    const validCollections = ["reports", "requests_resource", "ride_requests", "bookings"];
-
-    if (!validCollections.includes(collectionId)) {
-      return null;
-    }
-
     const newData = event.data.after.data();
     const oldData = event.data.before.data();
-
-    // Menambahkan pengecekan untuk memastikan data ada sebelum diproses
     if (!newData || !oldData) {
-      logger.error(`Data sebelum atau sesudah update tidak ditemukan untuk ${collectionId}/${docId}`);
+      logger.error(`[${collectionId}/${docId}] Data update tidak lengkap.`);
       return null;
     }
 
-    // Cek perubahan yang relevan
+    const promises = [];
+    const dataPayload = {
+      click_action: "FLUTTER_NOTIFICATION_CLICK",
+      collection: collectionId,
+      docId: docId,
+    };
+
+    // --- Identifikasi Perubahan Spesifik ---
     const statusChanged = newData.status !== oldData.status;
+
+    // Logika deteksi pergantian teknisi/driver
+    // Membandingkan UID teknisi/driver dari data lama dan baru.
     const technicianChanged = newData.assignedTechnicianId !== oldData.assignedTechnicianId;
     const driverChanged = newData.driverId !== oldData.driverId;
-    const ratingAdded = (newData.technicianRating && !oldData.technicianRating) || (newData.driverRating && !oldData.driverRating) || (newData.rating && !oldData.rating);
 
-    // Jika tidak ada perubahan status, teknisi, atau driver, hentikan fungsi
-    if (!statusChanged && !technicianChanged && !driverChanged && !ratingAdded) {
-      logger.log(`No relevant changes for ${collectionId}/${docId}. No notification sent.`);
+    let scheduleChanged = false;
+    let roomChanged = false;
+    if (collectionId === "bookings") {
+      const oldStartSeconds = oldData.usageStartDate?._seconds;
+      const newStartSeconds = newData.usageStartDate?._seconds;
+      const oldEndSeconds = oldData.usageEndDate?._seconds;
+      const newEndSeconds = newData.usageEndDate?._seconds;
+
+      if (oldStartSeconds !== newStartSeconds || oldEndSeconds !== newEndSeconds) {
+        scheduleChanged = true;
+      }
+      if (newData.roomName !== oldData.roomName) {
+        roomChanged = true;
+      }
+    }
+
+    if (!statusChanged && !technicianChanged && !driverChanged && !scheduleChanged && !roomChanged) {
+      logger.log(`[${collectionId}/${docId}] Tidak ada perubahan relevan. Notifikasi tidak dikirim.`);
       return null;
     }
 
-    if (technicianChanged || driverChanged) {
-      await markOfficerNotificationsAsRead(docId);
-    }
+    // --- LOGIKA INTI ---
 
-    // Jika status berubah menjadi 'completed', tandai notifikasi teknisi/driver sebagai terbaca.
-    if (statusChanged && newData.status === "completed") {
-      const assigneeId = newData.assignedTechnicianId || newData.driverId;
-      if (assigneeId) {
-        await markAssigneeNotificationAsRead(docId, assigneeId);
+    // Menangani pergantian teknisi/driver
+    // Logika ini sekarang memeriksa secara spesifik jika ada pergantian.
+    if (technicianChanged) {
+      // Jika ada teknisi lama, hapus notifikasi miliknya.
+      if (oldData.assignedTechnicianId) {
+        logger.info(`[${collectionId}/${docId}] Menghapus notifikasi untuk teknisi lama: ${oldData.assignedTechnicianId}`);
+        clearExistingNotifications(docId, oldData.assignedTechnicianId);
+      }
+      // Jika ada teknisi baru, kirim notifikasi tugas baru kepadanya.
+      if (newData.assignedTechnicianId) {
+        const targetTechnicianId = newData.assignedTechnicianId;
+        logger.info(`[${collectionId}/${docId}] Teknisi diganti/baru ditugaskan ke ${targetTechnicianId}. Mengirim notifikasi.`);
+        const title = "Tugas Baru Untuk Anda";
+        const body = `Anda mendapat tugas baru dari ${newData.employeeName || "seorang pengguna"}.`;
+        promises.push(sendNotification(targetTechnicianId, title, body, dataPayload));
+        await markOfficerNotificationsAsRead(docId);
       }
     }
 
-    // Jika user menambahkan rating, tandai notifikasi 'completed' mereka sebagai terbaca.
-    if (ratingAdded) {
-      const employeeId = newData.employeeId;
-      if (employeeId) {
-        await markUserNotificationAsRead(docId, employeeId);
+    if (driverChanged) {
+      // Jika ada driver lama, hapus notifikasi miliknya.
+      if (oldData.driverId) {
+        logger.info(`[${collectionId}/${docId}] Menghapus notifikasi untuk driver lama: ${oldData.driverId}`);
+        clearExistingNotifications(docId, oldData.driverId);
+      }
+      // Jika ada driver baru, kirim notifikasi tugas baru kepadanya.
+      if (newData.driverId) {
+        const targetDriverId = newData.driverId;
+        logger.info(`[${collectionId}/${docId}] Driver diganti/baru ditugaskan ke ${targetDriverId}. Mengirim notifikasi.`);
+        const title = "Tugas Perjalanan Baru";
+        const body = `Anda mendapat tugas perjalanan baru dari ${newData.employeeName || "seorang pengguna"}.`;
+        promises.push(sendNotification(targetDriverId, title, body, dataPayload));
+        await markOfficerNotificationsAsRead(docId);
       }
     }
 
-    logger.info(`[${collectionId}] Change detected for ${docId}. Processing status update notifications.`);
-    // Menambahkan fallback untuk nama agar fungsi tidak crash jika field kosong
-    const technicianName = newData.technicianName || "seorang teknisi";
-    const driverName = newData.driverName || "seorang driver";
-    const employeeName = newData.employeeName || "pengguna";
+    // Notifikasi untuk Employee terkait perubahan STATUS
+    if (statusChanged && newData.employeeId) {
+      const targetEmployeeId = newData.employeeId;
+      let title = "";
+      let body = "";
+      let handlerName = "petugas";
 
-    // logger.log(`Change detected for ${collectionId}/${docId}. Processing notifications.`);
-
-    if (technicianChanged && oldData.assignedTechnicianId) {
-      await clearExistingNotifications(docId, "technician");
-    }
-    if (driverChanged && oldData.driverId) {
-      // Asumsi driver juga memiliki role 'technician' di koleksi 'users'
-      await clearExistingNotifications(docId, "technician");
-    }
-
-    let title = "";
-    const notificationsToSend = [];
-
-    switch (collectionId) {
-      case "reports":
-        title = `Laporan "${newData.itemName || "Tanpa Nama"}"`;
-        if (statusChanged) {
+      switch (collectionId) {
+        case "reports":
+        case "requests_resource":
+          title = collectionId === "reports" ? `Update Laporan Maintenance` : `Update Permintaan Resource`;
           if (newData.status === "inProgress") {
-            notificationsToSend.push({ userId: newData.employeeId, body: `Laporan Anda sedang dikerjakan oleh ${newData.technicianName}.` });
+            handlerName = newData.technicianName || "petugas";
+            body = `Permintaan Anda sedang dikerjakan oleh ${handlerName}.`;
           } else if (newData.status === "completed") {
-            notificationsToSend.push({ userId: newData.employeeId, body: `Laporan Anda telah diselesaikan oleh ${newData.technicianName}.` });
+            handlerName = newData.technicianName || "petugas";
+            body = `Permintaan Anda telah diselesaikan oleh ${handlerName}. Silakan beri rating.`;
           }
-        }
-        if (technicianChanged && newData.assignedTechnicianId) {
-          notificationsToSend.push({ userId: newData.assignedTechnicianId, body: `Anda mendapat tugas baru untuk laporan dari ${newData.employeeName}.` });
-        }
-        break;
-
-      case "requests_resource":
-        title = `Permintaan "${newData.description.substring(0, 20)}..."`;
-        if (statusChanged) {
+          break;
+        case "ride_requests":
+          title = `Update Perjalanan`;
           if (newData.status === "inProgress") {
-            notificationsToSend.push({ userId: newData.employeeId, body: `Permintaan Anda sedang diproses oleh ${newData.technicianName}.` });
+            handlerName = newData.driverName || "petugas";
+            body = `${handlerName} akan menjadi driver Anda dan akan menjemput sesuai waktu yang telah Anda tentukan.`;
           } else if (newData.status === "completed") {
-            notificationsToSend.push({ userId: newData.employeeId, body: `Permintaan Anda telah diselesaikan oleh ${newData.technicianName}.` });
+            handlerName = newData.driverName || "petugas";
+            body = `Perjalanan Anda dengan ${handlerName} telah selesai. Silakan beri rating.`;
           }
-        }
-        if (technicianChanged && newData.assignedTechnicianId) {
-          notificationsToSend.push({ userId: newData.assignedTechnicianId, body: `Anda mendapat tugas baru untuk permintaan dari ${newData.employeeName}.` });
-        }
-        break;
-
-      case "ride_requests":
-        title = `Perjalanan dari "${newData.pickupLocation}"`;
-        if (statusChanged) {
-          if (newData.status === "inProgress") {
-            notificationsToSend.push({ userId: newData.employeeId, body: `Perjalanan Anda akan diantar oleh driver ${newData.driverName}.` });
-          } else if (newData.status === "completed") {
-            notificationsToSend.push({ userId: newData.employeeId, body: `Perjalanan Anda dengan driver ${newData.driverName} telah selesai.` });
-          }
-        }
-        if (driverChanged && newData.driverId) {
-          notificationsToSend.push({ userId: newData.driverId, body: `Anda mendapat tugas perjalanan baru dari ${newData.employeeName}.` });
-        }
-        break;
-
-      case "bookings":
-        title = `Booking Ruang "${newData.roomName}"`;
-        if (statusChanged) {
+          break;
+        case "bookings":
+          title = `Update Booking Ruang "${newData.roomName}"`;
+          handlerName = newData.officerName || "petugas";
           if (newData.status === "approved") {
-            notificationsToSend.push({ userId: newData.employeeId, body: `Booking ruangan Anda untuk acara "${newData.eventAgenda}" telah disetujui.` });
+            body = `Booking Anda telah disetujui oleh ${handlerName}.`;
           } else if (newData.status === "cancelled") {
-            notificationsToSend.push({ userId: newData.employeeId, body: `Booking ruangan Anda untuk acara "${newData.eventAgenda}" telah dibatalkan.` });
+            body = `Booking Anda telah ditolak/dibatalkan.`;
           }
-        }
-        break;
+          break;
+      }
+
+      if (body) {
+        logger.info(`[${collectionId}/${docId}] Status berubah menjadi '${newData.status}'. Notifikasi untuk employee ${targetEmployeeId}.`);
+        promises.push(sendNotification(targetEmployeeId, title, body, dataPayload));
+      }
     }
 
-    if (notificationsToSend.length > 0) {
-      const promises = notificationsToSend.map((notif) => {
-        const dataPayload = {
-          click_action: "FLUTTER_NOTIFICATION_CLICK",
-          collection: collectionId,
-          docId: docId,
-        };
-        return sendNotification(notif.userId, title, notif.body, dataPayload);
-      });
-      return Promise.all(promises);
+    // Notifikasi untuk Employee terkait perubahan JADWAL
+    if ((scheduleChanged || roomChanged) && newData.employeeId) {
+      const targetEmployeeId = newData.employeeId;
+      const title = `Update Booking Ruang "${newData.roomName}"`;
+      let body = "";
+
+      // Membuat pesan notifikasi yang dinamis
+      if (scheduleChanged && roomChanged) {
+        body = `Jadwal dan ruangan untuk booking Anda telah diubah. Mohon periksa kembali detailnya.`;
+      } else if (scheduleChanged) {
+        body = `Jadwal booking Anda telah diubah oleh officer. Mohon periksa kembali detailnya.`;
+      } else if (roomChanged) {
+        body = `Ruangan untuk booking Anda telah diubah dari "${oldData.roomName}" menjadi "${newData.roomName}".`;
+      }
+
+      logger.info(`[${collectionId}/${docId}] Jadwal/Ruangan berubah. Notifikasi untuk employee ${targetEmployeeId}.`);
+      promises.push(sendNotification(targetEmployeeId, title, body, dataPayload));
     }
 
-    return null;
+    return Promise.all(promises);
   } catch (error) {
-    logger.error(`❌❌ FATAL ERROR in sendStatusUpdateNotifications for ${event.params.collectionId}/${event.params.docId}:`, error);
+    logger.error(`[FATAL] Gagal di sendStatusUpdateNotifications untuk ${collectionId}/${docId}:`, error);
     return null;
   }
 });
@@ -1180,108 +1216,168 @@ exports.sendStatusUpdateNotifications = onDocumentUpdated("{collectionId}/{docId
  * @param {string} docId - ID dokumen tugas (laporan, permintaan, dll.).
  * @param {string} roleToClear - Role yang notifikasinya akan dihapus (misal: 'technician').
  */
-async function clearExistingNotifications(docId, roleToClear) {
-  logger.info(`Clearing existing notifications for docId: ${docId} and role: ${roleToClear}`);
+async function clearExistingNotifications(docId, userIdToClear) {
+  if (!userIdToClear) return;
+
+  logger.info(`Mencari notifikasi untuk dihapus: docId=${docId}, userId=${userIdToClear}`);
   const notificationsRef = db.collection("notifications");
-  const snapshot = await notificationsRef.where("data.docId", "==", docId).get();
+  // Query spesifik untuk notifikasi tugas terkait PADA PENGGUNA LAMA
+  const snapshot = await notificationsRef.where("data.docId", "==", docId).where("userId", "==", userIdToClear).get();
 
   if (snapshot.empty) {
-    logger.info("No existing notifications found to clear.");
+    logger.info("Tidak ada notifikasi lama yang ditemukan untuk dihapus.");
     return;
   }
 
   const batch = db.batch();
-  let clearedCount = 0;
+  snapshot.docs.forEach((doc) => {
+    logger.info(`Menandai untuk penghapusan notifikasi ID: ${doc.id}`);
+    batch.delete(doc.ref);
+  });
 
-  for (const doc of snapshot.docs) {
-    const notifData = doc.data();
-    const userDoc = await db.collection("users").doc(notifData.userId).get();
-    if (userDoc.exists && userDoc.data().role === roleToClear) {
-      batch.delete(doc.ref);
-      clearedCount++;
-    }
-  }
-
-  if (clearedCount > 0) {
-    await batch.commit();
-    logger.info(`Successfully cleared ${clearedCount} old notifications.`);
-  }
+  await batch.commit();
+  logger.info(`Berhasil menghapus ${snapshot.docs.length} notifikasi lama.`);
 }
 
 /**
  * FUNGSI Mengirim notifikasi ke SEMUA OFFICER saat ada permintaan baru dibuat.
+ * Cek apakah sudah ada penugasan, jika belum baru kirim ke semua officer.
  */
 exports.sendNewRequestNotification = onDocumentCreated("{collectionId}/{docId}", async (event) => {
   const { collectionId, docId } = event.params;
   const validCollections = ["reports", "requests_resource", "ride_requests", "bookings"];
-
   if (!validCollections.includes(collectionId)) {
-    return null;
+    return null; // Abaikan koleksi lain
   }
 
   try {
-    const newData = event.data.data();
-    if (!newData) {
-      logger.error(`[${collectionId}/${docId}] No data found in created document.`);
+    const data = event.data.data();
+    if (!data) {
+      logger.error(`[${collectionId}/${docId}] Dokumen baru tidak memiliki data.`);
       return null;
     }
 
-    // Menambahkan fallback jika 'employeeName' kosong untuk mencegah error.
-    const employeeName = newData.employeeName || "seorang pengguna";
-    logger.info(`[${collectionId}/${docId}] Triggered by ${employeeName}. Starting notification process.`);
+    const promises = [];
+    const dataPayload = {
+      click_action: "FLUTTER_NOTIFICATION_CLICK",
+      collection: collectionId,
+      docId: docId,
+    };
 
-    logger.info("--> STEP 1: Querying for users with role 'officer'.");
+    const employeeName = data.employeeName || "seorang pengguna";
 
-    const officersSnapshot = await db.collection("users").where("role", "==", "officer").get();
+    // --- LOGIKA INTI  ---
+    const targetTechnicianId = data.assignedTechnicianId;
+    const targetDriverId = data.driverId;
 
-    if (officersSnapshot.empty) {
-      logger.warn("--> STEP 2: FAILED. No documents found for officers. Check 'users' collection for documents with role field set to 'officer' (all lowercase).");
-      return null;
+    if (targetTechnicianId) {
+      // KASUS 1A: Laporan/Permintaan dibuat dan LANGSUNG ditugaskan ke Teknisi
+      logger.info(`[${collectionId}/${docId}] Dibuat dengan penugasan teknisi ${targetTechnicianId}. Mengirim notifikasi TERTARGET.`);
+      const title = "Tugas Baru Untuk Anda";
+      const body = `Anda mendapat tugas baru dari ${employeeName}.`;
+      promises.push(sendNotification(targetTechnicianId, title, body, dataPayload));
+    } else if (targetDriverId) {
+      // KASUS 1B: Perjalanan dibuat dan LANGSUNG ditugaskan ke Driver
+      logger.info(`[${collectionId}/${docId}] Dibuat dengan penugasan driver ${targetDriverId}. Mengirim notifikasi TERTARGET.`);
+      const title = "Tugas Perjalanan Baru";
+      const body = `Anda mendapat tugas perjalanan baru dari ${employeeName}.`;
+      promises.push(sendNotification(targetDriverId, title, body, dataPayload));
+    } else {
+      // KASUS 2: Permintaan baru TANPA penugasan. SATU-SATUNYA skenario broadcast.
+      logger.info(`[${collectionId}/${docId}] Dibuat tanpa penugasan. Notifikasi akan dikirim ke semua officer.`);
+      const officersSnapshot = await db.collection("users").where("role", "==", "officer").get();
+
+      if (officersSnapshot.empty) {
+        logger.warn(`[${collectionId}/${docId}] Permintaan baru dibuat, tetapi tidak ada officer yang ditemukan.`);
+        return null;
+      }
+
+      let title = "Permintaan Baru Diterima";
+      let body = `Permintaan dari ${employeeName} memerlukan perhatian Anda.`;
+
+      // Sesuaikan pesan untuk setiap jenis permintaan
+      if (collectionId === "reports") {
+        title = "Laporan Maintenance Baru";
+        body = `Laporan kerusakan aset dari ${employeeName}.`;
+      } else if (collectionId === "requests_resource") {
+        title = "Permintaan Resource Baru";
+        body = `Permintaan "${data.request || "Resource"}" dari ${employeeName}.`;
+      } else if (collectionId === "ride_requests") {
+        title = "Permintaan Perjalanan Baru";
+        body = `Perjalanan dari "${data.pickupLocation}" oleh ${employeeName}.`;
+      } else if (collectionId === "bookings") {
+        title = "Booking Ruangan Baru";
+        body = `Ruang "${data.roomName}" dibooking oleh ${employeeName}.`;
+      }
+
+      officersSnapshot.docs.forEach((officerDoc) => {
+        const officerId = officerDoc.id;
+        logger.info(`--> Menyiapkan notifikasi untuk Officer UID: ${officerId}`);
+        promises.push(sendNotification(officerId, title, body, dataPayload));
+      });
     }
-
-    // LOGGING JUMLAH DAN DETAIL OFFICER YANG DITEMUKAN
-    logger.info(`--> STEP 2: SUCCESS. Found ${officersSnapshot.docs.length} officer user(s).`);
-    officersSnapshot.docs.forEach((doc) => {
-      logger.info(`     - Found Officer ID: ${doc.id}, Role: ${doc.data().role}`);
-    });
-
-    // Siapkan pesan notifikasi
-    let title = "Permintaan Baru Diterima";
-    let body = `Permintaan baru dari ${newData.employeeName} membutuhkan perhatian Anda.`;
-
-    switch (collectionId) {
-      case "reports":
-        title = `Laporan Maintenance Baru`;
-        body = `Laporan kerusakan "${newData.itemName}" dari ${newData.employeeName}.`;
-        break;
-      case "requests_resource":
-        title = `Permintaan Resource Baru`;
-        body = `Permintaan "${newData.request}" dari ${newData.employeeName}.`;
-        break;
-      case "ride_requests":
-        title = `Permintaan Perjalanan Baru`;
-        body = `Perjalanan dari "${newData.pickupLocation}" oleh ${newData.employeeName}.`;
-        break;
-      case "bookings":
-        title = `Booking Ruangan Baru`;
-        body = `Ruang "${newData.roomName}" dibooking oleh ${newData.employeeName}.`;
-        break;
-    }
-
-    // 3. Kirim notifikasi ke setiap officer
-    const promises = officersSnapshot.docs.map((officerDoc) => {
-      const officerId = officerDoc.id;
-      const dataPayload = {
-        click_action: "FLUTTER_NOTIFICATION_CLICK",
-        collection: collectionId,
-        docId: docId,
-      };
-      logger.info(`--> STEP 3: Preparing to send notification for doc ${docId} to Officer ID: ${officerId}`);
-      return sendNotification(officerId, title, body, dataPayload);
-    });
     return Promise.all(promises);
   } catch (error) {
-    logger.error(`❌❌ FATAL ERROR in sendNewRequestNotification for ${collectionId}/${docId}:`, error);
+    logger.error(`[FATAL] Gagal di sendNewRequestNotification untuk ${collectionId}/${docId}:`, error);
+    return null;
+  }
+});
+
+/**
+ * Cloud Function yang dijadwalkan berjalan setiap jam.
+ * Fungsi ini akan mencari booking yang sudah selesai dalam satu jam terakhir
+ * dan mengirimkan notifikasi permintaan rating kepada pemesan.
+ */
+exports.sendBookingRatingNotifications = onSchedule("every 1 hours", async (event) => {
+  try {
+    const now = new Date();
+    const oneHourAgo = new Date(now.getTime() - 60 * 60 * 1000);
+
+    logger.log(`Menjalankan tugas terjadwal pada: ${now.toISOString()}`);
+    logger.log(`Mencari booking yang selesai antara ${oneHourAgo.toISOString()} dan ${now.toISOString()}`);
+
+    // Query untuk mencari booking yang:
+    // 1. Statusnya 'approved'.
+    // 2. Waktu selesainya (usageEndDate) berada di antara satu jam yang lalu dan sekarang.
+    // 3. Belum memiliki rating (rating == null).
+    const snapshot = await db.collection("bookings").where("status", "==", "approved").where("usageEndDate", ">=", oneHourAgo).where("usageEndDate", "<=", now).where("rating", "==", null).get();
+
+    if (snapshot.empty) {
+      logger.log("Tidak ada booking yang baru selesai dan belum diberi rating. Tugas selesai.");
+      return null;
+    }
+
+    logger.log(`Ditemukan ${snapshot.docs.length} booking yang memenuhi kriteria.`);
+
+    const promises = snapshot.docs.map((doc) => {
+      const bookingData = doc.data();
+      const bookingId = doc.id;
+      const employeeId = bookingData.employeeId;
+
+      if (!employeeId) {
+        logger.warn(`Booking ID ${bookingId} tidak memiliki employeeId.`);
+        return Promise.resolve();
+      }
+
+      const title = `Bagaimana Pengalaman Anda di Ruang "${bookingData.roomName}"?`;
+      const body = `Acara "${bookingData.eventAgenda}" telah selesai. Berikan rating Anda sekarang!`;
+
+      // Payload notifikasi dibuat sedikit berbeda agar bisa diidentifikasi
+      // sebagai notifikasi permintaan rating.
+      const dataPayload = {
+        click_action: "FLUTTER_NOTIFICATION_CLICK",
+        collection: "bookings",
+        docId: bookingId,
+        type: "rating_request", // Penanda khusus
+      };
+
+      logger.log(`Menyiapkan notifikasi rating untuk booking ID: ${bookingId} kepada user: ${employeeId}`);
+      return sendNotification(employeeId, title, body, dataPayload);
+    });
+
+    return Promise.all(promises);
+  } catch (error) {
+    logger.error("Terjadi kesalahan pada sendBookingRatingNotifications:", error);
     return null;
   }
 });
@@ -1397,60 +1493,42 @@ exports.updateUserByAdmin = onCall({ region: "asia-southeast1" }, async (request
     // 1. Verifikasi bahwa pengguna sudah login
     if (!request.auth) {
       logger.error("Fungsi dipanggil oleh pengguna yang tidak terautentikasi.");
-      throw new functions.https.HttpsError(
-        "unauthenticated",
-        "Anda harus login untuk menggunakan fungsi ini."
-      );
+      throw new functions.https.HttpsError("unauthenticated", "Anda harus login untuk menggunakan fungsi ini.");
     }
 
     const callerUid = request.auth.uid;
-    
+
     // 2. Verifikasi bahwa caller adalah admin
     const callerDoc = await db.collection("users").doc(callerUid).get();
     if (!callerDoc.exists || callerDoc.data().role !== "admin") {
       logger.warn(`Pengguna non-admin (UID: ${callerUid}) mencoba mengupdate user.`);
-      throw new functions.https.HttpsError(
-        "permission-denied", 
-        "Hanya admin yang dapat mengupdate user."
-      );
+      throw new functions.https.HttpsError("permission-denied", "Hanya admin yang dapat mengupdate user.");
     }
 
     // 3. Ambil dan validasi parameter
     const { uid, name, email, role } = request.data;
-    
+
     if (!uid || !name || !email || !role) {
       logger.error("Parameter tidak lengkap.", { data: request.data });
-      throw new functions.https.HttpsError(
-        "invalid-argument",
-        "Parameter uid, name, email, dan role harus disediakan."
-      );
+      throw new functions.https.HttpsError("invalid-argument", "Parameter uid, name, email, dan role harus disediakan.");
     }
 
     // Validasi email format
     const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
     if (!emailRegex.test(email)) {
-      throw new functions.https.HttpsError(
-        "invalid-argument",
-        "Format email tidak valid."
-      );
+      throw new functions.https.HttpsError("invalid-argument", "Format email tidak valid.");
     }
 
     // Validasi role
-    const validRoles = ['employee', 'officer', 'technician', 'admin'];
+    const validRoles = ["employee", "officer", "technician", "admin"];
     if (!validRoles.includes(role)) {
-      throw new functions.https.HttpsError(
-        "invalid-argument",
-        `Role harus salah satu dari: ${validRoles.join(', ')}`
-      );
+      throw new functions.https.HttpsError("invalid-argument", `Role harus salah satu dari: ${validRoles.join(", ")}`);
     }
 
     // 4. Verifikasi bahwa target user exists
     const targetUserDoc = await db.collection("users").doc(uid).get();
     if (!targetUserDoc.exists) {
-      throw new functions.https.HttpsError(
-        "not-found",
-        "User dengan UID tersebut tidak ditemukan."
-      );
+      throw new functions.https.HttpsError("not-found", "User dengan UID tersebut tidak ditemukan.");
     }
 
     const currentUserData = targetUserDoc.data();
@@ -1463,18 +1541,15 @@ exports.updateUserByAdmin = onCall({ region: "asia-southeast1" }, async (request
       // 5. Update Firebase Auth jika email berubah
       if (emailChanged) {
         logger.info(`Updating email in Firebase Auth from ${currentEmail} to ${email}`);
-        
+
         // Check if new email is already in use
         try {
           await admin.auth().getUserByEmail(email);
           // If we get here, email is already in use
-          throw new functions.https.HttpsError(
-            "already-exists",
-            "Email sudah digunakan oleh user lain."
-          );
+          throw new functions.https.HttpsError("already-exists", "Email sudah digunakan oleh user lain.");
         } catch (authError) {
           // If user-not-found, that's good - email is available
-          if (authError.code !== 'auth/user-not-found') {
+          if (authError.code !== "auth/user-not-found") {
             throw authError;
           }
         }
@@ -1482,41 +1557,29 @@ exports.updateUserByAdmin = onCall({ region: "asia-southeast1" }, async (request
         // Update email in Firebase Auth
         await admin.auth().updateUser(uid, {
           email: email,
-          displayName: name
+          displayName: name,
         });
-        
+
         logger.info(`✅ Email updated in Firebase Auth for UID: ${uid}`);
       } else {
         // Just update display name if email didn't change
         await admin.auth().updateUser(uid, {
-          displayName: name
+          displayName: name,
         });
         logger.info(`✅ Display name updated in Firebase Auth for UID: ${uid}`);
       }
     } catch (authError) {
       logger.error(`❌ Failed to update Firebase Auth: ${authError.message}`);
-      
+
       // Handle specific auth errors
-      if (authError.code === 'auth/user-not-found') {
-        throw new functions.https.HttpsError(
-          "not-found",
-          "User tidak ditemukan dalam sistem autentikasi."
-        );
-      } else if (authError.code === 'auth/email-already-exists') {
-        throw new functions.https.HttpsError(
-          "already-exists",
-          "Email sudah digunakan oleh user lain."
-        );
-      } else if (authError.code === 'auth/invalid-email') {
-        throw new functions.https.HttpsError(
-          "invalid-argument",
-          "Format email tidak valid."
-        );
+      if (authError.code === "auth/user-not-found") {
+        throw new functions.https.HttpsError("not-found", "User tidak ditemukan dalam sistem autentikasi.");
+      } else if (authError.code === "auth/email-already-exists") {
+        throw new functions.https.HttpsError("already-exists", "Email sudah digunakan oleh user lain.");
+      } else if (authError.code === "auth/invalid-email") {
+        throw new functions.https.HttpsError("invalid-argument", "Format email tidak valid.");
       } else {
-        throw new functions.https.HttpsError(
-          "internal",
-          `Gagal mengupdate autentikasi: ${authError.message}`
-        );
+        throw new functions.https.HttpsError("internal", `Gagal mengupdate autentikasi: ${authError.message}`);
       }
     }
 
@@ -1528,7 +1591,7 @@ exports.updateUserByAdmin = onCall({ region: "asia-southeast1" }, async (request
         role: role,
         updatedAt: admin.firestore.FieldValue.serverTimestamp(),
       });
-      
+
       logger.info(`✅ User document updated in Firestore for UID: ${uid}`);
 
       // 7. Update driver document if exists and email changed
@@ -1543,25 +1606,21 @@ exports.updateUserByAdmin = onCall({ region: "asia-southeast1" }, async (request
           logger.info(`✅ Driver document email updated for UID: ${uid}`);
         }
       }
-
     } catch (firestoreError) {
       logger.error(`❌ Failed to update Firestore: ${firestoreError.message}`);
-      
+
       // If Firestore fails, we might want to revert the Auth changes
       // But for now, we'll just report the error
-      throw new functions.https.HttpsError(
-        "internal",
-        `Gagal mengupdate database: ${firestoreError.message}`
-      );
+      throw new functions.https.HttpsError("internal", `Gagal mengupdate database: ${firestoreError.message}`);
     }
 
     // 8. Log audit trail
     try {
       await db.collection("admin_actions").add({
         adminUid: callerUid,
-        adminEmail: callerDoc.data().email || '',
-        adminName: callerDoc.data().name || '',
-        action: 'update_user',
+        adminEmail: callerDoc.data().email || "",
+        adminName: callerDoc.data().name || "",
+        action: "update_user",
         targetUserUid: uid,
         targetUserEmail: email,
         targetUserName: name,
@@ -1571,7 +1630,7 @@ exports.updateUserByAdmin = onCall({ region: "asia-southeast1" }, async (request
         newEmail: email,
         timestamp: admin.firestore.FieldValue.serverTimestamp(),
         success: true,
-        details: emailChanged ? 'User updated with email change' : 'User updated without email change'
+        details: emailChanged ? "User updated with email change" : "User updated without email change",
       });
     } catch (auditError) {
       logger.warn(`⚠️ Gagal mencatat audit trail: ${auditError.message}`);
@@ -1582,26 +1641,20 @@ exports.updateUserByAdmin = onCall({ region: "asia-southeast1" }, async (request
 
     return {
       success: true,
-      message: emailChanged 
-        ? `User ${name} berhasil diupdate dengan email baru: ${email}` 
-        : `User ${name} berhasil diupdate`,
+      message: emailChanged ? `User ${name} berhasil diupdate dengan email baru: ${email}` : `User ${name} berhasil diupdate`,
       emailChanged: emailChanged,
       oldEmail: currentEmail,
-      newEmail: email
+      newEmail: email,
     };
-
   } catch (error) {
     // Log error untuk debugging
     logger.error(`❌ Error pada updateUserByAdmin: ${error.message}`, error);
-    
+
     // Jika error bukan HttpsError, wrap dalam HttpsError
     if (!(error instanceof functions.https.HttpsError)) {
-      throw new functions.https.HttpsError(
-        "internal",
-        `Terjadi kesalahan tidak terduga: ${error.message}`
-      );
+      throw new functions.https.HttpsError("internal", `Terjadi kesalahan tidak terduga: ${error.message}`);
     }
-    
+
     // Re-throw HttpsError
     throw error;
   }
@@ -1626,7 +1679,7 @@ exports.batchUpdateUserEmails = onCall({ region: "asia-southeast1" }, async (req
 
     // 2. Validasi parameter
     const { updates } = request.data;
-    
+
     if (!Array.isArray(updates) || updates.length === 0) {
       throw new functions.https.HttpsError("invalid-argument", "Parameter 'updates' harus berupa array yang tidak kosong");
     }
@@ -1638,7 +1691,7 @@ exports.batchUpdateUserEmails = onCall({ region: "asia-southeast1" }, async (req
     logger.info(`Admin ${callerUid} starting batch update for ${updates.length} users`);
 
     const results = [];
-    
+
     // 3. Process each update
     for (let i = 0; i < updates.length; i++) {
       const update = updates[i];
@@ -1658,7 +1711,7 @@ exports.batchUpdateUserEmails = onCall({ region: "asia-southeast1" }, async (req
         // Update Firebase Auth
         await admin.auth().updateUser(uid, {
           email: email,
-          displayName: name
+          displayName: name,
         });
 
         // Update Firestore
@@ -1682,18 +1735,17 @@ exports.batchUpdateUserEmails = onCall({ region: "asia-southeast1" }, async (req
         results.push({
           uid: uid,
           success: true,
-          message: `User ${name} updated successfully`
+          message: `User ${name} updated successfully`,
         });
 
         logger.info(`✅ Batch update success for user ${uid}: ${name} (${email})`);
-
       } catch (error) {
         logger.error(`❌ Batch update failed for user ${uid}: ${error.message}`);
-        
+
         results.push({
           uid: uid,
           success: false,
-          error: error.message
+          error: error.message,
         });
       }
     }
@@ -1702,22 +1754,22 @@ exports.batchUpdateUserEmails = onCall({ region: "asia-southeast1" }, async (req
     try {
       await db.collection("admin_actions").add({
         adminUid: callerUid,
-        adminEmail: callerDoc.data().email || '',
-        adminName: callerDoc.data().name || '',
-        action: 'batch_update_users',
+        adminEmail: callerDoc.data().email || "",
+        adminName: callerDoc.data().name || "",
+        action: "batch_update_users",
         totalUpdates: updates.length,
-        successCount: results.filter(r => r.success).length,
-        failureCount: results.filter(r => !r.success).length,
+        successCount: results.filter((r) => r.success).length,
+        failureCount: results.filter((r) => !r.success).length,
         timestamp: admin.firestore.FieldValue.serverTimestamp(),
         success: true,
-        details: 'Batch update completed'
+        details: "Batch update completed",
       });
     } catch (auditError) {
       logger.warn(`⚠️ Gagal mencatat audit trail: ${auditError.message}`);
     }
 
-    const successCount = results.filter(r => r.success).length;
-    const failureCount = results.filter(r => !r.success).length;
+    const successCount = results.filter((r) => r.success).length;
+    const failureCount = results.filter((r) => !r.success).length;
 
     logger.info(`✅ Batch update completed: ${successCount} success, ${failureCount} failures`);
 
@@ -1727,16 +1779,15 @@ exports.batchUpdateUserEmails = onCall({ region: "asia-southeast1" }, async (req
       totalCount: updates.length,
       successCount: successCount,
       failureCount: failureCount,
-      results: results
+      results: results,
     };
-
   } catch (error) {
     logger.error(`❌ Error in batchUpdateUserEmails: ${error.message}`, error);
-    
+
     if (!(error instanceof functions.https.HttpsError)) {
       throw new functions.https.HttpsError("internal", `Batch update failed: ${error.message}`);
     }
-    
+
     throw error;
   }
 });

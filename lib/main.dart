@@ -29,6 +29,7 @@ final NotificationService notificationService =
     NotificationService(navigationService, userService);
 final NotificationListService notificationListService =
     NotificationListService();
+RemoteMessage? initialMessage;
 
 @pragma('vm:entry-point')
 Future<void> _firebaseMessagingBackgroundHandler(RemoteMessage message) async {
@@ -38,22 +39,6 @@ Future<void> _firebaseMessagingBackgroundHandler(RemoteMessage message) async {
   );
 
   print('[BACKGROUND] Pesan diterima: ${message.notification?.title}');
-  print('[BACKGROUND] Data: ${message.data}');
-
-  // Simpan notifikasi ke database jika perlu
-  if (message.data.isNotEmpty) {
-    try {
-      await FirebaseFirestore.instance.collection('notifications').add({
-        'title': message.notification?.title ?? '',
-        'body': message.notification?.body ?? '',
-        'data': message.data,
-        'timestamp': FieldValue.serverTimestamp(),
-        'isRead': false,
-      });
-    } catch (e) {
-      print('[BACKGROUND] Error menyimpan notifikasi: $e');
-    }
-  }
 }
 
 void main() async {
@@ -65,6 +50,10 @@ void main() async {
       options: DefaultFirebaseOptions.currentPlatform,
     );
     print('[MAIN] Firebase berhasil diinisialisasi');
+    initialMessage = await FirebaseMessaging.instance.getInitialMessage();
+    if (initialMessage != null) {
+      print('[MAIN] Aplikasi dibuka dari notifikasi terminated.');
+    }
   } catch (e) {
     print('[MAIN] Gagal menginisialisasi Firebase: $e');
   }
@@ -95,8 +84,6 @@ void main() async {
         print('[MAIN] Persistence tidak bisa diaktifkan: $e');
       }
     }
-
-    await notificationService.setupInteractedMessage();
 
     final storage = FirebaseStorage.instanceFor(
         bucket: 'gs://test-4fa2a.firebasestorage.app');
@@ -669,40 +656,99 @@ class _SplashScreenState extends State<SplashScreen>
   }
 }
 
-class AuthWrapper extends StatelessWidget {
+class AuthWrapper extends StatefulWidget {
   const AuthWrapper({super.key});
+
+  @override
+  State<AuthWrapper> createState() => _AuthWrapperState();
+}
+
+class _AuthWrapperState extends State<AuthWrapper> {
+  Future<bool>? _isOpenedFromNotificationFuture;
+  // Flag untuk mencegah navigasi ganda
+  bool _hasNavigatedFromNotification = false;
+
+  @override
+  void initState() {
+    super.initState();
+    // Cek notifikasi saat widget ini pertama kali dibuat
+    _isOpenedFromNotificationFuture = _checkForInitialMessage();
+  }
+
+  Future<bool> _checkForInitialMessage() async {
+    RemoteMessage? initialMessage =
+        await FirebaseMessaging.instance.getInitialMessage();
+
+    // Jika ada notifikasi, langsung proses dan set flag
+    if (initialMessage != null) {
+      print('[AUTH_WRAPPER] Aplikasi dibuka dari notifikasi terminated');
+      _hasNavigatedFromNotification = true;
+
+      // Proses navigasi notifikasi segera setelah user terautentikasi
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        _processNotificationNavigation(initialMessage);
+      });
+
+      return true;
+    }
+
+    return false;
+  }
+
+  // Fungsi khusus untuk memproses navigasi dari notifikasi
+  Future<void> _processNotificationNavigation(RemoteMessage message) async {
+    final authService = Provider.of<AuthService>(context, listen: false);
+
+    // Tunggu hingga user terautentikasi
+    while (authService.user == null) {
+      await Future.delayed(const Duration(milliseconds: 100));
+    }
+
+    print('[AUTH_WRAPPER] Memproses navigasi dari notifikasi terminated');
+
+    // Langsung serahkan ke NotificationService tanpa navigasi manual
+    // Biarkan NotificationService yang handle semua navigasi dengan benar
+    Provider.of<NotificationService>(context, listen: false)
+        .triggerNavigationFromNotification(message.data);
+  }
+
+  // Helper untuk membangun layar loading
+  Widget _buildLoadingScreen(String message) {
+    return Scaffold(
+      body: Container(
+        decoration: BoxDecoration(
+          gradient: LinearGradient(
+            begin: Alignment.topLeft,
+            end: Alignment.bottomRight,
+            colors: [
+              Theme.of(context).primaryColor,
+              Theme.of(context).primaryColor.withOpacity(0.8),
+            ],
+          ),
+        ),
+        child: Center(
+          child: Column(
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: [
+              const CircularProgressIndicator(color: Colors.white),
+              const SizedBox(height: 16),
+              Text(
+                message,
+                style: const TextStyle(color: Colors.white, fontSize: 16),
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     return Consumer<AuthService>(
       builder: (context, authService, child) {
         if (authService.isLoading) {
-          return Scaffold(
-            body: Container(
-              decoration: BoxDecoration(
-                gradient: LinearGradient(
-                  begin: Alignment.topLeft,
-                  end: Alignment.bottomRight,
-                  colors: [
-                    Theme.of(context).primaryColor,
-                    Theme.of(context).primaryColor.withOpacity(0.8),
-                  ],
-                ),
-              ),
-              child: const Center(
-                child: Column(
-                  mainAxisAlignment: MainAxisAlignment.center,
-                  children: [
-                    CircularProgressIndicator(color: Colors.white),
-                    SizedBox(height: 16),
-                    Text(
-                      'Memuat...',
-                      style: TextStyle(color: Colors.white, fontSize: 16),
-                    ),
-                  ],
-                ),
-              ),
-            ),
-          );
+          return _buildLoadingScreen('Memuat...');
         }
 
         if (authService.user == null) {
@@ -711,70 +757,58 @@ class AuthWrapper extends StatelessWidget {
           return LoginScreen();
         }
 
-        print(
-            '[AUTH_WRAPPER] Pengguna terautentikasi: ${authService.user!.uid}');
-        return FutureBuilder(
-          future: Provider.of<UserService>(context, listen: false)
-              .getUserData(authService.user!.uid),
+        return FutureBuilder<bool>(
+          future: _isOpenedFromNotificationFuture,
           builder: (context, snapshot) {
+            // Selama kita menunggu pengecekan notifikasi selesai, tampilkan loading sederhana.
             if (snapshot.connectionState == ConnectionState.waiting) {
-              return Scaffold(
-                body: Container(
-                  decoration: BoxDecoration(
-                    gradient: LinearGradient(
-                      begin: Alignment.topLeft,
-                      end: Alignment.bottomRight,
-                      colors: [
-                        Theme.of(context).primaryColor,
-                        Theme.of(context).primaryColor.withOpacity(0.8),
-                      ],
-                    ),
-                  ),
-                  child: const Center(
-                    child: Column(
-                      mainAxisAlignment: MainAxisAlignment.center,
-                      children: [
-                        CircularProgressIndicator(color: Colors.white),
-                        SizedBox(height: 16),
-                        Text(
-                          'Menyiapkan dashboard Anda...',
-                          style: TextStyle(color: Colors.white, fontSize: 16),
-                        ),
-                      ],
-                    ),
-                  ),
-                ),
-              );
+              return _buildLoadingScreen('Memuat...');
             }
 
-            if (snapshot.hasError || !snapshot.hasData) {
-              print(
-                  '[AUTH_WRAPPER] Gagal memuat data pengguna: ${snapshot.error}');
-              return LoginScreen();
+            final bool wasOpenedFromNotification = snapshot.data ?? false;
+
+            // Jika dibuka dari notifikasi, biarkan alur normal berjalan dulu
+            if (wasOpenedFromNotification && !_hasNavigatedFromNotification) {
+              // Set flag bahwa navigasi akan diproses, tapi tetap render dashboard normal
+              _hasNavigatedFromNotification = true;
             }
 
-            final userData = snapshot.data!;
-            print('[AUTH_WRAPPER] Peran pengguna: ${userData.role}');
+            // Alur normal untuk aplikasi yang tidak dibuka dari notifikasi
+            print(
+                '[AUTH_WRAPPER] Pengguna terautentikasi: ${authService.user!.uid}');
+            return FutureBuilder<UserModel>(
+              future: Provider.of<UserService>(context, listen: false)
+                  .getUserData(authService.user!.uid),
+              builder: (context, userSnapshot) {
+                if (userSnapshot.connectionState == ConnectionState.waiting) {
+                  return _buildLoadingScreen('Menyiapkan dashboard Anda...');
+                }
 
-            final notificationService =
-                Provider.of<NotificationService>(context, listen: false);
-            notificationService.initNotifications(userData.uid);
+                if (userSnapshot.hasError || !userSnapshot.hasData) {
+                  print(
+                      '[AUTH_WRAPPER] Gagal memuat data pengguna: ${userSnapshot.error}');
+                  return LoginScreen();
+                }
 
-            // Navigate based on role
-            switch (userData.role) {
-              case 'employee':
-                return const HomeDashboardUser();
-              case 'officer':
-                return const HomeDashboardOfficer();
-              case 'technician':
-                return const HomeDashboardTechnician();
-              case 'admin':
-                return AdminDashboard();
-              default:
-                print(
-                    '[AUTH_WRAPPER] Peran tidak dikenali: ${userData.role}, mengarahkan ke LoginScreen');
-                return LoginScreen();
-            }
+                final userData = userSnapshot.data!;
+                print('[AUTH_WRAPPER] Peran pengguna: ${userData.role}');
+
+                switch (userData.role) {
+                  case 'employee':
+                    return const HomeDashboardUser();
+                  case 'officer':
+                    return const HomeDashboardOfficer();
+                  case 'technician':
+                    return const HomeDashboardTechnician();
+                  case 'admin':
+                    return AdminDashboard();
+                  default:
+                    print(
+                        '[AUTH_WRAPPER] Peran tidak dikenali: ${userData.role}, mengarahkan ke LoginScreen');
+                    return LoginScreen();
+                }
+              },
+            );
           },
         );
       },

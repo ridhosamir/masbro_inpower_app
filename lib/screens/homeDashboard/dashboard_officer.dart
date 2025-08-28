@@ -13,9 +13,6 @@ import 'package:masbro_inpower_app/models/operasionalApp/ride_request_model.dart
 import 'package:masbro_inpower_app/models/bookingroomApp/booking_model.dart';
 import 'package:masbro_inpower_app/models/bookingroomApp/room_model.dart';
 import 'package:masbro_inpower_app/models/user_model.dart';
-import 'package:masbro_inpower_app/screens/employee/maintenanceApp/report_detail_screen.dart';
-import 'package:masbro_inpower_app/screens/employee/operasionalApp/ride_request_detail_screen.dart';
-import 'package:masbro_inpower_app/screens/employee/resourceApp/request_detail_screen.dart';
 import 'package:masbro_inpower_app/screens/homeDashboard/detailRating/rating_detail_screen.dart';
 import 'package:masbro_inpower_app/screens/officer/bookingroomApp/booking_detail_screen.dart';
 import 'package:masbro_inpower_app/screens/officer/bookingroomApp/officer_dahboard.dart';
@@ -25,7 +22,9 @@ import 'package:masbro_inpower_app/screens/officer/operasionalApp/assign_driver_
 import 'package:masbro_inpower_app/screens/officer/operasionalApp/officer_dashboard.dart';
 import 'package:masbro_inpower_app/screens/officer/resourceApp/assign_technician_screen.dart';
 import 'package:masbro_inpower_app/screens/officer/resourceApp/officer_dashboard.dart';
+import 'package:masbro_inpower_app/screens/officer/maintenanceApp/report_detail_screen.dart';
 import 'package:masbro_inpower_app/screens/officer/resourceApp/request_detail_screen.dart';
+import 'package:masbro_inpower_app/screens/officer/operasionalApp/ride_request_detail_screen.dart';
 import 'package:masbro_inpower_app/services/auth_service.dart';
 import 'package:masbro_inpower_app/services/maintenanceApp/firestore_service.dart'
     as maintenance_service;

@@ -156,57 +156,33 @@ class FirestoreServiceResource {
       {String? technicianId, String? technicianName}) async {
     try {
       final batch = _firestore.batch();
+      final requestRef = _requestsCollection.doc(requestId);
 
-      // Update laporan
-      batch.update(_requestsCollection.doc(requestId), {
+      // 1. Update dokumen request
+      batch.update(requestRef, {
         'status': 'completed',
         'completionReason': reason,
-        'completionDate': FieldValue.serverTimestamp(),
+        'completionDate': Timestamp.now(),
+        // Langsung simpan nilai yang diterima. Jika dari officer, nilainya akan null.
+        'assignedTechnicianId': technicianId,
+        'assignedTechnicianName': technicianName,
       });
 
-      // Jika diselesaikan langsung oleh officer, buat task baru yang sudah selesai
-      if (technicianId != null && technicianName != null) {
-        final requestDoc = await _requestsCollection.doc(requestId).get();
-        final request = RequestModel.fromFirestore(requestDoc);
+      // 2. Cari task yang mungkin sudah ada dan selesaikan juga
+      final taskQuery = await _tasksCollection
+          .where('requestId', isEqualTo: requestId)
+          .limit(1)
+          .get();
 
-        final taskRef = _tasksCollection.doc();
-        final task = TaskModel(
-          id: taskRef.id,
-          requestId: requestId,
-          assignedTo: technicianId,
-          technicianName: technicianName,
-          requesterName: request.employeeName,
-          description: request.description,
-          status: 'completed',
-          assignedAt: request.createdAt,
-          completedAt: DateTime.now(),
-          completionNote: reason,
-          timeRequired: request.timeRequired,
-          request: request.request,
-          imageUrl: request.imageUrl,
-        );
-        batch.set(taskRef, task.toMap());
-
-        // Log untuk image URL
-        if (request.hasValidImage()) {
-          print(
-              'Direct completion task created with image URL: ${request.imageUrl}');
-        }
-      } else {
-        // ... (sisa logika tidak berubah)
-        final taskQuery = await _tasksCollection
-            .where('requestId', isEqualTo: requestId)
-            .limit(1)
-            .get();
-
-        if (taskQuery.docs.isNotEmpty) {
-          batch.update(taskQuery.docs.first.reference, {
-            'status': 'completed',
-            'completedAt': FieldValue.serverTimestamp(),
-            'completionNote': reason,
-          });
-        }
+      if (taskQuery.docs.isNotEmpty) {
+        final taskRef = taskQuery.docs.first.reference;
+        batch.update(taskRef, {
+          'status': 'completed',
+          'completedAt': Timestamp.now(),
+          'completionNote': reason,
+        });
       }
+
       await batch.commit();
       print('Resource request $requestId marked as completed');
     } catch (e) {
