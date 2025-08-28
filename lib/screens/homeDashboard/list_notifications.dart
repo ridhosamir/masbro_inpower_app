@@ -4,6 +4,14 @@ import 'package:intl/intl.dart';
 import 'package:masbro_inpower_app/models/notification_model.dart';
 import 'package:masbro_inpower_app/services/notification_list_service.dart';
 import 'package:masbro_inpower_app/services/statusNotifications/notif_status_helper.dart';
+import 'package:masbro_inpower_app/screens/technician/maintenanceApp/technician_dashboard.dart'
+    as maintenance_dashboard;
+import 'package:masbro_inpower_app/screens/technician/resourceApp/technician_dashboard.dart'
+    as resource_dashboard;
+import 'package:masbro_inpower_app/screens/technician/operasionalApp/driver_dashboard.dart'
+    as operational_dashboard;
+import 'package:masbro_inpower_app/services/auth_service.dart';
+import 'package:masbro_inpower_app/services/user_service.dart';
 import 'package:provider/provider.dart';
 
 class NotificationListScreen extends StatefulWidget {
@@ -40,10 +48,11 @@ class _NotificationListScreenState extends State<NotificationListScreen> {
     });
   }
 
-  void _onNotificationTap(
-      BuildContext context, NotificationModel notification) {
+  Future<void> _onNotificationTap(
+      BuildContext context, NotificationModel notification) async {
     final notificationListService =
         Provider.of<NotificationListService>(context, listen: false);
+
     if (_isSelectionMode) {
       setState(() {
         if (_selectedNotifications.contains(notification.id)) {
@@ -52,12 +61,47 @@ class _NotificationListScreenState extends State<NotificationListScreen> {
           _selectedNotifications.add(notification.id);
         }
       });
+      return;
+    }
+
+    // Mark as read
+    notificationListService.markAsRead(notification.id);
+
+    // Dapatkan role user saat ini
+    final authService = Provider.of<AuthService>(context, listen: false);
+    final userService = Provider.of<UserService>(context, listen: false);
+    final user = await userService.getUserData(authService.user!.uid);
+
+    if (user == null || !mounted) return;
+
+    if (user.role == 'technician') {
+      // Logika khusus untuk teknisi
+      Widget? targetDashboard;
+      final String? collection = notification.data['collection'];
+
+      switch (collection) {
+        case 'reports':
+          targetDashboard = maintenance_dashboard.TechnicianDashboard();
+          break;
+        case 'requests_resource':
+          targetDashboard = resource_dashboard.TechnicianDashboardResource();
+          break;
+        case 'ride_requests':
+          targetDashboard = operational_dashboard.DriverDashboard();
+          break;
+      }
+
+      if (targetDashboard != null) {
+        // Pop halaman notifikasi saat ini, lalu push ke dashboard yang dituju
+        Navigator.of(context)
+          ..pop()
+          ..push(MaterialPageRoute(builder: (context) => targetDashboard!));
+      }
     } else {
-      // Mark as read and navigate
-      notificationListService.markAsRead(notification.id);
+      // Logika untuk user/officer
       final notificationHandler =
           Provider.of<NotificationService>(context, listen: false);
-      notificationHandler.handleMessageNavigation(notification.data);
+      notificationHandler.triggerNavigationFromNotification(notification.data);
     }
   }
 

@@ -842,20 +842,19 @@ class _OfficerDashboardResourceState extends State<OfficerDashboardResource>
                 const Divider(height: 24),
                 Row(
                   children: [
-                    Expanded(
-                      child: ElevatedButton.icon(
-                        onPressed: () => _navigateToAssignTechnician(request),
-                        icon: const Icon(Icons.engineering, size: 16),
-                        label: Text(request.assignedTechnicianId == null
-                            ? 'Assign'
-                            : 'Change Technician'),
-                        style: ElevatedButton.styleFrom(
-                          backgroundColor: Colors.blue,
-                          foregroundColor: Colors.white,
+                    if (request.status == 'open')
+                      Expanded(
+                        child: ElevatedButton.icon(
+                          onPressed: () => _navigateToAssignTechnician(request),
+                          icon: const Icon(Icons.engineering, size: 16),
+                          label: const Text('Assign'),
+                          style: ElevatedButton.styleFrom(
+                            backgroundColor: Colors.blue,
+                            foregroundColor: Colors.white,
+                          ),
                         ),
                       ),
-                    ),
-                    const SizedBox(width: 12),
+                    if (request.status == 'open') const SizedBox(width: 12),
                     Expanded(
                       child: ElevatedButton.icon(
                         onPressed: () => _showCompleteDialog(request),
@@ -1127,12 +1126,26 @@ class _OfficerDashboardResourceState extends State<OfficerDashboardResource>
 
     setState(() => _isCompleting = true);
 
+    String? technicianIdForRequest;
+    String? technicianNameForRequest;
+
+    // Cek apakah pengguna saat ini adalah seorang teknisi
+    if (currentUser!.role == 'technician') {
+      // Jika ya, gunakan data teknisi
+      technicianIdForRequest = currentUser!.uid;
+      technicianNameForRequest = currentUser!.name;
+    } else {
+      // Jika bukan (misalnya officer), kosongkan data teknisi (kirim null)
+      technicianIdForRequest = null;
+      technicianNameForRequest = null;
+    }
+
     try {
       await _firestoreService.completeRequest(
         request.id,
         _completionReasonController.text.trim(),
-        technicianId: currentUser!.uid,
-        technicianName: currentUser!.name,
+        technicianId: technicianIdForRequest,
+        technicianName: technicianNameForRequest,
       );
 
       if (mounted) {

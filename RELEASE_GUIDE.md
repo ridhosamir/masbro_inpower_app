@@ -88,6 +88,3 @@ Clean Periodik:
 Clean semua cache Gradle:
 `cd android`  
 `./gradlew clean`
-
-# Build APK Release
-`flutter build apk --release`

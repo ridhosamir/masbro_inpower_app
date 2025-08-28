@@ -74,6 +74,34 @@ class OperasionalFirestoreService {
     await _rideRequestsCollection.doc(request.id).update(request.toMap());
   }
 
+  // ✅ NEW: Get single ride request by ID
+  Future<RideRequestModel?> getRideRequestById(String requestId) async {
+    try {
+      print('Getting ride request by ID: $requestId');
+
+      final doc = await _rideRequestsCollection.doc(requestId).get();
+
+      if (doc.exists && doc.data() != null) {
+        final request = RideRequestModel.fromFirestore(doc);
+        print(
+            'Retrieved ride request: ${request.id} with status: ${request.status}');
+        print(
+            'Driver ID: ${request.driverId}, Driver Name: ${request.driverName}');
+        print(
+            'Vehicle ID: ${request.vehicleId}, Vehicle Name: ${request.vehicleName}');
+        print(
+            'Driver Rating: ${request.driverRating}, Vehicle Rating: ${request.vehicleRating}');
+        return request;
+      } else {
+        print('Ride request with ID $requestId not found');
+        return null;
+      }
+    } catch (e) {
+      print('Error getting ride request by ID: $e');
+      throw e;
+    }
+  }
+
   // Assign driver and vehicle to a ride request
   Future<void> assignDriverAndVehicle(
     String requestId,

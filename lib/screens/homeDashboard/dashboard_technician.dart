@@ -1,4 +1,6 @@
 import 'dart:io';
+import 'dart:async';
+import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:image_picker/image_picker.dart';
 import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
@@ -25,12 +27,12 @@ import 'package:masbro_inpower_app/services/notification_list_service.dart';
 import 'package:badges/badges.dart' as badges;
 import 'package:masbro_inpower_app/services/user_service.dart';
 import 'package:masbro_inpower_app/utils/firebase_storage_image.dart';
+import 'package:masbro_inpower_app/services/statusNotifications/notif_status_helper.dart';
 import 'package:provider/provider.dart';
 import '../../../services/storage_service.dart';
 import 'package:flutter/foundation.dart' show kIsWeb;
 import 'dart:typed_data';
 import 'dart:ui'; // Needed for ImageFilter
-import 'dart:async';
 import 'package:rxdart/rxdart.dart';
 
 class HomeDashboardTechnician extends StatefulWidget {
@@ -1016,11 +1018,106 @@ class _TechnicianStatusTabState extends State<TechnicianStatusTab>
   final StorageService _storageService = StorageService();
   XFile? _selectedImage;
   Uint8List? _selectedImageBytes;
+  File? _afterImageFile;
+  Uint8List? _afterImageBytes;
+  XFile? _pickedFile;
+  String? _afterImageName;
+  bool _hasSelectedImage = false;
 
   int _currentPage = 1;
   final int _itemsPerPage = 5;
 
   StreamSubscription? _dataSubscription;
+
+  // Helper function untuk memilih gambar
+  Future<void> _pickImageReport() async {
+    try {
+      setState(() {
+        _afterImageFile = null;
+        _afterImageBytes = null;
+        _pickedFile = null;
+        _afterImageName = null;
+        _hasSelectedImage = false;
+      });
+
+      final XFile? pickedImage = await ImagePicker().pickImage(
+        source: ImageSource.camera,
+        imageQuality: 80,
+      );
+
+      if (pickedImage != null) {
+        setState(() {
+          _pickedFile = pickedImage;
+          _afterImageName = pickedImage.name;
+          _hasSelectedImage = true;
+          if (!kIsWeb) {
+            _afterImageFile = File(pickedImage.path);
+          }
+        });
+      }
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('Error selecting image: $e'),
+            backgroundColor: Colors.red,
+          ),
+        );
+      }
+    }
+  }
+
+  // Helper function untuk mengunggah gambar ke Firebase Storage
+  Future<String?> _uploadAfterImage(String taskId) async {
+    if (!_hasSelectedImage || _pickedFile == null) return null;
+
+    try {
+      final timestamp = DateTime.now().millisecondsSinceEpoch;
+      final path = 'maintenance/tasks/$taskId/after_$timestamp.jpg';
+
+      if (kIsWeb) {
+        _afterImageBytes ??= await _pickedFile!.readAsBytes();
+        return await _storageService.uploadWebFile(_afterImageBytes!, path);
+      } else {
+        if (_afterImageFile != null) {
+          return await _storageService.uploadFile(_afterImageFile!, path);
+        }
+      }
+      return null;
+    } catch (e) {
+      print('Error uploading after image: $e');
+      rethrow;
+    }
+  }
+
+  // Helper function untuk menampilkan preview gambar
+  Widget _buildImagePreview() {
+    if (!_hasSelectedImage) {
+      return Column(
+        mainAxisAlignment: MainAxisAlignment.center,
+        children: [
+          Icon(Icons.add_a_photo, size: 40, color: Colors.grey[500]),
+          const SizedBox(height: 8),
+          Text('Tap to add a photo',
+              style: TextStyle(color: Colors.grey[600], fontSize: 14)),
+        ],
+      );
+    }
+    if (kIsWeb) {
+      return FutureBuilder<Uint8List>(
+        future: _pickedFile!.readAsBytes(),
+        builder: (context, snapshot) {
+          if (snapshot.hasData) {
+            _afterImageBytes = snapshot.data;
+            return Image.memory(snapshot.data!, fit: BoxFit.cover);
+          }
+          return const Center(child: CircularProgressIndicator());
+        },
+      );
+    } else {
+      return Image.file(_afterImageFile!, fit: BoxFit.cover);
+    }
+  }
 
   @override
   void initState() {
@@ -1063,7 +1160,7 @@ class _TechnicianStatusTabState extends State<TechnicianStatusTab>
     });
   }
 
-  Future<void> _pickImage(
+  Future<void> _pickImageResource(
       ImageSource source, StateSetter setStateDialog) async {
     try {
       final picker = ImagePicker();
@@ -2438,6 +2535,70 @@ class _TechnicianStatusTabState extends State<TechnicianStatusTab>
                           ),
                         ),
                       ),
+                      // Show after image if available
+                      if (task.afterImageUrl != null &&
+                          task.afterImageUrl!.isNotEmpty) ...[
+                        const SizedBox(height: 20),
+                        Text(
+                          'Completion Photo:',
+                          style: TextStyle(
+                            fontSize: 16,
+                            fontWeight: FontWeight.bold,
+                            color: Colors.green[700],
+                          ),
+                        ),
+                        const SizedBox(height: 8),
+                        GestureDetector(
+                          onTap: () => _showFullScreenImage(
+                              context, task.afterImageUrl!),
+                          child: Container(
+                            height: 200,
+                            width: double.infinity,
+                            decoration: BoxDecoration(
+                              borderRadius: BorderRadius.circular(12),
+                              border: Border.all(color: Colors.green[300]!),
+                            ),
+                            child: ClipRRect(
+                              borderRadius: BorderRadius.circular(11),
+                              child: Image.network(
+                                task.afterImageUrl!,
+                                fit: BoxFit.cover,
+                                loadingBuilder:
+                                    (context, child, loadingProgress) {
+                                  if (loadingProgress == null) return child;
+                                  return Center(
+                                    child: CircularProgressIndicator(
+                                      value:
+                                          loadingProgress.expectedTotalBytes !=
+                                                  null
+                                              ? loadingProgress
+                                                      .cumulativeBytesLoaded /
+                                                  loadingProgress
+                                                      .expectedTotalBytes!
+                                              : null,
+                                      valueColor:
+                                          const AlwaysStoppedAnimation<Color>(
+                                              Colors.green),
+                                    ),
+                                  );
+                                },
+                                errorBuilder: (context, error, stackTrace) {
+                                  return Container(
+                                    color: Colors.grey[200],
+                                    child: Center(
+                                      child: Icon(
+                                        Icons.broken_image,
+                                        size: 32,
+                                        color: Colors.grey[400],
+                                      ),
+                                    ),
+                                  );
+                                },
+                              ),
+                            ),
+                          ),
+                        ),
+                      ],
                     ],
                     const SizedBox(height: 20),
                   ],
@@ -2736,6 +2897,35 @@ class _TechnicianStatusTabState extends State<TechnicianStatusTab>
                           ),
                         ),
                       ),
+                      if (task.afterImageUrl != null &&
+                          task.afterImageUrl!.isNotEmpty) ...[
+                        const SizedBox(height: 20),
+                        Text(
+                          'Completion Photo',
+                          style: TextStyle(
+                            fontWeight: FontWeight.bold,
+                            fontSize: 16,
+                            color: Colors.green[700],
+                          ),
+                        ),
+                        const SizedBox(height: 8),
+                        GestureDetector(
+                          onTap: () => _showFullScreenImage(
+                              context, task.afterImageUrl!),
+                          child: ClipRRect(
+                            borderRadius: BorderRadius.circular(12),
+                            child: Container(
+                              height: 200,
+                              width: double.infinity,
+                              color: Colors.grey[200],
+                              child: FirebaseStorageImage(
+                                imageUrl: task.afterImageUrl!,
+                                fit: BoxFit.cover,
+                              ),
+                            ),
+                          ),
+                        ),
+                      ],
                     ],
                   ],
                 ),
@@ -2751,6 +2941,21 @@ class _TechnicianStatusTabState extends State<TechnicianStatusTab>
                   },
                   backgroundColor: Colors.green,
                   icon: Icons.check_circle,
+                ),
+              ),
+            if (task.status == 'completed')
+              Padding(
+                padding: const EdgeInsets.all(16),
+                child: ElevatedButton.icon(
+                  onPressed: () => Navigator.pop(context),
+                  icon: const Icon(Icons.keyboard_return),
+                  label: const Text('Back to Tasks'),
+                  style: ElevatedButton.styleFrom(
+                    minimumSize: const Size(double.infinity, 50),
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(12),
+                    ),
+                  ),
                 ),
               ),
           ],
@@ -2944,93 +3149,338 @@ class _TechnicianStatusTabState extends State<TechnicianStatusTab>
   }
 
   void _showCompleteDialogMaintenance(maintenance_task.TaskModel task) {
+    final _formKey = GlobalKey<FormState>();
     _completionMaintncNoteController.clear();
+    setState(() {
+      _afterImageFile = null;
+      _afterImageBytes = null;
+      _pickedFile = null;
+      _afterImageName = null;
+      _hasSelectedImage = false;
+    });
 
-    showDialog(
+    showModalBottomSheet(
       context: context,
-      builder: (context) => AlertDialog(
-        title: const Text('Mark Task as Completed'),
-        content: Column(
-          mainAxisSize: MainAxisSize.min,
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            const Text('Please provide completion notes:'),
-            const SizedBox(height: 16),
-            CustomTextField(
-              labelText: 'Completion Notes',
-              hintText: 'Enter notes about the completed work...',
-              controller: _completionMaintncNoteController,
-              maxLines: 3,
+      isScrollControlled: true,
+      backgroundColor: Colors.transparent,
+      builder: (context) => StatefulBuilder(
+        builder: (context, setStateDialog) => Form(
+          // Tambahkan Form
+          key: _formKey,
+          child: Container(
+            height: MediaQuery.of(context).size.height * 0.75,
+            decoration: const BoxDecoration(
+              color: Colors.white,
+              borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
             ),
-          ],
-        ),
-        actions: [
-          TextButton(
-            onPressed: () {
-              _completionMaintncNoteController.clear();
-              Navigator.pop(context);
-            },
-            child: const Text('Cancel'),
-          ),
-          TextButton(
-            onPressed: () => _completeTaskMaintnc(task),
-            child: _isLoading
-                ? const SizedBox(
-                    width: 20,
-                    height: 20,
-                    child: CircularProgressIndicator(
-                      strokeWidth: 2,
-                      valueColor: AlwaysStoppedAnimation<Color>(Colors.green),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.stretch,
+              children: [
+                Center(
+                  child: Container(
+                    width: 40,
+                    height: 4,
+                    margin: const EdgeInsets.symmetric(vertical: 12),
+                    decoration: BoxDecoration(
+                      color: Colors.grey[300],
+                      borderRadius: BorderRadius.circular(2),
                     ),
-                  )
-                : const Text('Complete', style: TextStyle(color: Colors.green)),
+                  ),
+                ),
+                Container(
+                  padding:
+                      const EdgeInsets.symmetric(horizontal: 24, vertical: 16),
+                  decoration: BoxDecoration(
+                    gradient: LinearGradient(
+                      colors: [Colors.blue.shade700, Colors.blue.shade500],
+                      begin: Alignment.topLeft,
+                      end: Alignment.bottomRight,
+                    ),
+                    borderRadius: const BorderRadius.only(
+                      topLeft: Radius.circular(20),
+                      topRight: Radius.circular(20),
+                    ),
+                  ),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      const Text(
+                        'Mark Task as Completed',
+                        style: TextStyle(
+                          color: Colors.white,
+                          fontSize: 20,
+                          fontWeight: FontWeight.bold,
+                        ),
+                      ),
+                      const SizedBox(height: 4),
+                      Text(
+                        'Room: ${task.roomName}',
+                        style: TextStyle(
+                          color: Colors.white.withOpacity(0.9),
+                          fontSize: 14,
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+                Expanded(
+                  child: SingleChildScrollView(
+                    padding: const EdgeInsets.all(24),
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        // Details Section
+                        Row(
+                          children: [
+                            Container(
+                              padding: const EdgeInsets.all(12),
+                              decoration: BoxDecoration(
+                                color: Colors.blue[50],
+                                shape: BoxShape.circle,
+                                border: Border.all(color: Colors.blue[300]!),
+                              ),
+                              child: Text('1',
+                                  style: TextStyle(
+                                      color: Colors.blue[700],
+                                      fontWeight: FontWeight.bold,
+                                      fontSize: 16)),
+                            ),
+                            const SizedBox(width: 12),
+                            Text('Completion Details',
+                                style: TextStyle(
+                                    fontSize: 16,
+                                    fontWeight: FontWeight.bold,
+                                    color: Colors.grey[800])),
+                          ],
+                        ),
+                        const SizedBox(height: 20),
+                        Text('What work was done?',
+                            style: TextStyle(
+                                fontWeight: FontWeight.w600,
+                                fontSize: 14,
+                                color: Colors.grey[700])),
+                        const SizedBox(height: 8),
+                        TextFormField(
+                          // Ganti CustomTextField dengan TextFormField untuk validasi
+                          controller: _completionMaintncNoteController,
+                          maxLines: 3,
+                          decoration: InputDecoration(
+                            hintText: 'Describe how you resolved the issue...',
+                            border: OutlineInputBorder(
+                                borderRadius: BorderRadius.circular(8.0)),
+                          ),
+                          validator: (value) {
+                            // Tambahkan validator
+                            if (value == null || value.trim().isEmpty) {
+                              return 'Completion notes cannot be empty.';
+                            }
+                            return null;
+                          },
+                        ),
+                        const SizedBox(height: 24),
+                        // Photo Section
+                        Row(
+                          children: [
+                            Container(
+                              padding: const EdgeInsets.all(12),
+                              decoration: BoxDecoration(
+                                color: Colors.blue[50],
+                                shape: BoxShape.circle,
+                                border: Border.all(color: Colors.blue[300]!),
+                              ),
+                              child: Text('2',
+                                  style: TextStyle(
+                                      color: Colors.blue[700],
+                                      fontWeight: FontWeight.bold,
+                                      fontSize: 16)),
+                            ),
+                            const SizedBox(width: 12),
+                            Text('Completion Photo',
+                                style: TextStyle(
+                                    fontSize: 16,
+                                    fontWeight: FontWeight.bold,
+                                    color: Colors.grey[800])),
+                          ],
+                        ),
+                        const SizedBox(height: 12),
+                        Text('Add a photo showing the completed work',
+                            style: TextStyle(
+                                fontWeight: FontWeight.w500,
+                                fontSize: 14,
+                                color: Colors.grey[700])),
+                        const SizedBox(height: 12),
+                        GestureDetector(
+                          onTap: () async {
+                            await _pickImageReport();
+                            setStateDialog(() {});
+                          },
+                          child: Container(
+                            height: 180,
+                            width: double.infinity,
+                            decoration: BoxDecoration(
+                              color: Colors.grey[100],
+                              borderRadius: BorderRadius.circular(12),
+                              border: Border.all(
+                                  color: _hasSelectedImage
+                                      ? Colors.blue[400]!
+                                      : Colors.grey[300]!,
+                                  width: _hasSelectedImage ? 2 : 1),
+                            ),
+                            child: ClipRRect(
+                                borderRadius: BorderRadius.circular(12),
+                                child: _buildImagePreview()),
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                ),
+                Container(
+                  padding:
+                      const EdgeInsets.symmetric(horizontal: 24, vertical: 16),
+                  decoration: BoxDecoration(
+                    color: Colors.white,
+                    boxShadow: [
+                      BoxShadow(
+                          color: Colors.black.withOpacity(0.05),
+                          offset: const Offset(0, -2),
+                          blurRadius: 6)
+                    ],
+                  ),
+                  child: Row(
+                    children: [
+                      Expanded(
+                        child: OutlinedButton(
+                          onPressed: () => Navigator.pop(context),
+                          style: OutlinedButton.styleFrom(
+                            side: BorderSide(color: Colors.grey[400]!),
+                            padding: const EdgeInsets.symmetric(vertical: 14),
+                            shape: RoundedRectangleBorder(
+                                borderRadius: BorderRadius.circular(10)),
+                          ),
+                          child: Text('Cancel',
+                              style: TextStyle(
+                                  color: Colors.grey[700],
+                                  fontWeight: FontWeight.w600)),
+                        ),
+                      ),
+                      const SizedBox(width: 16),
+                      Expanded(
+                        flex: 2,
+                        child: ElevatedButton.icon(
+                          onPressed: () {
+                            if (_formKey.currentState!.validate()) {
+                              _completeTaskMaintnc(task);
+                            }
+                          },
+                          style: ElevatedButton.styleFrom(
+                            backgroundColor: Colors.blue[700],
+                            padding: const EdgeInsets.symmetric(vertical: 14),
+                            shape: RoundedRectangleBorder(
+                                borderRadius: BorderRadius.circular(10)),
+                            elevation: 0,
+                          ),
+                          icon: const Icon(Icons.check_circle_outline,
+                              color: Colors.white),
+                          label: _isLoading
+                              ? const SizedBox(
+                                  width: 20,
+                                  height: 20,
+                                  child: CircularProgressIndicator(
+                                      strokeWidth: 2,
+                                      valueColor: AlwaysStoppedAnimation<Color>(
+                                          Colors.white)))
+                              : const Text('Mark as Completed',
+                                  style: TextStyle(
+                                      color: Colors.white,
+                                      fontWeight: FontWeight.w600,
+                                      fontSize: 16)),
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+              ],
+            ),
           ),
-        ],
+        ),
       ),
     );
   }
 
   Future<void> _completeTaskMaintnc(maintenance_task.TaskModel task) async {
+    // Validasi sudah dipindahkan ke tombol onPressed, namun bisa ditambahkan double check
     if (_completionMaintncNoteController.text.trim().isEmpty) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(
-          content: Text('Please provide completion notes'),
-          backgroundColor: Colors.red,
-          behavior: SnackBarBehavior.floating,
-        ),
-      );
+      ScaffoldMessenger.of(context).showSnackBar(const SnackBar(
+        content: Text('Completion notes cannot be empty.'),
+        backgroundColor: Colors.red,
+      ));
       return;
     }
 
+    if (!_hasSelectedImage) {
+      // Confirm if they want to proceed without an image
+      final proceed = await showDialog<bool>(
+        context: context,
+        builder: (context) => AlertDialog(
+          title: Text('No Photo Added'),
+          content: Text(
+              'Are you sure you want to complete the task without adding a photo?'),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.pop(context, false),
+              child: Text('No, I\'ll add a photo'),
+            ),
+            TextButton(
+              onPressed: () => Navigator.pop(context, true),
+              child: Text('Yes, proceed anyway'),
+            ),
+          ],
+        ),
+      );
+
+      if (proceed != true) return;
+    }
+
     setState(() => _isLoading = true);
-    Navigator.pop(context); // Close dialog first
+    Navigator.pop(context); // Close bottom sheet
 
     try {
-      await _maintenanceFirestoreService.updateTaskStatus(
-        task.id,
-        'completed',
+      String? afterImageUrl;
+      if (_hasSelectedImage) {
+        afterImageUrl = await _uploadAfterImage(task.id);
+      }
+
+      // Gunakan service yang benar
+      await _maintenanceFirestoreService.completeTaskWithImage(
+        taskId: task.id,
+        reportId: task.reportId,
         completionNote: _completionMaintncNoteController.text.trim(),
+        afterImageUrl: afterImageUrl ?? '',
       );
 
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(
-          content: Text('Task marked as completed'),
-          backgroundColor: Colors.green,
-          behavior: SnackBarBehavior.floating,
-        ),
-      );
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text('Task marked as completed'),
+            backgroundColor: Colors.green,
+            behavior: SnackBarBehavior.floating,
+          ),
+        );
+      }
     } catch (e) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: Text('Error completing task: $e'),
-          backgroundColor: Colors.red,
-          behavior: SnackBarBehavior.floating,
-        ),
-      );
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('Error completing task: $e'),
+            backgroundColor: Colors.red,
+            behavior: SnackBarBehavior.floating,
+          ),
+        );
+      }
     } finally {
       if (mounted) {
         setState(() => _isLoading = false);
-        _fetchData(); // Refresh the list
       }
     }
   }
@@ -3102,14 +3552,14 @@ class _TechnicianStatusTabState extends State<TechnicianStatusTab>
                           TextButton.icon(
                             icon: const Icon(Icons.photo_library),
                             label: const Text('Gallery'),
-                            onPressed: () =>
-                                _pickImage(ImageSource.gallery, setStateDialog),
+                            onPressed: () => _pickImageResource(
+                                ImageSource.gallery, setStateDialog),
                           ),
                           TextButton.icon(
                             icon: const Icon(Icons.camera_alt),
                             label: const Text('Camera'),
-                            onPressed: () =>
-                                _pickImage(ImageSource.camera, setStateDialog),
+                            onPressed: () => _pickImageResource(
+                                ImageSource.camera, setStateDialog),
                           ),
                         ],
                       ),
@@ -3175,6 +3625,8 @@ class _TechnicianStatusTabState extends State<TechnicianStatusTab>
         completionNote: _completionResourceNoteController.text.trim(),
         afterImageUrl: imageUrl,
       );
+
+      if (mounted) Navigator.pop(context);
 
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(

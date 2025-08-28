@@ -10,7 +10,7 @@
         android:label="MasBro"
         android:name="${applicationName}"
         android:usesCleartextTraffic="true"
-        android:icon="@mipmap/logo_masbro">
+        android:icon="@mipmap/ic_launcher">
         <activity
             android:name=".MainActivity"
             android:exported="true"
@@ -44,11 +44,11 @@
             android:value="2" />
         <meta-data
             android:name="com.google.firebase.messaging.default_notification_icon"
-            android:resource="@drawable/logo_masbro" />
+            android:resource="@drawable/ic_launcher" />
         <!-- Menentukan Channel ID Default untuk Notifikasi -->
         <meta-data
             android:name="com.google.firebase.messaging.default_notification_channel_id"
-            android:value="masbro_chanel" />
+            android:value="masbro_main_channel" />
         <!-- Menentukan Warna Ikon Notifikasi -->
         <meta-data
             android:name="com.google.firebase.messaging.default_notification_color"
