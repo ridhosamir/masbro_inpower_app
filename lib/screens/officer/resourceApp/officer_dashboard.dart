@@ -1,3 +1,9 @@
+import 'dart:io';
+import 'package:excel/excel.dart' as excel;
+import 'package:path_provider/path_provider.dart';
+import 'package:open_filex/open_filex.dart';
+import 'package:permission_handler/permission_handler.dart';
+import '../../../models/resourceApp/task_model.dart';
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'package:intl/intl.dart';
@@ -11,6 +17,8 @@ import '../../../models/user_model.dart';
 import '../../../widgets/custom_text_field.dart';
 import 'request_detail_screen.dart';
 import 'assign_technician_screen.dart';
+import 'package:flutter/foundation.dart' show kIsWeb;
+import 'dart:html' as html;
 
 class OfficerDashboardResource extends StatefulWidget {
   const OfficerDashboardResource({super.key});
@@ -34,6 +42,55 @@ class _OfficerDashboardResourceState extends State<OfficerDashboardResource>
   final UserService _userService = UserService();
   List<UserModel> _technicians = [];
   bool _loadingTechnicians = false;
+  String _selectedUrgency = 'all';
+  bool _isDownloading = false;
+
+  Widget _buildUrgencyChip(String requestType) {
+    Color color;
+    String text;
+    IconData icon;
+
+    switch (requestType) {
+      case 'Rendah':
+        color = Colors.green.shade700;
+        text = 'Rendah';
+        icon = Icons.keyboard_arrow_down;
+        break;
+      case 'Tinggi':
+        color = Colors.red.shade700;
+        text = 'Tinggi';
+        icon = Icons.keyboard_arrow_up;
+        break;
+      case 'Sedang':
+      default:
+        color = Colors.orange.shade800;
+        text = 'Sedang';
+        icon = Icons.remove;
+    }
+
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
+      decoration: BoxDecoration(
+        color: color.withOpacity(0.1),
+        borderRadius: BorderRadius.circular(8),
+      ),
+      child: Row(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Icon(icon, size: 10, color: color),
+          const SizedBox(width: 4),
+          Text(
+            text,
+            style: TextStyle(
+              fontSize: 9,
+              fontWeight: FontWeight.bold,
+              color: color,
+            ),
+          ),
+        ],
+      ),
+    );
+  }
 
   @override
   void initState() {
@@ -113,6 +170,24 @@ class _OfficerDashboardResourceState extends State<OfficerDashboardResource>
         print('Error loading user data: $e');
       }
     }
+  }
+
+  // Method untuk menentukan warna berdasarkan nilai rating
+  Color _getRatingColor(double rating) {
+    if (rating >= 4.5) return Colors.amber;
+    if (rating >= 4.0) return Colors.amber[600]!;
+    if (rating >= 3.5) return Colors.orange[700]!;
+    if (rating >= 3.0) return Colors.deepOrange;
+    return Colors.red;
+  }
+
+  // Method untuk menentukan label teks berdasarkan nilai rating
+  String _getRatingLabel(double rating) {
+    if (rating >= 4.5) return 'VERY GOOD';
+    if (rating >= 4.0) return 'GOOD';
+    if (rating >= 3.5) return 'ENOUGH';
+    if (rating >= 3.0) return 'NOT ENOUGH';
+    return 'NEEDS IMPROVEMENT';
   }
 
   @override
@@ -576,6 +651,11 @@ class _OfficerDashboardResourceState extends State<OfficerDashboardResource>
           requests = requests.where((r) => r.status == status).toList();
         }
 
+        if (_selectedUrgency != 'all') {
+          requests =
+              requests.where((r) => r.requestType == _selectedUrgency).toList();
+        }
+
         if (_searchQuery.isNotEmpty) {
           requests = requests
               .where((r) =>
@@ -718,6 +798,8 @@ class _OfficerDashboardResourceState extends State<OfficerDashboardResource>
                             overflow: TextOverflow.ellipsis,
                           ),
                         ),
+                        const SizedBox(width: 8),
+                        _buildUrgencyChip(request.requestType),
                       ],
                     ),
                   ),
@@ -837,6 +919,59 @@ class _OfficerDashboardResourceState extends State<OfficerDashboardResource>
                   ),
                 ],
               ),
+              if (request.technicianRating != null) ...[
+                const SizedBox(height: 8),
+                Container(
+                  padding:
+                      const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+                  decoration: BoxDecoration(
+                    color: _getRatingColor(request.technicianRating!)
+                        .withOpacity(0.1),
+                    borderRadius: BorderRadius.circular(8),
+                    border: Border.all(
+                      color: _getRatingColor(request.technicianRating!)
+                          .withOpacity(0.4),
+                      width: 1,
+                    ),
+                  ),
+                  child: Row(
+                    children: [
+                      Icon(
+                        Icons.star,
+                        color: _getRatingColor(request.technicianRating!),
+                        size: 16,
+                      ),
+                      const SizedBox(width: 8),
+                      Text(
+                        'Rating: ${request.technicianRating!.toStringAsFixed(1)}',
+                        style: TextStyle(
+                          fontSize: 12,
+                          color: _getRatingColor(request.technicianRating!)
+                              .withOpacity(0.8),
+                          fontWeight: FontWeight.bold,
+                        ),
+                      ),
+                      const Spacer(),
+                      Container(
+                        padding: const EdgeInsets.symmetric(
+                            horizontal: 6, vertical: 2),
+                        decoration: BoxDecoration(
+                          color: _getRatingColor(request.technicianRating!),
+                          borderRadius: BorderRadius.circular(4),
+                        ),
+                        child: Text(
+                          _getRatingLabel(request.technicianRating!),
+                          style: const TextStyle(
+                            color: Colors.white,
+                            fontWeight: FontWeight.bold,
+                            fontSize: 10,
+                          ),
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+              ],
               if (request.status == 'open' ||
                   request.status == 'inProgress') ...[
                 const Divider(height: 24),
@@ -1053,26 +1188,26 @@ class _OfficerDashboardResourceState extends State<OfficerDashboardResource>
             return AlertDialog(
               shape: RoundedRectangleBorder(
                   borderRadius: BorderRadius.circular(16)),
-              title: const Text('Complete Request'),
+              title: const Text('Selesaikan Permintaan'),
               content: Form(
                 key: formKey,
                 child: Column(
                   mainAxisSize: MainAxisSize.min,
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    const Text('Provide completion notes:'),
+                    const Text('Berikan catatan penyelesaian:'),
                     const SizedBox(height: 16),
                     TextFormField(
                       controller: _completionReasonController,
                       decoration: const InputDecoration(
-                        labelText: 'Completion Notes',
-                        hintText: 'Enter notes about completion...',
+                        labelText: 'Catatan Penyelesaian',
+                        hintText: 'Masukkan catatan tentang penyelesaian...',
                         border: OutlineInputBorder(),
                       ),
                       maxLines: 3,
                       validator: (value) {
                         if (value == null || value.trim().isEmpty) {
-                          return 'Please provide completion notes';
+                          return 'Harap berikan catatan penyelesaian';
                         }
                         return null;
                       },
@@ -1083,7 +1218,7 @@ class _OfficerDashboardResourceState extends State<OfficerDashboardResource>
               actions: [
                 TextButton(
                   onPressed: () => Navigator.pop(dialogContext),
-                  child: const Text('Cancel'),
+                  child: const Text('Batal'),
                 ),
                 TextButton(
                   onPressed: _isCompleting
@@ -1099,7 +1234,7 @@ class _OfficerDashboardResourceState extends State<OfficerDashboardResource>
                           height: 18,
                           child: CircularProgressIndicator(strokeWidth: 2),
                         )
-                      : const Text('Complete',
+                      : const Text('Selesaikan',
                           style: TextStyle(color: Colors.green)),
                 ),
               ],
@@ -1114,7 +1249,7 @@ class _OfficerDashboardResourceState extends State<OfficerDashboardResource>
     if (_completionReasonController.text.trim().isEmpty) {
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(
-          content: Text('Please provide completion notes'),
+          content: Text('Harap berikan catatan penyelesaian'),
           backgroundColor: Colors.red,
           behavior: SnackBarBehavior.floating,
         ),
@@ -1313,6 +1448,13 @@ class _OfficerDashboardResourceState extends State<OfficerDashboardResource>
             label: 'Technician Ratings',
             color: Colors.amber,
             onTap: _showTechniciansRatingDialog,
+          ),
+          const SizedBox(height: 12),
+          _buildActionButton(
+            icon: Icons.download_rounded,
+            label: 'Download Data',
+            color: Colors.green,
+            onTap: _showDownloadOptionsDialog,
           ),
         ],
       ),
@@ -1520,19 +1662,11 @@ class _OfficerDashboardResourceState extends State<OfficerDashboardResource>
     );
   }
 
-  Color _getRatingColor(double rating) {
-    if (rating >= 4.5) return Colors.green;
-    if (rating >= 4.0) return Colors.lightGreen;
-    if (rating >= 3.5) return Colors.orange;
-    if (rating >= 3.0) return Colors.deepOrange;
-    return Colors.red;
-  }
-
-  String _getPerformanceLabel(double rating) {
-    if (rating >= 4.5) return 'EXCELLENT';
-    if (rating >= 4.0) return 'GOOD';
-    if (rating >= 3.5) return 'AVERAGE';
-    if (rating >= 3.0) return 'FAIR';
+  String _getPerformanceLabel(double technicianRating) {
+    if (technicianRating >= 4.5) return 'EXCELLENT';
+    if (technicianRating >= 4.0) return 'GOOD';
+    if (technicianRating >= 3.5) return 'AVERAGE';
+    if (technicianRating >= 3.0) return 'FAIR';
     return 'NEEDS IMPROVEMENT';
   }
 
@@ -1556,51 +1690,95 @@ class _OfficerDashboardResourceState extends State<OfficerDashboardResource>
       context: context,
       builder: (context) => AlertDialog(
         title: const Text(
-          'Filter Berdasarkan Waktu',
+          'Filter',
           style: TextStyle(
             fontSize: 16,
           ),
         ),
-        content: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            RadioListTile<String>(
-              title: Text('All Requests'),
-              value: 'all',
-              groupValue: _selectedFilter,
-              onChanged: (value) {
-                setState(() => _selectedFilter = value!);
-                Navigator.pop(context);
-              },
-            ),
-            RadioListTile<String>(
-              title: Text('Today Only'),
-              value: 'today',
-              groupValue: _selectedFilter,
-              onChanged: (value) {
-                setState(() => _selectedFilter = value!);
-                Navigator.pop(context);
-              },
-            ),
-            RadioListTile<String>(
-              title: Text('This Week'),
-              value: 'week',
-              groupValue: _selectedFilter,
-              onChanged: (value) {
-                setState(() => _selectedFilter = value!);
-                Navigator.pop(context);
-              },
-            ),
-            RadioListTile<String>(
-              title: Text('This Month'),
-              value: 'month',
-              groupValue: _selectedFilter,
-              onChanged: (value) {
-                setState(() => _selectedFilter = value!);
-                Navigator.pop(context);
-              },
-            ),
-          ],
+        content: SingleChildScrollView(
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              const Text('Berdasarkan Waktu',
+                  style: TextStyle(fontWeight: FontWeight.bold)),
+              RadioListTile<String>(
+                title: const Text('Semua Waktu'),
+                value: 'all',
+                groupValue: _selectedFilter,
+                onChanged: (value) {
+                  setState(() => _selectedFilter = value!);
+                  Navigator.pop(context);
+                },
+              ),
+              RadioListTile<String>(
+                title: const Text('Hari Ini'),
+                value: 'today',
+                groupValue: _selectedFilter,
+                onChanged: (value) {
+                  setState(() => _selectedFilter = value!);
+                  Navigator.pop(context);
+                },
+              ),
+              RadioListTile<String>(
+                title: const Text('Minggu Ini'),
+                value: 'week',
+                groupValue: _selectedFilter,
+                onChanged: (value) {
+                  setState(() => _selectedFilter = value!);
+                  Navigator.pop(context);
+                },
+              ),
+              RadioListTile<String>(
+                title: const Text('Bulan Ini'),
+                value: 'month',
+                groupValue: _selectedFilter,
+                onChanged: (value) {
+                  setState(() => _selectedFilter = value!);
+                  Navigator.pop(context);
+                },
+              ),
+              const Divider(),
+              const Text('Berdasarkan Tingkat Urgensi',
+                  style: TextStyle(fontWeight: FontWeight.bold)),
+              RadioListTile<String>(
+                title: const Text('Semua Urgensi'),
+                value: 'all',
+                groupValue: _selectedUrgency,
+                onChanged: (value) {
+                  setState(() => _selectedUrgency = value!);
+                  Navigator.pop(context);
+                },
+              ),
+              RadioListTile<String>(
+                title: const Text('Tinggi'),
+                value: 'Tinggi',
+                groupValue: _selectedUrgency,
+                onChanged: (value) {
+                  setState(() => _selectedUrgency = value!);
+                  Navigator.pop(context);
+                },
+              ),
+              RadioListTile<String>(
+                title: const Text('Sedang'),
+                value: 'Sedang',
+                groupValue: _selectedUrgency,
+                onChanged: (value) {
+                  setState(() => _selectedUrgency = value!);
+                  Navigator.pop(context);
+                },
+              ),
+              RadioListTile<String>(
+                title: const Text('Rendah'),
+                value: 'Rendah',
+                groupValue: _selectedUrgency,
+                onChanged: (value) {
+                  setState(() => _selectedUrgency = value!);
+                  Navigator.pop(context);
+                },
+              ),
+            ],
+          ),
         ),
       ),
     );
@@ -1707,6 +1885,285 @@ class _OfficerDashboardResourceState extends State<OfficerDashboardResource>
         ],
       ),
     );
+  }
+
+  void _showDownloadOptionsDialog() {
+    showModalBottomSheet(
+      context: context,
+      shape: const RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
+      ),
+      builder: (context) {
+        return Padding(
+          padding: const EdgeInsets.all(16.0),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Text(
+                'Pilih Data untuk Diunduh',
+                style: Theme.of(context).textTheme.titleLarge,
+              ),
+              const SizedBox(height: 16),
+              ListTile(
+                leading: Icon(Icons.supervisor_account,
+                    color: Theme.of(context).primaryColor),
+                title: const Text('Data Permintaan Resource/Item'),
+                subtitle: const Text(
+                    'Unduh semua data permintaan dalam format Excel.'),
+                onTap: () {
+                  Navigator.pop(context);
+                  _showDownloadConfirmationDialog(
+                      'Permintaan Resource/Item', _exportRequestsToExcel);
+                },
+              ),
+              const Divider(),
+              ListTile(
+                leading: Icon(Icons.engineering, color: Colors.blueAccent),
+                title: const Text('Data Penugasan Teknisi'),
+                subtitle: const Text(
+                    'Unduh semua data penugasan dalam format Excel.'),
+                onTap: () {
+                  Navigator.pop(context);
+                  _showDownloadConfirmationDialog(
+                      'Penugasan Teknisi', _exportTasksToExcel);
+                },
+              ),
+              const SizedBox(height: 10),
+            ],
+          ),
+        );
+      },
+    );
+  }
+
+  /// Menampilkan dialog konfirmasi sebelum mengunduh.
+  void _showDownloadConfirmationDialog(
+      String dataType, Future<void> Function() onConfirm) {
+    showDialog(
+      context: context,
+      builder: (context) => AlertDialog(
+        shape: RoundedRectangleBorder(
+          borderRadius: BorderRadius.circular(16),
+        ),
+        title: const Row(
+          children: [
+            Icon(Icons.download_for_offline_outlined, color: Colors.blue),
+            SizedBox(width: 10),
+            Text('Konfirmasi Unduhan'),
+          ],
+        ),
+        content: Text(
+            'Anda akan mengunduh file Excel untuk data "$dataType". Lanjutkan?'),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context),
+            child: const Text('Batal'),
+          ),
+          FilledButton.icon(
+            icon: const Icon(Icons.download),
+            label: const Text('Unduh'),
+            onPressed: () {
+              Navigator.pop(context);
+              onConfirm();
+            },
+          ),
+        ],
+      ),
+    );
+  }
+
+  /// Fungsi utama untuk mengekspor data Permintaan ke Excel.
+  Future<void> _exportRequestsToExcel() async {
+    if (_isDownloading) return;
+    setState(() => _isDownloading = true);
+    ScaffoldMessenger.of(context).showSnackBar(
+      const SnackBar(content: Text('Mempersiapkan data permintaan...')),
+    );
+
+    try {
+      final requests = await _firestoreService.getAllRequests();
+      if (requests.isEmpty) {
+        throw Exception('Tidak ada data permintaan untuk diunduh.');
+      }
+
+      var excelFile = excel.Excel.createExcel();
+
+      var sheetName = 'Data Permintaan';
+      String defaultSheet = excelFile.getDefaultSheet()!;
+      excelFile.rename(defaultSheet, sheetName);
+      excel.Sheet sheetObject = excelFile[sheetName];
+
+      final headers = [
+        'ID Permintaan',
+        'Nama Pemohon',
+        'Deskripsi',
+        'Status',
+        'Tanggal Dibuat',
+        'Jenis Kebutuhan',
+        'Tingkat Urgensi',
+        'Waktu yang Dibutuhkan',
+        'Alasan Penyelesaian',
+        'Nama Teknisi',
+        'Tanggal Selesai',
+        'Rating Teknisi',
+        'Ulasan Teknisi'
+      ];
+      sheetObject
+          .appendRow(headers.map((h) => excel.TextCellValue(h)).toList());
+
+      final dateFormat = DateFormat('dd-MM-yyyy HH:mm', 'id_ID');
+      for (var request in requests) {
+        final rowData = [
+          excel.TextCellValue(request.id),
+          excel.TextCellValue(request.employeeName),
+          excel.TextCellValue(request.description),
+          excel.TextCellValue(request.getStatusDisplayName()),
+          excel.TextCellValue(dateFormat.format(request.createdAt)),
+          excel.TextCellValue(request.request),
+          excel.TextCellValue(request.requestType),
+          excel.TextCellValue(request.timeRequired ?? '-'),
+          excel.TextCellValue(request.completionReason ?? '-'),
+          excel.TextCellValue(request.technicianName ?? '-'),
+          excel.TextCellValue(request.completionDate != null
+              ? dateFormat.format(request.completionDate!)
+              : '-'),
+          excel.TextCellValue(request.technicianRating?.toString() ?? '-'),
+          excel.TextCellValue(request.technicianReview ?? '-'),
+        ];
+        sheetObject.appendRow(rowData);
+      }
+
+      final fileName =
+          'Data_Permintaan_Resource_${DateFormat('yyyyMMdd_HHmmss').format(DateTime.now())}.xlsx';
+      List<int>? fileBytes = excelFile.save();
+
+      if (fileBytes != null) {
+        await _saveAndOpenFile(fileBytes, fileName);
+      } else {
+        throw Exception('Gagal menyimpan berkas Excel.');
+      }
+    } catch (e) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+            content: Text('Gagal mengunduh: $e'), backgroundColor: Colors.red),
+      );
+    } finally {
+      setState(() => _isDownloading = false);
+    }
+  }
+
+  /// Fungsi utama untuk mengekspor data Penugasan ke Excel.
+  Future<void> _exportTasksToExcel() async {
+    if (_isDownloading) return;
+    setState(() => _isDownloading = true);
+    ScaffoldMessenger.of(context).showSnackBar(
+      const SnackBar(content: Text('Mempersiapkan data penugasan...')),
+    );
+
+    try {
+      final tasks = await _firestoreService.getAllTasks();
+      if (tasks.isEmpty) {
+        throw Exception('Tidak ada data penugasan untuk diunduh.');
+      }
+
+      var excelFile = excel.Excel.createExcel();
+
+      var sheetName = 'Data Penugasan (Resource)';
+      String defaultSheet = excelFile.getDefaultSheet()!;
+      excelFile.rename(defaultSheet, sheetName);
+      excel.Sheet sheetObject = excelFile[sheetName];
+
+      final headers = [
+        'Nama Teknisi',
+        'Nama Pemohon',
+        'Deskripsi',
+        'Status',
+        'Tanggal Ditugaskan',
+        'Tanggal Selesai',
+        'Catatan Penyelesaian',
+        'Rating Pengguna',
+        'Ulasan Pengguna'
+      ];
+      sheetObject
+          .appendRow(headers.map((h) => excel.TextCellValue(h)).toList());
+
+      final dateFormat = DateFormat('dd-MM-yyyy HH:mm', 'id_ID');
+      for (var task in tasks) {
+        final rowData = [
+          excel.TextCellValue(task.id),
+          excel.TextCellValue(task.requestId),
+          excel.TextCellValue(task.technicianName),
+          excel.TextCellValue(task.requesterName),
+          excel.TextCellValue(task.description),
+          excel.TextCellValue(task.getStatusDisplayName()),
+          excel.TextCellValue(dateFormat.format(task.assignedAt)),
+          excel.TextCellValue(task.completedAt != null
+              ? dateFormat.format(task.completedAt!)
+              : '-'),
+          excel.TextCellValue(task.completionNote ?? '-'),
+          excel.TextCellValue(task.userRating?.toString() ?? '-'),
+          excel.TextCellValue(task.userReview ?? '-'),
+        ];
+        sheetObject.appendRow(rowData);
+      }
+
+      final fileName =
+          'Data_Penugasan_Teknisi_Resource_${DateFormat('yyyyMMdd_HHmmss').format(DateTime.now())}.xlsx';
+      List<int>? fileBytes = excelFile.save();
+
+      if (fileBytes != null) {
+        await _saveAndOpenFile(fileBytes, fileName);
+      } else {
+        throw Exception('Gagal menyimpan berkas Excel.');
+      }
+    } catch (e) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+            content: Text('Gagal mengunduh: $e'), backgroundColor: Colors.red),
+      );
+    } finally {
+      setState(() => _isDownloading = false);
+    }
+  }
+
+  /// Helper function untuk menyimpan file berdasarkan platform (Web atau Mobile).
+  Future<void> _saveAndOpenFile(List<int> bytes, String fileName) async {
+    if (kIsWeb) {
+      // Logika untuk Web
+      try {
+        final blob = html.Blob([bytes]);
+        final url = html.Url.createObjectUrlFromBlob(blob);
+        final anchor = html.AnchorElement(href: url)
+          ..setAttribute("download", fileName)
+          ..style.display = "none";
+
+        html.document.body!.children.add(anchor);
+        anchor.click();
+        html.document.body!.children.remove(anchor);
+
+        html.Url.revokeObjectUrl(url);
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('File $fileName berhasil diunduh'),
+            backgroundColor: Colors.green,
+          ),
+        );
+      } catch (e) {
+        throw Exception('Gagal mengunduh file: $e');
+      }
+    } else {
+      // Logika untuk Mobile
+      var status = await Permission.storage.request();
+      if (!status.isGranted) {
+        throw Exception('Izin penyimpanan ditolak.');
+      }
+      final directory = await getExternalStorageDirectory();
+      final path = '${directory!.path}/$fileName';
+      final file = File(path);
+      await file.writeAsBytes(bytes, flush: true);
+      await OpenFilex.open(path);
+    }
   }
 
   void _showLogoutDialog() {

@@ -326,7 +326,7 @@ class _AssignTechnicianScreenResourceState
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
-        title: const Text('Assign Technician'),
+        title: const Text('Tetapkan Teknisi'),
         backgroundColor: Theme.of(context).primaryColor,
         foregroundColor: Colors.white,
       ),
@@ -351,15 +351,15 @@ class _AssignTechnicianScreenResourceState
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
                         _buildSummaryItem(
-                            'Requester', widget.request.employeeName),
+                            'Pemohon', widget.request.employeeName),
                         _buildSummaryItem(
-                          'Needs',
+                          'Kebutuhan',
                           '${widget.request.request[0].toUpperCase()}${widget.request.request.substring(1)}',
                         ),
                         if (widget.request.request != 'resource' &&
                             widget.request.hasValidImage()) ...[
                           Text(
-                            'Request Item:',
+                            'Foto Barang:',
                             style: TextStyle(
                               fontSize: 16,
                               fontWeight: FontWeight.bold,
@@ -403,11 +403,30 @@ class _AssignTechnicianScreenResourceState
                         if (widget.request.timeRequired != null &&
                             widget.request.timeRequired!.isNotEmpty)
                           _buildSummaryItem(
-                            'Time Required',
+                            'Dibutuhkan',
                             widget.request.timeRequired!,
                           ),
                         _buildSummaryItem(
-                            'Description', widget.request.description),
+                            'Deskripsi', widget.request.description),
+                        Padding(
+                          padding: const EdgeInsets.only(top: 4.0),
+                          child: Row(
+                            crossAxisAlignment: CrossAxisAlignment.center,
+                            children: [
+                              SizedBox(
+                                width: 120,
+                                child: Text(
+                                  'Urgensi:',
+                                  style: TextStyle(
+                                    fontWeight: FontWeight.w600,
+                                    color: Colors.blue[700],
+                                  ),
+                                ),
+                              ),
+                              _buildUrgencyChip(widget.request.requestType),
+                            ],
+                          ),
+                        ),
                       ],
                     ),
                   ),
@@ -418,7 +437,7 @@ class _AssignTechnicianScreenResourceState
                     mainAxisAlignment: MainAxisAlignment.spaceBetween,
                     children: [
                       Text(
-                        'Select Technician',
+                        'Pilih Teknisi',
                         style: TextStyle(
                           fontSize: 18,
                           fontWeight: FontWeight.bold,
@@ -467,7 +486,7 @@ class _AssignTechnicianScreenResourceState
                                   children: [
                                     Icon(Icons.sort_by_alpha, size: 16),
                                     SizedBox(width: 4),
-                                    Text('Name',
+                                    Text('Nama',
                                         style: TextStyle(fontSize: 14)),
                                   ],
                                 ),
@@ -479,7 +498,7 @@ class _AssignTechnicianScreenResourceState
                                   children: [
                                     Icon(Icons.access_time, size: 16),
                                     SizedBox(width: 4),
-                                    Text('Since',
+                                    Text('Sejak',
                                         style: TextStyle(fontSize: 14)),
                                   ],
                                 ),
@@ -495,7 +514,7 @@ class _AssignTechnicianScreenResourceState
                   TextField(
                     controller: _searchController,
                     decoration: InputDecoration(
-                      hintText: 'Find a Technician...',
+                      hintText: 'Temukan Teknisi...',
                       prefixIcon: const Icon(Icons.search, size: 20),
                       border: OutlineInputBorder(
                         borderRadius: BorderRadius.circular(12),
@@ -526,7 +545,7 @@ class _AssignTechnicianScreenResourceState
                         children: [
                           CircularProgressIndicator(),
                           SizedBox(height: 16),
-                          Text('Loading Technician...'),
+                          Text('Memuat...'),
                         ],
                       ),
                     ))
@@ -541,7 +560,7 @@ class _AssignTechnicianScreenResourceState
                                 size: 64, color: Colors.grey[400]),
                             const SizedBox(height: 16),
                             Text(
-                              'Technician Not Found.',
+                              'Teknisi tidak ditemukan.',
                               style: TextStyle(
                                 fontSize: 18,
                                 fontWeight: FontWeight.bold,
@@ -550,8 +569,8 @@ class _AssignTechnicianScreenResourceState
                             ),
                             Text(
                               _searchQuery.isNotEmpty
-                                  ? 'No technicians matched the search.'
-                                  : 'No technicians (non-drivers) available.',
+                                  ? 'Tidak ada teknisi yang cocok dengan pencarian.'
+                                  : 'Tidak ada teknisi (non-pengemudi) yang tersedia.',
                               textAlign: TextAlign.center,
                               style: TextStyle(color: Colors.grey[500]),
                             ),
@@ -703,7 +722,7 @@ class _AssignTechnicianScreenResourceState
                                                 color: Colors.grey[500]),
                                             const SizedBox(width: 4),
                                             Text(
-                                              'Member Since ${DateFormat('MMM yyyy').format(technician.createdAt)}',
+                                              'Teknisi Sejak ${DateFormat('MMM yyyy').format(technician.createdAt)}',
                                               style: TextStyle(
                                                 fontSize: 11,
                                                 color: Colors.grey[500],
@@ -755,7 +774,7 @@ class _AssignTechnicianScreenResourceState
                 ),
               ),
               child: CustomButton(
-                text: 'Assign',
+                text: 'Tugaskan Teknisi',
                 onPressed: _assignTechnician,
                 isLoading: _isAssigning,
               ),
@@ -826,6 +845,54 @@ class _AssignTechnicianScreenResourceState
             ),
           ),
         ),
+      ),
+    );
+  }
+
+  Widget _buildUrgencyChip(String requestType) {
+    Color color;
+    String text;
+    IconData icon;
+
+    switch (requestType) {
+      case 'Rendah':
+        color = Colors.green;
+        text = 'Rendah';
+        icon = Icons.keyboard_arrow_down;
+        break;
+      case 'Tinggi':
+        color = Colors.red;
+        text = 'Tinggi';
+        icon = Icons.keyboard_arrow_up;
+        break;
+      case 'Sedang':
+      default:
+        color = Colors.orange;
+        text = 'Sedang';
+        icon = Icons.remove;
+    }
+
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
+      decoration: BoxDecoration(
+        color: color.withOpacity(0.1),
+        borderRadius: BorderRadius.circular(16),
+        border: Border.all(color: color.withOpacity(0.5)),
+      ),
+      child: Row(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Icon(icon, size: 12, color: color),
+          const SizedBox(width: 4),
+          Text(
+            text,
+            style: TextStyle(
+              color: color,
+              fontSize: 12,
+              fontWeight: FontWeight.bold,
+            ),
+          ),
+        ],
       ),
     );
   }

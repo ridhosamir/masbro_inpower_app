@@ -2047,7 +2047,13 @@ class _StatusTabState extends State<StatusTab>
                               ),
                             ),
                             const SizedBox(height: 2), // Reduced spacing
-                            _buildStatusChip(request.status),
+                            Row(
+                              children: [
+                                _buildStatusChip(request.status),
+                                const SizedBox(width: 6),
+                                _buildUrgencyChip(request.requestType),
+                              ],
+                            ),
                           ],
                         ),
                       ),
@@ -2397,8 +2403,14 @@ class _StatusTabState extends State<StatusTab>
                                 color: Color(0xFF2D3748),
                               ),
                             ),
-                            const SizedBox(height: 2), // Reduced spacing
-                            _buildStatusChip(booking.status),
+                            const SizedBox(height: 2),
+                            Row(
+                              children: [
+                                _buildStatusChip(booking.status),
+                                const SizedBox(width: 6),
+                                _buildUrgencyChip(booking.requestType),
+                              ],
+                            ),
                           ],
                         ),
                       ),
@@ -2532,6 +2544,53 @@ class _StatusTabState extends State<StatusTab>
       final endDate = DateFormat('d MMM', 'id_ID').format(end);
       return '$startDate to $endDate';
     }
+  }
+
+  Widget _buildUrgencyChip(String requestType) {
+    Color color;
+    String text;
+    IconData icon;
+
+    switch (requestType) {
+      case 'Rendah':
+        color = Colors.green.shade700;
+        text = 'Rendah';
+        icon = Icons.keyboard_arrow_down;
+        break;
+      case 'Tinggi':
+        color = Colors.red.shade900;
+        text = 'Tinggi';
+        icon = Icons.keyboard_arrow_up;
+        break;
+      case 'Sedang':
+      default:
+        color = Colors.orange.shade800;
+        text = 'Sedang';
+        icon = Icons.remove;
+    }
+
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
+      decoration: BoxDecoration(
+        color: color.withOpacity(0.1),
+        borderRadius: BorderRadius.circular(8),
+      ),
+      child: Row(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Icon(icon, size: 10, color: color),
+          const SizedBox(width: 4),
+          Text(
+            text,
+            style: TextStyle(
+              fontSize: 9,
+              fontWeight: FontWeight.bold,
+              color: color,
+            ),
+          ),
+        ],
+      ),
+    );
   }
 }
 

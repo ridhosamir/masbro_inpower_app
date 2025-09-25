@@ -71,6 +71,38 @@ class _EmployeeDashboardBookingRoomState
     }
   }
 
+  // Method untuk mengecek rating sebelum membuat booking baru
+  Future<void> _handleCreateBookingPressed() async {
+    final authService = Provider.of<AuthService>(context, listen: false);
+    if (authService.user == null) return;
+
+    // Ambil daftar booking terbaru dari stream
+    List<BookingModel> allBookings = await _firestoreService
+        .getBookingsByEmployee(authService.user!.uid)
+        .first;
+
+    // Cek apakah ada booking yang memenuhi syarat untuk di-rate tapi belum di-rate
+    final bool hasPendingRating = allBookings.any((booking) =>
+        booking.status == 'approved' &&
+        DateTime.now().isAfter(booking.usageEndDate) &&
+        booking.rating == null);
+
+    if (!mounted) return;
+
+    if (hasPendingRating) {
+      // Jika ada, tampilkan popup peringatan
+      _showRatingReminderPopup();
+    } else {
+      // Jika tidak ada, navigasi ke halaman create booking
+      Navigator.push(
+        context,
+        MaterialPageRoute(
+          builder: (context) => const CreateBookingScreen(),
+        ),
+      );
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
     final authService = Provider.of<AuthService>(context);
@@ -137,13 +169,7 @@ class _EmployeeDashboardBookingRoomState
         ),
       ),
       floatingActionButton: FloatingActionButton.extended(
-        onPressed: () {
-          Navigator.push(
-            context,
-            MaterialPageRoute(
-                builder: (context) => const CreateBookingScreen()),
-          );
-        },
+        onPressed: _handleCreateBookingPressed,
         icon: const Icon(Icons.add, color: Colors.white),
         label: const Text('New Booking', style: TextStyle(color: Colors.white)),
         backgroundColor: Theme.of(context).primaryColor,
@@ -875,14 +901,7 @@ class _EmployeeDashboardBookingRoomState
           ),
           SizedBox(height: 24),
           ElevatedButton.icon(
-            onPressed: () {
-              Navigator.push(
-                context,
-                MaterialPageRoute(
-                  builder: (context) => CreateBookingScreen(),
-                ),
-              );
-            },
+            onPressed: _handleCreateBookingPressed,
             icon: Icon(Icons.add),
             label: Text('Create Booking'),
           ),
@@ -1040,6 +1059,71 @@ class _EmployeeDashboardBookingRoomState
             ),
           ),
         ],
+      ),
+    );
+  }
+
+  // Method untuk menampilkan popup peringatan
+  void _showRatingReminderPopup() {
+    showDialog(
+      context: context,
+      builder: (context) => Dialog(
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
+        child: Padding(
+          padding: const EdgeInsets.all(24.0),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Container(
+                padding: const EdgeInsets.all(16),
+                decoration: BoxDecoration(
+                  color: Colors.orange.withOpacity(0.1),
+                  shape: BoxShape.circle,
+                ),
+                child: Icon(
+                  Icons.rate_review_outlined,
+                  size: 40,
+                  color: Colors.orange[800],
+                ),
+              ),
+              const SizedBox(height: 24),
+              Text(
+                'Feedback Required',
+                style: TextStyle(
+                  fontSize: 20,
+                  fontWeight: FontWeight.bold,
+                  color: Colors.grey[800],
+                ),
+                textAlign: TextAlign.center,
+              ),
+              const SizedBox(height: 12),
+              Text(
+                'Mohon berikan Penilaian kesiapan ruangan untuk semua acara Anda sebelumnya sebelum membuat pemesanan baru. Masukan Anda akan membantu kami meningkatkan layanan!',
+                style: TextStyle(
+                  fontSize: 15,
+                  color: Colors.grey[600],
+                ),
+                textAlign: TextAlign.center,
+              ),
+              const SizedBox(height: 24),
+              ElevatedButton(
+                onPressed: () => Navigator.pop(context),
+                style: ElevatedButton.styleFrom(
+                  backgroundColor: Theme.of(context).primaryColor,
+                  foregroundColor: Colors.white,
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 32,
+                    vertical: 12,
+                  ),
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(12),
+                  ),
+                ),
+                child: const Text('OK'),
+              ),
+            ],
+          ),
+        ),
       ),
     );
   }

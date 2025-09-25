@@ -1940,6 +1940,53 @@ class _TechnicianStatusTabState extends State<TechnicianStatusTab>
     );
   }
 
+  Widget _buildUrgencyChip(String requestType) {
+    Color color;
+    String text;
+    IconData icon;
+
+    switch (requestType) {
+      case 'Rendah':
+        color = Colors.green.shade700;
+        text = 'Rendah';
+        icon = Icons.keyboard_arrow_down;
+        break;
+      case 'Tinggi':
+        color = Colors.red.shade700;
+        text = 'Tinggi';
+        icon = Icons.keyboard_arrow_up;
+        break;
+      case 'Sedang':
+      default:
+        color = Colors.orange.shade800;
+        text = 'Sedang';
+        icon = Icons.remove;
+    }
+
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
+      decoration: BoxDecoration(
+        color: color.withOpacity(0.1),
+        borderRadius: BorderRadius.circular(8),
+      ),
+      child: Row(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Icon(icon, size: 10, color: color),
+          const SizedBox(width: 4),
+          Text(
+            text,
+            style: TextStyle(
+              fontSize: 9,
+              fontWeight: FontWeight.bold,
+              color: color,
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
   // --- NEW UNIFIED TASK CARDS ---
 
   Widget _buildUnifiedMaintenanceTaskCard(maintenance_task.TaskModel task) {
@@ -2138,7 +2185,13 @@ class _TechnicianStatusTabState extends State<TechnicianStatusTab>
                             ),
                           ),
                           const SizedBox(height: 2),
-                          _buildStatusChip(task.status),
+                          Row(
+                            children: [
+                              _buildStatusChip(task.status),
+                              const SizedBox(width: 6),
+                              _buildUrgencyChip(task.requestType),
+                            ],
+                          ),
                         ],
                       ),
                     ),
@@ -2383,7 +2436,7 @@ class _TechnicianStatusTabState extends State<TechnicianStatusTab>
                 mainAxisAlignment: MainAxisAlignment.spaceBetween,
                 children: [
                   const Text(
-                    'Task Details',
+                    'Detail Tugas',
                     style: TextStyle(
                       fontSize: 20,
                       fontWeight: FontWeight.bold,
@@ -2410,12 +2463,13 @@ class _TechnicianStatusTabState extends State<TechnicianStatusTab>
                       child: Column(
                         crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
-                          _buildDetailItem('Room', task.roomName, Icons.room),
+                          _buildDetailItem(
+                              'Ruangan', task.roomName, Icons.room),
                           if (task.itemName.isNotEmpty)
                             _buildDetailItem(
                                 'Item', task.itemName, Icons.build),
                           _buildDetailItem(
-                            'Assigned',
+                            'Ditugaskan',
                             DateFormat('dd MMM yyyy, HH:mm')
                                 .format(task.assignedAt),
                             Icons.calendar_today,
@@ -2423,7 +2477,7 @@ class _TechnicianStatusTabState extends State<TechnicianStatusTab>
                           if (task.status == 'completed' &&
                               task.completedAt != null)
                             _buildDetailItem(
-                              'Completed',
+                              'Diselesaikan',
                               DateFormat('dd MMM yyyy, HH:mm')
                                   .format(task.completedAt!),
                               Icons.check_circle,
@@ -2434,7 +2488,7 @@ class _TechnicianStatusTabState extends State<TechnicianStatusTab>
                     const SizedBox(height: 20),
                     if (task.imageUrl != null) ...[
                       const Text(
-                        'Issue Photo',
+                        'Foto Permasalahan',
                         style: TextStyle(
                           fontWeight: FontWeight.bold,
                           fontSize: 16,
@@ -2484,7 +2538,7 @@ class _TechnicianStatusTabState extends State<TechnicianStatusTab>
                       const SizedBox(height: 20),
                     ],
                     const Text(
-                      'Description',
+                      'Deskripsi',
                       style: TextStyle(
                         fontWeight: FontWeight.bold,
                         fontSize: 16,
@@ -2511,7 +2565,7 @@ class _TechnicianStatusTabState extends State<TechnicianStatusTab>
                         task.completionNote != null) ...[
                       const SizedBox(height: 20),
                       Text(
-                        'Completion Notes',
+                        'Catatan Penyelesaian:',
                         style: TextStyle(
                           fontWeight: FontWeight.bold,
                           fontSize: 16,
@@ -2540,7 +2594,7 @@ class _TechnicianStatusTabState extends State<TechnicianStatusTab>
                           task.afterImageUrl!.isNotEmpty) ...[
                         const SizedBox(height: 20),
                         Text(
-                          'Completion Photo:',
+                          'Foto Setelah Perbaikan:',
                           style: TextStyle(
                             fontSize: 16,
                             fontWeight: FontWeight.bold,
@@ -2609,7 +2663,7 @@ class _TechnicianStatusTabState extends State<TechnicianStatusTab>
               Padding(
                 padding: const EdgeInsets.all(16),
                 child: CustomButton(
-                  text: 'Mark as Completed',
+                  text: 'Tandai sebagai Selesai',
                   onPressed: () {
                     Navigator.pop(context);
                     _showCompleteDialogMaintenance(task);
@@ -2623,7 +2677,7 @@ class _TechnicianStatusTabState extends State<TechnicianStatusTab>
                 child: ElevatedButton.icon(
                   onPressed: () => Navigator.pop(context),
                   icon: const Icon(Icons.keyboard_return),
-                  label: const Text('Back to Tasks'),
+                  label: const Text('Kembali ke Daftar Tugas'),
                   style: ElevatedButton.styleFrom(
                     minimumSize: const Size(double.infinity, 50),
                     shape: RoundedRectangleBorder(
@@ -2736,7 +2790,7 @@ class _TechnicianStatusTabState extends State<TechnicianStatusTab>
                 mainAxisAlignment: MainAxisAlignment.spaceBetween,
                 children: [
                   const Text(
-                    'Task Details',
+                    'Detail Tugas',
                     style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold),
                   ),
                   _buildStatusChip(task.status),
@@ -2761,20 +2815,25 @@ class _TechnicianStatusTabState extends State<TechnicianStatusTab>
                         crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
                           _buildDetailItem(
-                            'Need',
+                            'Kebutuhan',
                             '${task.request[0].toUpperCase()}${task.request.substring(1)}',
                             task.request == 'resource'
                                 ? Icons.supervisor_account
                                 : Icons.inventory,
                           ),
                           _buildDetailItem(
-                              'Requester', task.requesterName, Icons.person),
+                            'Urgensi',
+                            task.requestType,
+                            Icons.priority_high,
+                          ),
+                          _buildDetailItem(
+                              'Pemohon', task.requesterName, Icons.person),
                           if (task.timeRequired != null &&
                               task.timeRequired!.isNotEmpty)
-                            _buildDetailItem('Time Required',
-                                task.timeRequired!, Icons.calendar_today),
+                            _buildDetailItem('Dibutuhkan', task.timeRequired!,
+                                Icons.calendar_today),
                           _buildDetailItem(
-                            'Assigned',
+                            'Ditugaskan',
                             DateFormat('dd MMM yyyy, HH:mm', 'id_ID')
                                 .format(task.assignedAt),
                             Icons.access_time,
@@ -2782,7 +2841,7 @@ class _TechnicianStatusTabState extends State<TechnicianStatusTab>
                           if (task.status == 'completed' &&
                               task.completedAt != null)
                             _buildDetailItem(
-                              'Finished',
+                              'Diselesaikan',
                               DateFormat('EEEE, d MMM yyyy, HH:mm', 'id_ID')
                                   .format(task.completedAt!),
                               Icons.check_circle,
@@ -2792,7 +2851,7 @@ class _TechnicianStatusTabState extends State<TechnicianStatusTab>
                     ),
                     if (!isResourceRequest && task.hasValidImage()) ...[
                       const SizedBox(height: 24),
-                      const Text('Item Photo',
+                      const Text('Foto Barang',
                           style: TextStyle(
                               fontSize: 16, fontWeight: FontWeight.bold)),
                       const SizedBox(height: 12),
@@ -2846,7 +2905,7 @@ class _TechnicianStatusTabState extends State<TechnicianStatusTab>
                     ],
                     const SizedBox(height: 20),
                     const Text(
-                      'Task Description',
+                      'Deksripsi Tugas',
                       style: TextStyle(
                         fontWeight: FontWeight.bold,
                         fontSize: 16,
@@ -2873,7 +2932,7 @@ class _TechnicianStatusTabState extends State<TechnicianStatusTab>
                         task.completionNote != null) ...[
                       const SizedBox(height: 20),
                       Text(
-                        'Your Completion Notes',
+                        'Catatan Penyelesaian Anda',
                         style: TextStyle(
                           fontWeight: FontWeight.bold,
                           fontSize: 16,
@@ -2901,7 +2960,7 @@ class _TechnicianStatusTabState extends State<TechnicianStatusTab>
                           task.afterImageUrl!.isNotEmpty) ...[
                         const SizedBox(height: 20),
                         Text(
-                          'Completion Photo',
+                          'Foto Barang Diminta:',
                           style: TextStyle(
                             fontWeight: FontWeight.bold,
                             fontSize: 16,
@@ -2935,7 +2994,7 @@ class _TechnicianStatusTabState extends State<TechnicianStatusTab>
               Padding(
                 padding: const EdgeInsets.all(16),
                 child: CustomButton(
-                  text: 'Mark Complete',
+                  text: 'Tandai Selesai',
                   onPressed: () {
                     _showCompleteDialogResource(task);
                   },
@@ -2949,7 +3008,7 @@ class _TechnicianStatusTabState extends State<TechnicianStatusTab>
                 child: ElevatedButton.icon(
                   onPressed: () => Navigator.pop(context),
                   icon: const Icon(Icons.keyboard_return),
-                  label: const Text('Back to Tasks'),
+                  label: const Text('Kembali ke Tugas'),
                   style: ElevatedButton.styleFrom(
                     minimumSize: const Size(double.infinity, 50),
                     shape: RoundedRectangleBorder(
@@ -2992,7 +3051,7 @@ class _TechnicianStatusTabState extends State<TechnicianStatusTab>
                 mainAxisAlignment: MainAxisAlignment.spaceBetween,
                 children: [
                   const Text(
-                    'Ride Details',
+                    'Detail Perjalanan',
                     style: TextStyle(
                       fontSize: 20,
                       fontWeight: FontWeight.bold,
@@ -3019,36 +3078,36 @@ class _TechnicianStatusTabState extends State<TechnicianStatusTab>
                       child: Column(
                         crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
-                          _buildDetailItem('From', request.pickupLocation,
+                          _buildDetailItem('Dari', request.pickupLocation,
                               Icons.location_on),
                           _buildDetailItem(
-                              'To', request.dropoffLocation, Icons.location_on),
+                              'Ke', request.dropoffLocation, Icons.location_on),
                           _buildDetailItem(
-                            'Pickup',
+                            'Menjemput',
                             DateFormat('dd MMM yyyy, HH:mm')
                                 .format(request.pickupDateTime),
                             Icons.event,
                           ),
                           if (request.returnDateTime != null)
                             _buildDetailItem(
-                              'Return',
+                              'Kembali',
                               DateFormat('dd MMM yyyy, HH:mm')
                                   .format(request.returnDateTime!),
                               Icons.event_available,
                             ),
                           _buildDetailItem(
-                            'Passengers',
+                            'Penumpang',
                             request.passengerCapacity.toString(),
                             Icons.group,
                           ),
                           _buildDetailItem(
-                            'Requester',
+                            'Pemohon',
                             request.employeeName,
                             Icons.person,
                           ),
                           if (request.vehicleName != null)
                             _buildDetailItem(
-                              'Vehicle',
+                              'Kendaraan',
                               request.vehicleName!,
                               Icons.directions_car,
                             ),
@@ -3057,7 +3116,7 @@ class _TechnicianStatusTabState extends State<TechnicianStatusTab>
                     ),
                     const SizedBox(height: 20),
                     const Text(
-                      'Description',
+                      'Deskripsi',
                       style: TextStyle(
                         fontWeight: FontWeight.bold,
                         fontSize: 16,
@@ -3084,7 +3143,7 @@ class _TechnicianStatusTabState extends State<TechnicianStatusTab>
                         request.completionNote != null) ...[
                       const SizedBox(height: 20),
                       Text(
-                        'Completion Notes',
+                        'Catatan Penyelesaian:',
                         style: TextStyle(
                           fontWeight: FontWeight.bold,
                           fontSize: 16,

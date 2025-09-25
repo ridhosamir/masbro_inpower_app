@@ -115,7 +115,7 @@ class _RoomBookingManagementScreenState
       builder: (context) => AlertDialog(
         title: const Text('Delete Room'),
         content: Text(
-          'Are you sure you want to delete the room "${room.name}"? This action cannot be undone.\n\nNote: A room cannot be deleted if it has already been used in a booking.',
+          'Anda yakin ingin menghapus ruangan "${room.name}"? Tindakan ini tidak dapat dibatalkan.\n\nCatatan: Ruangan tidak dapat dihapus jika sudah digunakan dalam pemesanan.',
         ),
         actions: [
           TextButton(
@@ -127,7 +127,7 @@ class _RoomBookingManagementScreenState
               try {
                 await _firestoreService.deleteRoom(room.id);
                 ScaffoldMessenger.of(context).showSnackBar(const SnackBar(
-                  content: Text('Room successfully deleted.'),
+                  content: Text('Ruangan berhasil dihapus.'),
                   backgroundColor: Colors.green,
                 ));
               } catch (e) {
@@ -149,7 +149,7 @@ class _RoomBookingManagementScreenState
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
-        title: const Text('Manage Room',
+        title: const Text('Kelola Ruangan',
             style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold)),
         backgroundColor: Theme.of(context).primaryColor,
         iconTheme: const IconThemeData(color: Colors.white),
@@ -165,7 +165,7 @@ class _RoomBookingManagementScreenState
                 child: ElevatedButton.icon(
                   onPressed: _showForm,
                   icon: const Icon(Icons.add),
-                  label: const Text('Add New Room'),
+                  label: const Text('Tambah Ruangan Baru'),
                   style: ElevatedButton.styleFrom(
                     backgroundColor: Colors.green,
                     foregroundColor: Colors.white,
@@ -177,7 +177,7 @@ class _RoomBookingManagementScreenState
             const SizedBox(height: 24),
             _buildRoomSearchField(),
             const SizedBox(height: 16),
-            const Text('Room List',
+            const Text('Daftar Ruangan',
                 style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold)),
             const Divider(),
             Expanded(child: _buildRoomsList()),
@@ -201,19 +201,19 @@ class _RoomBookingManagementScreenState
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           Text(
-            _selectedRoom == null ? 'Add New Room' : 'Edit Room',
+            _selectedRoom == null ? 'Tambah Ruangan Baru' : 'Edit Ruangan',
             style: const TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
           ),
           const SizedBox(height: 16),
           CustomTextField(
             controller: _nameController,
-            labelText: 'Room Name',
+            labelText: 'Nama Ruangan',
             hintText: 'Contoh: Ruang Meeting A',
           ),
           const SizedBox(height: 16),
           CustomTextField(
             controller: _capacityController,
-            labelText: 'Capacity (people)',
+            labelText: 'Kapasitas (orang)',
             hintText: 'Contoh: 20',
             keyboardType: TextInputType.number,
           ),
@@ -225,7 +225,7 @@ class _RoomBookingManagementScreenState
                   onPressed: _isLoading ? null : _hideForm,
                   style: ElevatedButton.styleFrom(
                       backgroundColor: Colors.grey[500]),
-                  child: const Text('Cancel'),
+                  child: const Text('Batal'),
                 ),
               ),
               const SizedBox(width: 16),
@@ -238,7 +238,7 @@ class _RoomBookingManagementScreenState
                           width: 20,
                           child: CircularProgressIndicator(
                               strokeWidth: 2, color: Colors.white))
-                      : Text(_selectedRoom == null ? 'Save' : 'Update'),
+                      : Text(_selectedRoom == null ? 'Simpan' : 'Perbarui'),
                 ),
               ),
             ],
@@ -252,7 +252,7 @@ class _RoomBookingManagementScreenState
     return TextField(
       controller: _searchController,
       decoration: InputDecoration(
-        hintText: 'Search for room name...',
+        hintText: 'Cari nama ruangan...',
         prefixIcon: const Icon(Icons.search),
         suffixIcon: _searchQuery.isNotEmpty
             ? IconButton(
@@ -285,8 +285,8 @@ class _RoomBookingManagementScreenState
           return Center(
             child: Text(
               _searchQuery.isNotEmpty
-                  ? 'Room not found'
-                  : 'There are no rooms yet.\nPlease add a new room.',
+                  ? 'Ruangan tidak ditemukan.'
+                  : 'Belum ada ruangan.\nSilakan tambahkan ruangan baru.',
               textAlign: TextAlign.center,
               style: TextStyle(color: Colors.grey[600]),
             ),
@@ -311,19 +311,19 @@ class _RoomBookingManagementScreenState
                 ),
                 title: Text(room.name,
                     style: const TextStyle(fontWeight: FontWeight.bold)),
-                subtitle: Text('Capacity: ${room.capacity} people'),
+                subtitle: Text('Kapasitas: ${room.capacity} orang'),
                 trailing: Row(
                   mainAxisSize: MainAxisSize.min,
                   children: [
                     IconButton(
                       icon: const Icon(Icons.edit, color: Colors.blue),
                       onPressed: () => _showForm(room: room),
-                      tooltip: 'Edit Room',
+                      tooltip: 'Edit Ruangan',
                     ),
                     IconButton(
                       icon: const Icon(Icons.delete, color: Colors.red),
                       onPressed: () => _confirmDeleteRoom(room),
-                      tooltip: 'Delete Room',
+                      tooltip: 'Delete Ruangan',
                     ),
                   ],
                 ),

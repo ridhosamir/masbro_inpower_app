@@ -73,6 +73,41 @@ class _EmployeeDashboardResourceState extends State<EmployeeDashboardResource>
     }
   }
 
+  // Method untuk mengecek rating sebelum membuat request baru
+  Future<void> _handleNewRequestPressed() async {
+    final authService = Provider.of<AuthService>(context, listen: false);
+    if (authService.user == null) return;
+
+    // Mengambil daftar request terbaru dari stream sebagai Future
+    List<RequestModel> allRequests = await _firestoreService
+        .getRequestsByEmployee(authService.user!.uid)
+        .first;
+
+    // Filter request yang berstatus 'completed'
+    final completedRequests =
+        allRequests.where((r) => r.status == 'completed').toList();
+
+    // Cek apakah ada request 'completed' yang ratingnya masih null
+    final bool hasUnratedRequest =
+        completedRequests.any((r) => r.technicianRating == null);
+
+    if (mounted) {
+      // Memastikan widget masih ada di tree
+      if (hasUnratedRequest) {
+        // Jika ada, tampilkan popup peringatan
+        _showRatingReminderPopup();
+      } else {
+        // Jika tidak ada (semua sudah di-rate), navigasi ke halaman create request
+        Navigator.push(
+          context,
+          MaterialPageRoute(
+            builder: (context) => CreateRequestScreen(),
+          ),
+        );
+      }
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
     final authService = Provider.of<AuthService>(context);
@@ -411,14 +446,7 @@ class _EmployeeDashboardResourceState extends State<EmployeeDashboardResource>
         ),
       ),
       floatingActionButton: FloatingActionButton.extended(
-        onPressed: () {
-          Navigator.push(
-            context,
-            MaterialPageRoute(
-              builder: (context) => CreateRequestScreen(),
-            ),
-          );
-        },
+        onPressed: _handleNewRequestPressed,
         icon: const Icon(
           Icons.add_box,
           color: Colors.white,
@@ -862,6 +890,56 @@ class _EmployeeDashboardResourceState extends State<EmployeeDashboardResource>
                   ),
                 ),
               ],
+              // Tampilkan blok ini hanya jika request sudah selesai dan merupakan request resource
+              if (request.status == 'completed') ...[
+                const SizedBox(height: 12),
+                Container(
+                  width: double.infinity,
+                  padding:
+                      const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+                  decoration: BoxDecoration(
+                    // Warna berbeda untuk status rating pending vs sudah diisi
+                    color: request.technicianRating == null
+                        ? Colors.deepOrange[50]
+                        : Colors.amber[50],
+                    borderRadius: BorderRadius.circular(8),
+                    border: Border.all(
+                      color: request.technicianRating == null
+                          ? Colors.deepOrange[400]!
+                          : Colors.amber[400]!,
+                    ),
+                  ),
+                  child: Row(
+                    children: [
+                      Icon(
+                        request.technicianRating == null
+                            ? Icons
+                                .rate_review_outlined // Icon untuk rating pending
+                            : Icons.star, // Icon untuk rating yang sudah ada
+                        size: 18,
+                        color: request.technicianRating == null
+                            ? Colors.deepOrange[800]
+                            : Colors.amber[800],
+                      ),
+                      const SizedBox(width: 8),
+                      Expanded(
+                        child: Text(
+                          request.technicianRating == null
+                              ? 'Feedback pending. Tap to rate.'
+                              : 'Your Rating: ${request.technicianRating} ★',
+                          style: TextStyle(
+                            fontSize: 13,
+                            fontWeight: FontWeight.w500,
+                            color: request.technicianRating == null
+                                ? Colors.deepOrange[900]
+                                : Colors.amber[900],
+                          ),
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+              ],
             ],
           ),
         ),
@@ -1014,14 +1092,7 @@ class _EmployeeDashboardResourceState extends State<EmployeeDashboardResource>
           ),
           const SizedBox(height: 24),
           ElevatedButton.icon(
-            onPressed: () {
-              Navigator.push(
-                context,
-                MaterialPageRoute(
-                  builder: (context) => CreateRequestScreen(),
-                ),
-              );
-            },
+            onPressed: _handleNewRequestPressed,
             icon: const Icon(Icons.add),
             label: const Text('Create Request'),
           ),
@@ -1193,6 +1264,70 @@ class _EmployeeDashboardResourceState extends State<EmployeeDashboardResource>
             ),
           ),
         ],
+      ),
+    );
+  }
+
+  void _showRatingReminderPopup() {
+    showDialog(
+      context: context,
+      builder: (context) => Dialog(
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
+        child: Padding(
+          padding: const EdgeInsets.all(24.0),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Container(
+                padding: const EdgeInsets.all(16),
+                decoration: BoxDecoration(
+                  color: Colors.orange.withOpacity(0.1),
+                  shape: BoxShape.circle,
+                ),
+                child: Icon(
+                  Icons.rate_review_outlined,
+                  size: 40,
+                  color: Colors.orange[800],
+                ),
+              ),
+              const SizedBox(height: 24),
+              Text(
+                'Feedback Required',
+                style: TextStyle(
+                  fontSize: 20,
+                  fontWeight: FontWeight.bold,
+                  color: Colors.grey[800],
+                ),
+                textAlign: TextAlign.center,
+              ),
+              const SizedBox(height: 12),
+              Text(
+                'Mohon beri penilaian semua permintaan Anda yang telah selesai sebelum membuat permintaan baru. Masukan Anda sangat berharga!',
+                style: TextStyle(
+                  fontSize: 15,
+                  color: Colors.grey[600],
+                ),
+                textAlign: TextAlign.center,
+              ),
+              const SizedBox(height: 24),
+              ElevatedButton(
+                onPressed: () => Navigator.pop(context),
+                style: ElevatedButton.styleFrom(
+                  backgroundColor: Theme.of(context).primaryColor,
+                  foregroundColor: Colors.white,
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 32,
+                    vertical: 12,
+                  ),
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(12),
+                  ),
+                ),
+                child: const Text('OK'),
+              ),
+            ],
+          ),
+        ),
       ),
     );
   }
