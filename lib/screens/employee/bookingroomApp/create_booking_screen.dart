@@ -57,6 +57,7 @@ class _CreateBookingScreenState extends State<CreateBookingScreen> {
   bool _showOtherNeedsField = false;
   String? _selectedMainType;
   String? _selectedSubType;
+  String? _selectedRequestType;
 
   List<AvailableRoom> _availableRooms = [];
   String? _selectedRoomId;
@@ -252,6 +253,7 @@ class _CreateBookingScreenState extends State<CreateBookingScreen> {
         numberOfParticipants: int.parse(_participantsController.text),
         status: 'open',
         createdAt: DateTime.now(),
+        requestType: _selectedRequestType!,
       );
 
       await _firestoreService.createBooking(booking);
@@ -278,7 +280,7 @@ class _CreateBookingScreenState extends State<CreateBookingScreen> {
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
-        title: const Text('Create a New Booking',
+        title: const Text('Buat Pemesanan Baru',
             style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold)),
         backgroundColor: Theme.of(context).primaryColor,
         iconTheme: const IconThemeData(color: Colors.white),
@@ -290,18 +292,21 @@ class _CreateBookingScreenState extends State<CreateBookingScreen> {
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              _buildSectionTitle('Event Details'),
+              _buildSectionTitle('Detail Acara'),
               CustomTextField(
                 controller: _agendaController,
-                labelText: 'Event Agenda',
+                labelText: 'Agenda Acara',
                 hintText: 'Contoh: Rapat bulanan departemen...',
                 maxLines: 3,
                 validator: (val) =>
-                    val!.isEmpty ? 'The agenda cannot be empty' : null,
+                    val!.isEmpty ? 'Agenda tidak boleh kosong' : null,
               ),
               const SizedBox(height: 24),
 
-              _buildSectionTitle('Event duration'),
+              _buildRequestTypeSelector(),
+              const SizedBox(height: 24),
+
+              _buildSectionTitle('Durasi Acara'),
               _buildBookingTypeSelector(),
               const SizedBox(height: 16),
 
@@ -312,43 +317,43 @@ class _CreateBookingScreenState extends State<CreateBookingScreen> {
                 _buildMultiDayInputs(),
               const SizedBox(height: 24),
 
-              _buildSectionTitle('Type of activity'),
+              _buildSectionTitle('Jenis kegiatan'),
               _buildActivityTypeSection(),
               const SizedBox(height: 24),
 
-              _buildSectionTitle('Event needs'),
+              _buildSectionTitle('Kebutuhan Acara'),
               _buildNeedsSection(),
               if (_showOtherNeedsField) ...[
                 const SizedBox(height: 16),
                 CustomTextField(
                     controller: _otherNeedsController,
-                    labelText: 'Other Needs',
+                    labelText: 'Kebutuhan Lainnya',
                     hintText: 'Tuliskan kebutuhan spesifik Anda...'),
               ],
               const SizedBox(height: 24),
 
-              _buildSectionTitle('Participant'),
+              _buildSectionTitle('Peserta Acara'),
               CustomTextField(
                 controller: _participantsController,
-                labelText: 'Number of participants',
+                labelText: 'Jumlah peserta',
                 hintText: 'Contoh: 15',
                 keyboardType: TextInputType.number,
                 validator: (val) {
                   if (val == null || val.isEmpty)
-                    return 'The number of participants cannot be empty';
+                    return 'Jumlah peserta tidak boleh kosong';
                   if (int.tryParse(val) == null)
-                    return 'Please enter a valid number';
+                    return 'Silakan masukkan jumlah yang valid';
                   return null;
                 },
               ),
               const SizedBox(height: 24),
 
-              _buildSectionTitle('Selesct Room'),
+              _buildSectionTitle('Pilih Ruangan'),
               _buildRoomSelectionSection(),
               const SizedBox(height: 32),
 
               CustomButton(
-                text: 'Send Booking Request',
+                text: 'Kirim Permintaan Pemesanan',
                 onPressed: _submitBooking,
                 isLoading: _isLoading,
               ),
@@ -360,6 +365,86 @@ class _CreateBookingScreenState extends State<CreateBookingScreen> {
   }
 
   // --- Widget Builder --- //
+
+  Widget _buildRequestTypeSelector() {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        _buildSectionTitle('Tingkat Urgensi'),
+        FormField<String>(
+          initialValue: _selectedRequestType,
+          validator: (value) {
+            if (_selectedRequestType == null) {
+              return 'Silakan pilih tingkat urgensi';
+            }
+            return null;
+          },
+          builder: (FormFieldState<String> state) {
+            return Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                SizedBox(
+                  width: double.infinity,
+                  child: SegmentedButton<String>(
+                    emptySelectionAllowed: true, // Izinkan pilihan kosong
+                    segments: const <ButtonSegment<String>>[
+                      ButtonSegment<String>(
+                        value: 'Rendah',
+                        label: Text('Rendah'),
+                        icon: Icon(Icons.keyboard_arrow_down),
+                      ),
+                      ButtonSegment<String>(
+                        value: 'Sedang',
+                        label: Text('Sedang'),
+                        icon: Icon(Icons.remove),
+                      ),
+                      ButtonSegment<String>(
+                        value: 'Tinggi',
+                        label: Text('Tinggi'),
+                        icon: Icon(Icons.keyboard_arrow_up),
+                      ),
+                    ],
+                    selected: _selectedRequestType != null
+                        ? <String>{_selectedRequestType!}
+                        : <String>{},
+                    onSelectionChanged: (Set<String> newSelection) {
+                      setState(() {
+                        // SegmentedButton dengan emptySelectionAllowed bisa mengembalikan set kosong
+                        _selectedRequestType =
+                            newSelection.isNotEmpty ? newSelection.first : null;
+                        state.didChange(_selectedRequestType);
+                      });
+                    },
+                    style: SegmentedButton.styleFrom(
+                      selectedBackgroundColor:
+                          Theme.of(context).primaryColor.withOpacity(0.2),
+                      selectedForegroundColor: Theme.of(context).primaryColor,
+                      side: BorderSide(
+                        color: state.hasError
+                            ? Theme.of(context).colorScheme.error
+                            : Colors.grey[300]!,
+                      ),
+                    ),
+                  ),
+                ),
+                if (state.hasError)
+                  Padding(
+                    padding: const EdgeInsets.only(left: 12, top: 8),
+                    child: Text(
+                      state.errorText!,
+                      style: TextStyle(
+                        color: Theme.of(context).colorScheme.error,
+                        fontSize: 12,
+                      ),
+                    ),
+                  ),
+              ],
+            );
+          },
+        ),
+      ],
+    );
+  }
 
   Widget _buildSectionTitle(String title) {
     return Padding(
@@ -401,7 +486,7 @@ class _CreateBookingScreenState extends State<CreateBookingScreen> {
   Widget _buildSingleDayInputs() {
     return Column(
       children: [
-        _buildDatePicker('Select Event Date', _selectedDate, (date) {
+        _buildDatePicker('Pilih Tanggal Acara', _selectedDate, (date) {
           setState(() {
             _selectedDate = date;
             final now = DateTime.now();
@@ -424,7 +509,7 @@ class _CreateBookingScreenState extends State<CreateBookingScreen> {
           children: [
             Expanded(
               child: _buildTimePicker(
-                'Start Time',
+                'Waktu Mulai',
                 _startTime,
                 (time) {
                   setState(() {
@@ -442,7 +527,7 @@ class _CreateBookingScreenState extends State<CreateBookingScreen> {
             const SizedBox(width: 16),
             Expanded(
               child: _buildTimePicker(
-                'End Time',
+                'Waktu Selesai',
                 _endTime,
                 (time) {
                   setState(() => _endTime = time);
@@ -459,7 +544,7 @@ class _CreateBookingScreenState extends State<CreateBookingScreen> {
   Widget _buildMultiDayInputs() {
     return Column(
       children: [
-        _buildDatePicker('Start Date', _startDateMulti, (date) {
+        _buildDatePicker('Tanggal Mulai', _startDateMulti, (date) {
           setState(() {
             _startDateMulti = date;
             // Reset end date jika start date diubah menjadi setelah end date
@@ -470,7 +555,7 @@ class _CreateBookingScreenState extends State<CreateBookingScreen> {
           });
         }),
         const SizedBox(height: 16),
-        _buildDatePicker('End Date', _endDateMulti, (date) {
+        _buildDatePicker('Tanggal Selesai', _endDateMulti, (date) {
           setState(() => _endDateMulti = date);
         }, firstDate: _startDateMulti?.add(const Duration(days: 1))),
       ],
@@ -484,7 +569,7 @@ class _CreateBookingScreenState extends State<CreateBookingScreen> {
       initialValue: value,
       validator: (date) {
         if (value == null) {
-          return 'Please select a date';
+          return 'Silakan pilih tanggal';
         }
         return null;
       },
@@ -516,7 +601,7 @@ class _CreateBookingScreenState extends State<CreateBookingScreen> {
               mainAxisAlignment: MainAxisAlignment.spaceBetween,
               children: [
                 Text(value == null
-                    ? 'Select date'
+                    ? 'Pilih Tanggal'
                     : DateFormat('EEEE, d MMMM yyyy', 'id_ID').format(value)),
                 const Icon(Icons.calendar_month),
               ],
@@ -538,7 +623,7 @@ class _CreateBookingScreenState extends State<CreateBookingScreen> {
     });
 
     // Filter jam mulai berdasarkan waktu sekarang jika tanggal yang dipilih adalah hari ini
-    if (label == 'Start Time' && selectedDate != null) {
+    if (label == 'Waktu Mulai' && selectedDate != null) {
       final now = DateTime.now();
       final isToday = selectedDate.year == now.year &&
           selectedDate.month == now.month &&
@@ -578,7 +663,7 @@ class _CreateBookingScreenState extends State<CreateBookingScreen> {
             const EdgeInsets.symmetric(horizontal: 12, vertical: 15),
       ),
       menuMaxHeight: 200,
-      hint: times.isEmpty ? const Text('Start Time') : null,
+      hint: times.isEmpty ? const Text('Waktu Mulai') : null,
       items: times.map((time) {
         return DropdownMenuItem<TimeOfDay>(
           value: time,
@@ -591,11 +676,12 @@ class _CreateBookingScreenState extends State<CreateBookingScreen> {
           _findAvailableRooms();
         }
       },
-      validator: (val) => val == null ? 'Required fields' : null,
+      validator: (val) => val == null ? 'Wajib diisi' : null,
     );
   }
 
   Widget _buildNeedsSection() {
+    final bool needsDisabled = _selectedMainType == 'Internal';
     return Wrap(
       spacing: 8.0,
       runSpacing: 4.0,
@@ -603,22 +689,26 @@ class _CreateBookingScreenState extends State<CreateBookingScreen> {
         ..._predefinedNeeds.map((need) => FilterChip(
               label: Text(need),
               selected: _selectedNeeds.contains(need),
-              onSelected: (selected) {
-                setState(() {
-                  if (selected) {
-                    _selectedNeeds.add(need);
-                  } else {
-                    _selectedNeeds.remove(need);
-                  }
-                });
-              },
+              onSelected: needsDisabled
+                  ? null
+                  : (selected) {
+                      setState(() {
+                        if (selected) {
+                          _selectedNeeds.add(need);
+                        } else {
+                          _selectedNeeds.remove(need);
+                        }
+                      });
+                    },
             )),
         FilterChip(
-          label: const Text('Other...'),
+          label: const Text('Lainnya...'),
           selected: _showOtherNeedsField,
-          onSelected: (selected) {
-            setState(() => _showOtherNeedsField = selected);
-          },
+          onSelected: needsDisabled
+              ? null
+              : (selected) {
+                  setState(() => _showOtherNeedsField = selected);
+                },
         ),
       ],
     );
@@ -634,7 +724,7 @@ class _CreateBookingScreenState extends State<CreateBookingScreen> {
             border: OutlineInputBorder(),
             contentPadding: EdgeInsets.symmetric(horizontal: 12, vertical: 15),
           ),
-          hint: const Text('Select the type of activity'),
+          hint: const Text('Pilih jenis kegiatan'),
           items: ['Internal', 'Eksternal'].map((String value) {
             return DropdownMenuItem<String>(
               value: value,
@@ -645,10 +735,15 @@ class _CreateBookingScreenState extends State<CreateBookingScreen> {
             setState(() {
               _selectedMainType = newValue;
               _selectedSubType = null;
+              if (newValue == 'Internal') {
+                _selectedNeeds.clear();
+                _showOtherNeedsField = false;
+                _otherNeedsController.clear();
+              }
             });
           },
           validator: (value) =>
-              value == null ? 'Type of activity must be filled in' : null,
+              value == null ? 'Jenis kegiatan harus diisi' : null,
         ),
 
         // Tampilkan dropdown kedua jika 'Eksternal' dipilih
@@ -657,12 +752,12 @@ class _CreateBookingScreenState extends State<CreateBookingScreen> {
           DropdownButtonFormField<String>(
             value: _selectedSubType,
             decoration: const InputDecoration(
-              labelText: 'External Activity Type',
+              labelText: 'Jenis kegiatan Eksternal',
               border: OutlineInputBorder(),
               contentPadding:
                   EdgeInsets.symmetric(horizontal: 12, vertical: 15),
             ),
-            hint: const Text('Select type'),
+            hint: const Text('Pilih tipe eksternal'),
             items: ['Standard', 'VIP'].map((String value) {
               return DropdownMenuItem<String>(
                 value: value,
@@ -675,7 +770,7 @@ class _CreateBookingScreenState extends State<CreateBookingScreen> {
               });
             },
             validator: (value) =>
-                value == null ? 'External type is required' : null,
+                value == null ? 'Tipe eksternal diperlukan' : null,
           ),
         ],
       ],
@@ -692,7 +787,7 @@ class _CreateBookingScreenState extends State<CreateBookingScreen> {
           borderRadius: BorderRadius.circular(8),
         ),
         child: const Text(
-          'Please fill in the number of participants and duration of the event to see available rooms.',
+          'Silakan isi jumlah peserta dan durasi acara untuk melihat ruangan yang tersedia.',
           textAlign: TextAlign.center,
           style: TextStyle(color: Colors.black54),
         ),
@@ -711,7 +806,7 @@ class _CreateBookingScreenState extends State<CreateBookingScreen> {
             borderRadius: BorderRadius.circular(8),
             border: Border.all(color: Colors.orange)),
         child: const Text(
-          'There are no rooms available with sufficient capacity.',
+          'Tidak ada ruangan yang tersedia dengan kapasitas yang memadai.',
           textAlign: TextAlign.center,
           style: TextStyle(color: Colors.orange),
         ),
@@ -723,7 +818,7 @@ class _CreateBookingScreenState extends State<CreateBookingScreen> {
       initialValue: _selectedRoomId,
       validator: (value) {
         if (_selectedRoomId == null) {
-          return 'You have to choose one room';
+          return 'Anda harus memilih satu ruangan';
         }
         return null;
       },
@@ -752,7 +847,7 @@ class _CreateBookingScreenState extends State<CreateBookingScreen> {
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
                       Text(
-                        'Capacity: ${room.capacity} people',
+                        'Kapasitas: ${room.capacity} orang',
                         style: TextStyle(
                             color: isAvailable
                                 ? Colors.black54
@@ -762,7 +857,7 @@ class _CreateBookingScreenState extends State<CreateBookingScreen> {
                         Padding(
                           padding: const EdgeInsets.only(top: 4.0),
                           child: Text(
-                            'Conflict with other schedules!',
+                            'Konflik dengan jadwal lain!',
                             style: TextStyle(
                               color: Colors.orange[800],
                               fontSize: 12,

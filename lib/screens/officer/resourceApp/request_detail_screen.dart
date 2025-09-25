@@ -254,7 +254,7 @@ class _RequestDetailScreenResourceState
     final bool isResourceRequest = _currentRequest.request == 'resource';
     return Scaffold(
       appBar: AppBar(
-        title: const Text('Request Details'),
+        title: const Text('Detail Permintaan'),
         backgroundColor: Theme.of(context).primaryColor,
         foregroundColor: Colors.white,
       ),
@@ -311,23 +311,28 @@ class _RequestDetailScreenResourceState
               ),
             ),
             const SizedBox(height: 24),
-            _buildSectionTitle('Request Information'),
+            _buildSectionTitle('Informasi Permintaan'),
             const SizedBox(height: 12),
             _buildInfoCard([
               _buildInfoRow(
-                  Icons.person, 'Requester', _currentRequest.employeeName),
+                  Icons.person, 'Pemohon', _currentRequest.employeeName),
               _buildInfoRow(
                 isResourceRequest ? Icons.supervisor_account : Icons.inventory,
-                'Need',
+                'Kebutuhan',
                 '${_currentRequest.request[0].toUpperCase()}${_currentRequest.request.substring(1)}',
+              ),
+              _buildInfoRowWithWidgetValue(
+                Icons.priority_high,
+                'Tingkat Urgensi',
+                _buildUrgencyChip(_currentRequest.requestType),
               ),
               if (_currentRequest.timeRequired != null &&
                   _currentRequest.timeRequired!.isNotEmpty)
-                _buildInfoRow(Icons.calendar_today, 'Time\nRequired',
+                _buildInfoRow(Icons.calendar_today, 'Waktu\nDibutuhkan',
                     _currentRequest.timeRequired!),
               _buildInfoRow(
                 Icons.access_time,
-                'Date Created',
+                'Tanggal Dibuat',
                 DateFormat('EEEE, d MMM yyyy, HH:mm', 'id_ID')
                     .format(_currentRequest.createdAt),
               ),
@@ -335,7 +340,7 @@ class _RequestDetailScreenResourceState
             // Tampilkan foto jika ini adalah permintaan item
             if (!isResourceRequest && _currentRequest.hasValidImage()) ...[
               const SizedBox(height: 24),
-              _buildSectionTitle('Item Photo'),
+              _buildSectionTitle('Foto Barang'),
               const SizedBox(height: 12),
               GestureDetector(
                 onTap: () {
@@ -373,14 +378,14 @@ class _RequestDetailScreenResourceState
                                   const Icon(Icons.error_outline,
                                       color: Colors.red, size: 40),
                                   const SizedBox(height: 8),
-                                  const Text('Failed to load image'),
+                                  const Text('Gagal memuat gambar'),
                                   const SizedBox(height: 8),
                                   ElevatedButton.icon(
                                     onPressed: () {
                                       setState(() {});
                                     },
                                     icon: const Icon(Icons.refresh),
-                                    label: const Text('Try Again'),
+                                    label: const Text('Coba Lagi'),
                                   ),
                                 ],
                               ),
@@ -407,7 +412,7 @@ class _RequestDetailScreenResourceState
               ),
             ],
             const SizedBox(height: 24),
-            _buildSectionTitle('Description of Needs'),
+            _buildSectionTitle('Deskripsi Kebutuhan'),
             const SizedBox(height: 12),
             Container(
               width: double.infinity,
@@ -426,7 +431,7 @@ class _RequestDetailScreenResourceState
             if (_currentRequest.technicianName != null &&
                 _currentRequest.technicianName!.isNotEmpty) ...[
               const SizedBox(height: 24),
-              _buildSectionTitle('Assigned Technician'),
+              _buildSectionTitle('Teknisi yang Ditugaskan'),
               const SizedBox(height: 12),
               Container(
                 width: double.infinity,
@@ -462,8 +467,8 @@ class _RequestDetailScreenResourceState
                               const SizedBox(height: 4),
                               Text(
                                 _currentRequest.status == 'completed'
-                                    ? 'Complete this request'
-                                    : 'Currently working on this request',
+                                    ? 'Menyelesaikan permintaan ini'
+                                    : 'Saat ini sedang mengerjakan permintaan ini',
                                 style: TextStyle(
                                   fontSize: 14,
                                   color: Colors.blue[600],
@@ -489,7 +494,7 @@ class _RequestDetailScreenResourceState
                               crossAxisAlignment: CrossAxisAlignment.start,
                               children: [
                                 Text(
-                                  'Assessment from Requester',
+                                  'Penilaian dari Pemohon',
                                   style: TextStyle(
                                     fontSize: 14,
                                     fontWeight: FontWeight.w600,
@@ -565,7 +570,7 @@ class _RequestDetailScreenResourceState
                       Divider(height: 1, color: Colors.blue[200]),
                       const SizedBox(height: 16),
                       Text(
-                        'Items from Technician:',
+                        'Barang dari Teknisi:',
                         style: TextStyle(
                           fontSize: 14,
                           fontWeight: FontWeight.w600,
@@ -600,7 +605,7 @@ class _RequestDetailScreenResourceState
             if (_currentRequest.status == 'completed' &&
                 _currentRequest.completionReason != null) ...[
               const SizedBox(height: 24),
-              _buildSectionTitle('Completion Notes'),
+              _buildSectionTitle('Catatan Penyelesaian'),
               const SizedBox(height: 12),
               Container(
                 width: double.infinity,
@@ -643,15 +648,15 @@ class _RequestDetailScreenResourceState
               const SizedBox(height: 12),
               CustomButton(
                 text: _currentRequest.assignedTechnicianId == null
-                    ? 'Assign Technician'
-                    : 'Change Technician',
+                    ? 'Tetapkan Teknisi'
+                    : 'Ubah Teknisi',
                 onPressed: _navigateToAssignTechnician,
                 isLoading: _isLoading,
                 icon: Icons.engineering,
               ),
               const SizedBox(height: 12),
               CustomButton(
-                text: 'Mark Complete',
+                text: 'Tandai Selesai',
                 onPressed: () => _showCompleteDialog(_currentRequest),
                 backgroundColor: Colors.green,
                 icon: Icons.check_circle,
@@ -751,6 +756,83 @@ class _RequestDetailScreenResourceState
                   fontWeight: FontWeight.w500,
                   fontSize: 15,
                   color: Colors.grey[900]),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  // Helper widget untuk membuat baris info dengan value berupa widget
+  Widget _buildInfoRowWithWidgetValue(
+      IconData icon, String label, Widget valueWidget) {
+    return Padding(
+      padding: const EdgeInsets.symmetric(vertical: 8),
+      child: Row(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Icon(icon, size: 20, color: Colors.grey[600]),
+          const SizedBox(width: 16),
+          SizedBox(
+            width: 120, // Menyesuaikan dengan lebar label di file ini
+            child: Text(
+              label,
+              style: TextStyle(
+                fontWeight: FontWeight.w600,
+                color: Colors.grey[700],
+              ),
+            ),
+          ),
+          Expanded(
+            child: valueWidget,
+          ),
+        ],
+      ),
+    );
+  }
+
+// Helper widget untuk menampilkan chip tingkat urgensi
+  Widget _buildUrgencyChip(String requestType) {
+    Color color;
+    String text;
+    IconData icon;
+
+    switch (requestType) {
+      case 'Rendah':
+        color = Colors.green;
+        text = 'Rendah';
+        icon = Icons.keyboard_arrow_down;
+        break;
+      case 'Tinggi':
+        color = Colors.red;
+        text = 'Tinggi';
+        icon = Icons.keyboard_arrow_up;
+        break;
+      case 'Sedang':
+      default:
+        color = Colors.orange;
+        text = 'Sedang';
+        icon = Icons.remove;
+    }
+
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
+      decoration: BoxDecoration(
+        color: color.withOpacity(0.1),
+        borderRadius: BorderRadius.circular(16),
+        border: Border.all(color: color.withOpacity(0.5)),
+      ),
+      child: Row(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Icon(icon, size: 12, color: color),
+          const SizedBox(width: 4),
+          Text(
+            text,
+            style: TextStyle(
+              color: color,
+              fontSize: 12,
+              fontWeight: FontWeight.bold,
             ),
           ),
         ],

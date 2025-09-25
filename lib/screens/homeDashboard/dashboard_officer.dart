@@ -1581,7 +1581,7 @@ class _OfficerStatusTabState extends State<OfficerStatusTab>
         helperText: ' ',
       ),
       menuMaxHeight: 200,
-      hint: times.isEmpty ? const Text('Start Time') : null,
+      hint: times.isEmpty ? const Text('Jam Mulai') : null,
       items: times.map((time) {
         return DropdownMenuItem<TimeOfDay>(
           value: time,
@@ -1607,7 +1607,7 @@ class _OfficerStatusTabState extends State<OfficerStatusTab>
             final nowInMinutes = now.hour * 60 + now.minute;
 
             if (selectedTimeInMinutes < nowInMinutes) {
-              return 'The selected time has passed';
+              return 'Waktu sudah lewat';
             }
           }
         }
@@ -1652,6 +1652,53 @@ class _OfficerStatusTabState extends State<OfficerStatusTab>
           fontWeight: FontWeight.bold,
           color: color,
         ),
+      ),
+    );
+  }
+
+  Widget _buildUrgencyChip(String requestType) {
+    Color color;
+    String text;
+    IconData icon;
+
+    switch (requestType) {
+      case 'Rendah':
+        color = Colors.green.shade700;
+        text = 'Rendah';
+        icon = Icons.keyboard_arrow_down;
+        break;
+      case 'Tinggi':
+        color = Colors.red.shade900;
+        text = 'Tinggi';
+        icon = Icons.keyboard_arrow_up;
+        break;
+      case 'Sedang':
+      default:
+        color = Colors.orange.shade800;
+        text = 'Sedang';
+        icon = Icons.remove;
+    }
+
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+      decoration: BoxDecoration(
+        color: color.withOpacity(0.1),
+        borderRadius: BorderRadius.circular(12),
+      ),
+      child: Row(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Icon(icon, size: 12, color: color),
+          const SizedBox(width: 4),
+          Text(
+            text,
+            style: TextStyle(
+              fontSize: 10,
+              fontWeight: FontWeight.bold,
+              color: color,
+            ),
+          ),
+        ],
       ),
     );
   }
@@ -1841,9 +1888,21 @@ class _OfficerStatusTabState extends State<OfficerStatusTab>
                         children: [
                           const Text('Resource Request',
                               style: TextStyle(fontWeight: FontWeight.bold)),
-                          Text('by ${request.employeeName}',
-                              style:
-                                  TextStyle(fontSize: 12, color: Colors.grey)),
+                          Row(
+                            children: [
+                              Flexible(
+                                child: Text(
+                                  'by ${request.employeeName}',
+                                  style: TextStyle(
+                                      fontSize: 12, color: Colors.grey),
+                                  overflow: TextOverflow.ellipsis,
+                                  maxLines: 1,
+                                ),
+                              ),
+                              const SizedBox(width: 8),
+                              _buildUrgencyChip(request.requestType),
+                            ],
+                          ),
                         ],
                       ),
                     ),
@@ -2227,9 +2286,21 @@ class _OfficerStatusTabState extends State<OfficerStatusTab>
                         children: [
                           const Text('Booking Request',
                               style: TextStyle(fontWeight: FontWeight.bold)),
-                          Text('by ${booking.employeeName}',
-                              style:
-                                  TextStyle(fontSize: 12, color: Colors.grey)),
+                          Row(
+                            children: [
+                              Flexible(
+                                child: Text(
+                                  'by ${booking.employeeName}',
+                                  style: TextStyle(
+                                      fontSize: 12, color: Colors.grey),
+                                  overflow: TextOverflow.ellipsis,
+                                  maxLines: 1,
+                                ),
+                              ),
+                              const SizedBox(width: 8),
+                              _buildUrgencyChip(booking.requestType),
+                            ],
+                          ),
                         ],
                       ),
                     ),
@@ -3094,13 +3165,13 @@ class _OfficerStatusTabState extends State<OfficerStatusTab>
                     initialValue: currentDate,
                     validator: (value) {
                       if (value == null) {
-                        return 'Event date is required';
+                        return 'Tanggal acara diperlukan';
                       }
                       return null;
                     },
                     builder: (FormFieldState<DateTime> state) {
                       return _buildDatePicker(
-                          context, 'Select Event Date', state.value, (date) {
+                          context, 'Pilih Tanggal Acara', state.value, (date) {
                         setState(() {
                           onDateChanged(date);
                           state.didChange(date);
@@ -3138,7 +3209,7 @@ class _OfficerStatusTabState extends State<OfficerStatusTab>
                     children: [
                       Expanded(
                           child: _buildTimePicker(
-                              context, 'Start Time', currentTime,
+                              context, 'Jam Mulai', currentTime,
                               (newStartTime) {
                         setState(() {
                           onStartTimeChanged(newStartTime);
@@ -3159,8 +3230,8 @@ class _OfficerStatusTabState extends State<OfficerStatusTab>
                       }, selectedDate: currentDate)),
                       const SizedBox(width: 16),
                       Expanded(
-                          child: _buildTimePicker(context, 'End Time', endTime,
-                              (newEndTime) {
+                          child: _buildTimePicker(
+                              context, 'Jam Selesai', endTime, (newEndTime) {
                         setState(() => onEndTimeChanged(newEndTime));
                       }, startTimeFilter: currentTime)),
                     ],
@@ -3183,18 +3254,18 @@ class _OfficerStatusTabState extends State<OfficerStatusTab>
                     initialValue: currentStartDate,
                     validator: (value) {
                       if (value == null) {
-                        return 'Start date is required';
+                        return 'Tanggal mulai diperlukan';
                       }
                       if (currentEndDate != null &&
                           (value.isAfter(currentEndDate) ||
                               DateUtils.isSameDay(value, currentEndDate))) {
-                        return 'Start date must be before event end date!';
+                        return 'Tanggal mulai harus sebelum tanggal akhir acara!';
                       }
                       return null;
                     },
                     builder: (FormFieldState<DateTime> state) {
-                      return _buildDatePicker(
-                          context, 'Start Time', state.value, (date) {
+                      return _buildDatePicker(context, 'Jam Mulai', state.value,
+                          (date) {
                         setState(() {
                           onStartDateChanged(date);
                           state.didChange(date);
@@ -3208,13 +3279,13 @@ class _OfficerStatusTabState extends State<OfficerStatusTab>
                     initialValue: currentEndDate,
                     validator: (value) {
                       if (value == null) {
-                        return 'The end date is required';
+                        return 'Tanggal selesai diperlukan';
                       }
                       return null;
                     },
                     builder: (FormFieldState<DateTime> state) {
-                      return _buildDatePicker(context, 'End Date', state.value,
-                          (date) {
+                      return _buildDatePicker(
+                          context, 'Tanggal Selesai', state.value, (date) {
                         setState(() {
                           onEndDateChanged(date);
                           state.didChange(date);
@@ -3255,7 +3326,7 @@ class _OfficerStatusTabState extends State<OfficerStatusTab>
                       child: Row(
                         mainAxisAlignment: MainAxisAlignment.spaceBetween,
                         children: [
-                          const Text('Manage Booking',
+                          const Text('Kelola Pemesanan Ruangan',
                               style: TextStyle(
                                   fontSize: 20, fontWeight: FontWeight.bold)),
                           _buildStatusChip('open'),
@@ -3287,25 +3358,25 @@ class _OfficerStatusTabState extends State<OfficerStatusTab>
                                 child: Column(
                                   children: [
                                     _buildDetailItem(Icons.event_note,
-                                        'Event Agenda', booking.eventAgenda),
+                                        'Agenda Acara', booking.eventAgenda),
                                     _buildDetailItem(
                                         Icons.local_activity_outlined,
-                                        'Activity Type',
+                                        'Jenis Kegiatan',
                                         booking.activityType),
                                     _buildDetailItem(Icons.person_outline,
-                                        'Booker', booking.employeeName),
+                                        'Pemesan', booking.employeeName),
                                     _buildDetailItem(Icons.add_box_outlined,
-                                        'Needs', booking.needs),
+                                        'Kebutuhan', booking.needs),
                                     _buildDetailItem(
                                         Icons.groups_3_outlined,
-                                        'Number of Participants',
+                                        'Jumlah Peserta',
                                         booking.numberOfParticipants
                                             .toString()),
                                   ],
                                 ),
                               ),
                               const SizedBox(height: 24),
-                              _buildSectionTitle('Room Configuration & Time'),
+                              _buildSectionTitle('Ruangan & Jadwal'),
                               const SizedBox(height: 12),
                               StreamBuilder<List<RoomModel>>(
                                 stream: _firestoreService.getRooms(),
@@ -3336,7 +3407,7 @@ class _OfficerStatusTabState extends State<OfficerStatusTab>
                                     value: selectedRoomId,
                                     menuMaxHeight: 300,
                                     decoration: const InputDecoration(
-                                      labelText: 'Select Room',
+                                      labelText: 'Pilih Ruangan',
                                       prefixIcon:
                                           Icon(Icons.meeting_room_outlined),
                                       border: OutlineInputBorder(),
@@ -3381,7 +3452,7 @@ class _OfficerStatusTabState extends State<OfficerStatusTab>
                                                   ),
                                                   const SizedBox(height: 4),
                                                   Text(
-                                                    'Capacity: ${room.capacity} people',
+                                                    'Kapasitas: ${room.capacity} orang',
                                                     style: TextStyle(
                                                       fontSize: 12,
                                                       color: Colors.grey[600],
@@ -3407,7 +3478,7 @@ class _OfficerStatusTabState extends State<OfficerStatusTab>
                                       });
                                     },
                                     validator: (value) => value == null
-                                        ? 'A room must be selected'
+                                        ? 'Ruangan harus dipilih'
                                         : null,
                                   );
                                 },
@@ -3418,7 +3489,7 @@ class _OfficerStatusTabState extends State<OfficerStatusTab>
                               if (isOutdated) ...[
                                 const SizedBox(height: 12),
                                 _buildWarningBox(
-                                    'The schedule has passed, please re-enter.'),
+                                    'Jadwal sudah lewat, silakan pilih lagi.'),
                                 const SizedBox(height: 12),
                               ],
                               const SizedBox(height: 16),
@@ -3538,13 +3609,13 @@ class _OfficerStatusTabState extends State<OfficerStatusTab>
                                   onEndDateChanged: (d) => endDateMulti = d,
                                 ),
                               const SizedBox(height: 24),
-                              _buildSectionTitle('Additional Notes (Optional)'),
+                              _buildSectionTitle('Catatan Tambahan (Opsional)'),
                               TextFormField(
                                 controller: notesController,
                                 decoration: const InputDecoration(
-                                  labelText: 'Additional Notes',
+                                  labelText: 'Catatan Tambahan',
                                   hintText:
-                                      'Add a note for the room orderer...',
+                                      'Tambahkan catatan untuk pemesan ruangan...',
                                   prefixIcon: Icon(Icons.note_alt_outlined),
                                   border: OutlineInputBorder(),
                                 ),
@@ -3563,7 +3634,7 @@ class _OfficerStatusTabState extends State<OfficerStatusTab>
                             child: ElevatedButton.icon(
                               onPressed: () => Navigator.pop(context),
                               icon: const Icon(Icons.cancel_outlined),
-                              label: const Text('Cancel'),
+                              label: const Text('Batal'),
                               style: ElevatedButton.styleFrom(
                                 backgroundColor: Colors.blueGrey,
                                 foregroundColor: Colors.white,
@@ -3575,7 +3646,7 @@ class _OfficerStatusTabState extends State<OfficerStatusTab>
                             child: ElevatedButton.icon(
                               onPressed: handleFinalApproval,
                               icon: const Icon(Icons.check_circle_outline),
-                              label: const Text('Approve'),
+                              label: const Text('Disetujui'),
                               style: ElevatedButton.styleFrom(
                                 backgroundColor: Colors.green,
                                 foregroundColor: Colors.white,
@@ -3640,20 +3711,20 @@ class _OfficerStatusTabState extends State<OfficerStatusTab>
       context: context,
       builder: (dialogContext) => AlertDialog(
         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
-        title: const Text('Reject Booking'),
+        title: const Text('Tolak Pemesanan Ruangan'),
         content: Form(
           key: _formKey,
           child: TextFormField(
             controller: _rejectionReasonController,
             decoration: const InputDecoration(
-              labelText: 'Reason for Rejection',
-              hintText: 'Please provide a reason for rejecting the booking',
+              labelText: 'Alasan Penolakan',
+              hintText: 'Harap berikan alasan penolakan pemesanan',
               border: OutlineInputBorder(),
             ),
             maxLines: 3,
             validator: (value) {
               if (value == null || value.trim().isEmpty) {
-                return 'Reason cannot be empty';
+                return 'Alasan tidak bisa kosong';
               }
               return null;
             },
@@ -3662,7 +3733,7 @@ class _OfficerStatusTabState extends State<OfficerStatusTab>
         actions: [
           TextButton(
             onPressed: () => Navigator.pop(dialogContext),
-            child: const Text('Cancel'),
+            child: const Text('Batal'),
           ),
           ElevatedButton(
             onPressed: () async {

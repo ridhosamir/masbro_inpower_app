@@ -134,6 +134,7 @@ class FirestoreServiceResource {
         assignedAt: DateTime.now(),
         timeRequired: request.timeRequired,
         request: request.request,
+        requestType: request.requestType,
         imageUrl: request.imageUrl,
       );
       batch.set(taskRef, task.toMap());
@@ -384,6 +385,33 @@ class FirestoreServiceResource {
       return null;
     } catch (e) {
       print('Error getting request by ID: $e');
+      rethrow;
+    }
+  }
+
+  /// Mengambil semua data permintaan (requests) sebagai Future untuk ekspor.
+  Future<List<RequestModel>> getAllRequests() async {
+    try {
+      final snapshot = await _requestsCollection
+          .orderBy('createdAt', descending: true)
+          .get();
+      return snapshot.docs
+          .map((doc) => RequestModel.fromFirestore(doc))
+          .toList();
+    } catch (e) {
+      print('Error getting all requests for export: $e');
+      rethrow;
+    }
+  }
+
+  /// Mengambil semua data penugasan (tasks) sebagai Future untuk ekspor.
+  Future<List<TaskModel>> getAllTasks() async {
+    try {
+      final snapshot =
+          await _tasksCollection.orderBy('assignedAt', descending: true).get();
+      return snapshot.docs.map((doc) => TaskModel.fromFirestore(doc)).toList();
+    } catch (e) {
+      print('Error getting all tasks for export: $e');
       rethrow;
     }
   }

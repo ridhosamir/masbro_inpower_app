@@ -411,11 +411,7 @@ class _NotificationListScreenState extends State<NotificationListScreen> {
       case 'reports':
         return Icons.construction;
       case 'requests_resource':
-        if (requestType == 'resource') {
-          return Icons.supervisor_account;
-        } else {
-          return Icons.inventory;
-        }
+        return Icons.supervisor_account;
       case 'ride_requests':
         return Icons.directions_car;
       case 'bookings':

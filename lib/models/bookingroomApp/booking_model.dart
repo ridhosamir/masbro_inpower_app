@@ -15,6 +15,7 @@ class BookingModel {
   final int numberOfParticipants;
   final String status;
   final DateTime createdAt;
+  final String requestType;
   final String? completionReason;
   final DateTime? completionDate;
   final double? rating;
@@ -35,6 +36,7 @@ class BookingModel {
     required this.numberOfParticipants,
     required this.status,
     required this.createdAt,
+    required this.requestType,
     this.completionReason,
     this.completionDate,
     this.rating,
@@ -59,6 +61,7 @@ class BookingModel {
       numberOfParticipants: data['numberOfParticipants'] ?? 0,
       status: data['status'] ?? 'open',
       createdAt: (data['createdAt'] as Timestamp).toDate(),
+      requestType: data['requestType'] ?? 'Sedang',
       completionReason: data['completionReason'],
       completionDate: data['completionDate'] != null
           ? (data['completionDate'] as Timestamp).toDate()
@@ -85,6 +88,7 @@ class BookingModel {
       'numberOfParticipants': numberOfParticipants,
       'status': status,
       'createdAt': Timestamp.fromDate(createdAt),
+      'requestType': requestType,
       'completionReason': completionReason,
       'completionDate':
           completionDate != null ? Timestamp.fromDate(completionDate!) : null,
@@ -147,6 +151,7 @@ class BookingModel {
     int? numberOfParticipants,
     String? status,
     DateTime? createdAt,
+    String? requestType,
     String? completionReason,
     DateTime? completionDate,
     double? rating,
@@ -167,6 +172,7 @@ class BookingModel {
       numberOfParticipants: numberOfParticipants ?? this.numberOfParticipants,
       status: status ?? this.status,
       createdAt: createdAt ?? this.createdAt,
+      requestType: requestType ?? this.requestType,
       completionReason: completionReason ?? this.completionReason,
       completionDate: completionDate ?? this.completionDate,
       rating: rating ?? this.rating,

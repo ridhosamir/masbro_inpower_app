@@ -126,7 +126,7 @@ class _BookingDetailScreenState extends State<BookingDetailScreen> {
         crossAxisAlignment: CrossAxisAlignment.center,
         children: [
           Text(
-            hasRated ? 'Your Rating' : 'Rate Room Readiness',
+            hasRated ? 'Penilaian Anda' : 'Nilai Kesiapan Ruangan',
             style: TextStyle(
               fontSize: 16,
               fontWeight: FontWeight.w600,
@@ -160,7 +160,7 @@ class _BookingDetailScreenState extends State<BookingDetailScreen> {
               controller: _commentController,
               maxLines: 3,
               decoration: InputDecoration(
-                hintText: 'Write your review (optional)...',
+                hintText: 'Tulis ulasan Anda (optional)...',
                 border: OutlineInputBorder(
                   borderRadius: BorderRadius.circular(8),
                   borderSide: BorderSide.none,
@@ -188,7 +188,7 @@ class _BookingDetailScreenState extends State<BookingDetailScreen> {
                           color: Colors.white, strokeWidth: 2),
                     )
                   : const Icon(Icons.send_outlined),
-              label: Text(_isSubmitting ? 'Send...' : 'Submit Assessment'),
+              label: Text(_isSubmitting ? 'Mengirim...' : 'Kirim Penilaian'),
             ),
           ] else ...[
             // --- Tampilan setelah memberi rating ---
@@ -214,7 +214,7 @@ class _BookingDetailScreenState extends State<BookingDetailScreen> {
               )
             else
               Text(
-                'Thank you for your rating!',
+                'Terima kasih atas penilaian Anda!',
                 style: TextStyle(
                   color: Colors.green[700],
                   fontWeight: FontWeight.w500,
@@ -230,7 +230,7 @@ class _BookingDetailScreenState extends State<BookingDetailScreen> {
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
-        title: const Text('Booking Details'),
+        title: const Text('Detail Pemesanan Ruangan'),
         backgroundColor: Theme.of(context).primaryColor,
         foregroundColor: Colors.white,
       ),
@@ -249,33 +249,38 @@ class _BookingDetailScreenState extends State<BookingDetailScreen> {
             ],
 
             // --- Informasi Booking ---
-            _buildSectionTitle('Booking Details'),
+            _buildSectionTitle('Detail Pemesanan'),
             const SizedBox(height: 12),
             _buildInfoCard([
-              _buildInfoRow(Icons.meeting_room_outlined, 'Room',
+              _buildInfoRow(Icons.meeting_room_outlined, 'Ruangan',
                   _currentBooking.roomName),
-              _buildInfoRow(Icons.person_outline, 'Booked by',
+              _buildInfoRow(Icons.person_outline, 'Pemesan',
                   _currentBooking.employeeName),
+              _buildInfoRowWithWidgetValue(
+                Icons.priority_high_outlined,
+                'Urgensi',
+                _buildUrgencyChip(_currentBooking.requestType),
+              ),
               _buildInfoRow(
                   Icons.calendar_today,
-                  'Event schedule',
+                  'Jadwal Acara',
                   _formatBookingDuration(_currentBooking.usageStartDate,
                       _currentBooking.usageEndDate)),
-              _buildInfoRow(Icons.local_activity_outlined, 'Type of activity',
+              _buildInfoRow(Icons.local_activity_outlined, 'Jenis kegiatan',
                   _currentBooking.activityType),
-              _buildInfoRow(Icons.group_outlined, 'Number of participants',
-                  '${_currentBooking.numberOfParticipants} people'),
+              _buildInfoRow(Icons.group_outlined, 'Jumlah peserta',
+                  '${_currentBooking.numberOfParticipants} orang'),
             ]),
             const SizedBox(height: 24),
 
             // --- Agenda Acara ---
-            _buildSectionTitle('Event Agenda'),
+            _buildSectionTitle('Agenda Acara'),
             const SizedBox(height: 12),
             _buildDescriptionBox(_currentBooking.eventAgenda),
 
             // --- Kebutuhan Tambahan ---
             const SizedBox(height: 24),
-            _buildSectionTitle('Event needs'),
+            _buildSectionTitle('Kebutuhan Tambahan'),
             const SizedBox(height: 12),
             _buildDescriptionBox(_currentBooking.needs),
 
@@ -287,8 +292,8 @@ class _BookingDetailScreenState extends State<BookingDetailScreen> {
               const SizedBox(height: 24),
               _buildSectionTitle(
                 _currentBooking.status == 'approved'
-                    ? 'Consent Note'
-                    : 'Reason for Cancellation',
+                    ? 'Catatan Persetujuan'
+                    : 'Alasan Pembatalan',
               ),
               const SizedBox(height: 12),
               _buildReasonBox(),
@@ -296,6 +301,83 @@ class _BookingDetailScreenState extends State<BookingDetailScreen> {
             const SizedBox(height: 24),
           ],
         ),
+      ),
+    );
+  }
+
+  // Helper widget untuk membuat baris info dengan value berupa widget
+  Widget _buildInfoRowWithWidgetValue(
+      IconData icon, String label, Widget valueWidget) {
+    return Padding(
+      padding: const EdgeInsets.symmetric(vertical: 10),
+      child: Row(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Icon(icon, size: 20, color: Colors.grey[600]),
+          const SizedBox(width: 16),
+          SizedBox(
+            width: 110,
+            child: Text(
+              label,
+              style: TextStyle(
+                fontWeight: FontWeight.w600,
+                color: Colors.grey[700],
+              ),
+            ),
+          ),
+          Expanded(
+            child: valueWidget,
+          ),
+        ],
+      ),
+    );
+  }
+
+// Helper widget untuk menampilkan chip tingkat urgensi
+  Widget _buildUrgencyChip(String requestType) {
+    Color color;
+    String text;
+    IconData icon;
+
+    switch (requestType) {
+      case 'Rendah':
+        color = Colors.green;
+        text = 'Rendah';
+        icon = Icons.keyboard_arrow_down;
+        break;
+      case 'Tinggi':
+        color = Colors.red;
+        text = 'Tinggi';
+        icon = Icons.keyboard_arrow_up;
+        break;
+      case 'Sedang':
+      default:
+        color = Colors.orange;
+        text = 'Sedang';
+        icon = Icons.remove;
+    }
+
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
+      decoration: BoxDecoration(
+        color: color.withOpacity(0.1),
+        borderRadius: BorderRadius.circular(16),
+        border: Border.all(color: color.withOpacity(0.5)),
+      ),
+      child: Row(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Icon(icon, size: 12, color: color),
+          const SizedBox(width: 4),
+          Text(
+            text,
+            style: TextStyle(
+              color: color,
+              fontSize: 12,
+              fontWeight: FontWeight.bold,
+            ),
+          ),
+        ],
       ),
     );
   }

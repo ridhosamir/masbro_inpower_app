@@ -107,7 +107,7 @@ class _RequestDetailScreenState extends State<RequestDetailScreen> {
     final bool isResourceRequest = request.request == 'resource';
     return Scaffold(
       appBar: AppBar(
-        title: const Text('Request Details'),
+        title: const Text('Detail Permintaan'),
         backgroundColor: Theme.of(context).primaryColor,
         foregroundColor: Colors.white,
       ),
@@ -170,7 +170,7 @@ class _RequestDetailScreenState extends State<RequestDetailScreen> {
             if (request.status == 'completed' &&
                 request.assignedTechnicianId != null) ...[
               const SizedBox(height: 24),
-              _buildSectionTitle('Service Assessment'),
+              _buildSectionTitle('Penilaian Layanan'),
               const SizedBox(height: 12),
               Container(
                 width: double.infinity,
@@ -223,7 +223,7 @@ class _RequestDetailScreenState extends State<RequestDetailScreen> {
                         controller: _reviewController,
                         maxLines: 3,
                         decoration: InputDecoration(
-                          hintText: 'Write your review (optional)...',
+                          hintText: 'Tulis ulasan Anda (optional)...',
                           border: OutlineInputBorder(
                             borderRadius: BorderRadius.circular(8),
                             borderSide: BorderSide(color: Colors.amber[300]!),
@@ -252,13 +252,13 @@ class _RequestDetailScreenState extends State<RequestDetailScreen> {
                               )
                             : const Icon(Icons.send),
                         label: Text(
-                            _isSubmitting ? 'Sending...' : 'Send Assessment'),
+                            _isSubmitting ? 'Mengirim...' : 'Kirim Penilaian'),
                       ),
                     ] else ...[
                       // -- TAMPILAN SETELAH MEMBERI RATING --
                       const Divider(height: 24),
                       Text(
-                        'Your rating has been submitted. Thank you!',
+                        'Penilaian Anda telah dikirimkan. Terima kasih!',
                         style: TextStyle(
                           color: Colors.green[700],
                           fontWeight: FontWeight.bold,
@@ -293,31 +293,36 @@ class _RequestDetailScreenState extends State<RequestDetailScreen> {
             const SizedBox(height: 24),
 
             // --- Informasi Permintaan ---
-            _buildSectionTitle('Request Information'),
+            _buildSectionTitle('Informasi Permintaan'),
             const SizedBox(height: 12),
             _buildInfoCard([
               _buildInfoRow(
                 Icons.person,
-                'Requester',
+                'Pemohon',
                 request.employeeName,
               ),
               _buildInfoRow(
                 isResourceRequest ? Icons.supervisor_account : Icons.inventory,
-                'Need',
+                'Kebutuhan',
                 '${request.request[0].toUpperCase()}${widget.request.request.substring(1)}',
+              ),
+              _buildInfoRowWithWidgetValue(
+                Icons.priority_high,
+                'Tingkat Urgensi',
+                _buildUrgencyChip(request.requestType),
               ),
               if (widget.request.timeRequired != null &&
                   widget.request.timeRequired!.isNotEmpty)
                 _buildInfoRow(
                   Icons.calendar_today,
-                  'Time\nRequired',
+                  'Waktu\nDiperlukan',
                   _formatDisplayDate(request.timeRequired!),
                 ),
             ]),
             // Tampilkan foto jika ini adalah permintaan item
             if (!isResourceRequest && request.hasValidImage()) ...[
               const SizedBox(height: 24),
-              _buildSectionTitle('Request Item Photo'),
+              _buildSectionTitle('Foto Barang'),
               const SizedBox(height: 12),
               GestureDetector(
                 onTap: () {
@@ -390,7 +395,7 @@ class _RequestDetailScreenState extends State<RequestDetailScreen> {
             const SizedBox(height: 24),
 
             // --- Deskripsi Kebutuhan ---
-            _buildSectionTitle('Description of Needs'),
+            _buildSectionTitle('Deskripsi Kebutuhan'),
             const SizedBox(height: 12),
             Container(
               width: double.infinity,
@@ -414,7 +419,7 @@ class _RequestDetailScreenState extends State<RequestDetailScreen> {
             if (widget.request.technicianName != null &&
                 widget.request.technicianName!.isNotEmpty) ...[
               const SizedBox(height: 24),
-              _buildSectionTitle('Assigned Resources'),
+              _buildSectionTitle('Teknisi yang Ditugaskan'),
               const SizedBox(height: 12),
               Container(
                 width: double.infinity,
@@ -455,8 +460,8 @@ class _RequestDetailScreenState extends State<RequestDetailScreen> {
                           const SizedBox(height: 4),
                           Text(
                             widget.request.status == 'inProgress'
-                                ? 'Currently processing your request.'
-                                : 'Have completed this request.',
+                                ? 'Saat ini sedang memproses permintaan Anda.'
+                                : 'Telah menyelesaikan permintaan ini.',
                             style: TextStyle(
                               fontSize: 14,
                               color: Colors.blue[700],
@@ -474,7 +479,7 @@ class _RequestDetailScreenState extends State<RequestDetailScreen> {
             if (request.status == 'completed' &&
                 request.completionReason != null) ...[
               const SizedBox(height: 24),
-              _buildSectionTitle('Settlement Details'),
+              _buildSectionTitle('Rincian Penyelesaian'),
               const SizedBox(height: 12),
               Container(
                 width: double.infinity,
@@ -488,7 +493,7 @@ class _RequestDetailScreenState extends State<RequestDetailScreen> {
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
                     Text(
-                      'Notes from Technician/Officer:',
+                      'Catatan dari Technician/Officer:',
                       style: TextStyle(
                           fontWeight: FontWeight.bold,
                           color: Colors.green[800]),
@@ -505,7 +510,7 @@ class _RequestDetailScreenState extends State<RequestDetailScreen> {
                     if (!isResourceRequest && request.hasValidAfterImage()) ...[
                       const Divider(height: 32, thickness: 1),
                       Text(
-                        'Photos of Items Given:',
+                        'Foto Barang yang Diberikan:',
                         style: TextStyle(
                           fontWeight: FontWeight.bold,
                           color: Colors.green[800],
@@ -551,7 +556,7 @@ class _RequestDetailScreenState extends State<RequestDetailScreen> {
                   SizedBox(width: 12),
                   Expanded(
                     child: Text(
-                      'If you have any questions about this request, please contact the management office.',
+                      'Jika Anda memiliki pertanyaan tentang permintaan ini, silakan menghubungi pihak terkait.',
                       style: TextStyle(
                         color: Colors.amber[700],
                         fontSize: 14,
@@ -667,6 +672,83 @@ Widget _buildInfoRow(IconData icon, String label, String value) {
               fontSize: 15,
               color: Colors.grey[900],
             ),
+          ),
+        ),
+      ],
+    ),
+  );
+}
+
+// Helper widget untuk membuat baris info dengan value berupa widget
+Widget _buildInfoRowWithWidgetValue(
+    IconData icon, String label, Widget valueWidget) {
+  return Padding(
+    padding: const EdgeInsets.symmetric(vertical: 8),
+    child: Row(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Icon(icon, size: 20, color: Colors.grey[600]),
+        const SizedBox(width: 16),
+        SizedBox(
+          width: 110,
+          child: Text(
+            label,
+            style: TextStyle(
+              fontWeight: FontWeight.w600,
+              color: Colors.grey[700],
+            ),
+          ),
+        ),
+        Expanded(
+          child: valueWidget,
+        ),
+      ],
+    ),
+  );
+}
+
+// Helper widget untuk menampilkan chip tingkat urgensi
+Widget _buildUrgencyChip(String requestType) {
+  Color color;
+  String text;
+  IconData icon;
+
+  switch (requestType) {
+    case 'Rendah':
+      color = Colors.green;
+      text = 'Rendah';
+      icon = Icons.keyboard_arrow_down;
+      break;
+    case 'Tinggi':
+      color = Colors.red;
+      text = 'Tinggi';
+      icon = Icons.keyboard_arrow_up;
+      break;
+    case 'Sedang':
+    default:
+      color = Colors.orange;
+      text = 'Sedang';
+      icon = Icons.remove;
+  }
+
+  return Container(
+    padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
+    decoration: BoxDecoration(
+      color: color.withOpacity(0.1),
+      borderRadius: BorderRadius.circular(16),
+      border: Border.all(color: color.withOpacity(0.5)),
+    ),
+    child: Row(
+      mainAxisSize: MainAxisSize.min,
+      children: [
+        Icon(icon, size: 12, color: color),
+        const SizedBox(width: 4),
+        Text(
+          text,
+          style: TextStyle(
+            color: color,
+            fontSize: 12,
+            fontWeight: FontWeight.bold,
           ),
         ),
       ],

@@ -762,7 +762,7 @@ class _TechnicianDashboardResourceState
                 mainAxisAlignment: MainAxisAlignment.spaceBetween,
                 children: [
                   const Text(
-                    'Task Details',
+                    'Detail Tugas',
                     style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold),
                   ),
                   _buildStatusChip(task.status),
@@ -787,20 +787,20 @@ class _TechnicianDashboardResourceState
                         crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
                           _buildDetailItem(
-                            'Need',
+                            'Kebutuhan',
                             '${task.request[0].toUpperCase()}${task.request.substring(1)}',
                             task.request == 'resource'
                                 ? Icons.supervisor_account
                                 : Icons.inventory,
                           ),
                           _buildDetailItem(
-                              'Requester', task.requesterName, Icons.person),
+                              'Pemohon', task.requesterName, Icons.person),
                           if (task.timeRequired != null &&
                               task.timeRequired!.isNotEmpty)
-                            _buildDetailItem('Time Required',
+                            _buildDetailItem('Waktu Dibutuhkan',
                                 task.timeRequired!, Icons.calendar_today),
                           _buildDetailItem(
-                            'Assigned on',
+                            'Ditugaskan pada',
                             DateFormat('dd MMM yyyy, HH:mm', 'id_ID')
                                 .format(task.assignedAt),
                             Icons.access_time,
@@ -808,7 +808,7 @@ class _TechnicianDashboardResourceState
                           if (task.status == 'completed' &&
                               task.completedAt != null)
                             _buildDetailItem(
-                              'Completed on',
+                              'Diselesaikan pada',
                               DateFormat('EEEE, d MMM yyyy, HH:mm', 'id_ID')
                                   .format(task.completedAt!),
                               Icons.check_circle,
@@ -819,7 +819,7 @@ class _TechnicianDashboardResourceState
                     // Tampilkan foto jika ini adalah permintaan item
                     if (!isResourceRequest && task.hasValidImage()) ...[
                       const SizedBox(height: 24),
-                      const Text('Item Photo',
+                      const Text('Foto Barang',
                           style: TextStyle(
                               fontSize: 16, fontWeight: FontWeight.bold)),
                       const SizedBox(height: 12),
@@ -874,7 +874,7 @@ class _TechnicianDashboardResourceState
                     ],
                     const SizedBox(height: 20),
                     const Text(
-                      'Task Description',
+                      'Deksikripsi Tugas',
                       style: TextStyle(
                         fontWeight: FontWeight.bold,
                         fontSize: 16,
@@ -901,7 +901,7 @@ class _TechnicianDashboardResourceState
                         task.completionNote != null) ...[
                       const SizedBox(height: 20),
                       Text(
-                        'Your Completion Notes',
+                        'Catatan Penyelesaian Anda',
                         style: TextStyle(
                           fontWeight: FontWeight.bold,
                           fontSize: 16,
@@ -929,7 +929,7 @@ class _TechnicianDashboardResourceState
                           task.afterImageUrl!.isNotEmpty) ...[
                         const SizedBox(height: 20),
                         Text(
-                          'Completion Photo',
+                          'Foto Barang Diminta',
                           style: TextStyle(
                             fontWeight: FontWeight.bold,
                             fontSize: 16,

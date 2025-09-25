@@ -353,4 +353,19 @@ class FirestoreService {
       throw e;
     }
   }
+
+  /// Mengambil semua data booking sebagai Future untuk ekspor.
+  Future<List<BookingModel>> getAllBookings() async {
+    try {
+      final snapshot = await _bookingsCollection
+          .orderBy('createdAt', descending: true)
+          .get();
+      return snapshot.docs
+          .map((doc) => BookingModel.fromFirestore(doc))
+          .toList();
+    } catch (e) {
+      debugPrint('Error getting all bookings for export: $e');
+      rethrow;
+    }
+  }
 }

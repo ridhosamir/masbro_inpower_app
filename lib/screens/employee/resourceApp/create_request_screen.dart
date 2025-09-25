@@ -44,6 +44,7 @@ class _CreateRequestScreenState extends State<CreateRequestScreen>
   Uint8List? _webImageBytes;
   String? _imageUrl;
   String? _imageError;
+  String? _selectedRequestType;
 
   @override
   void initState() {
@@ -289,6 +290,7 @@ class _CreateRequestScreenState extends State<CreateRequestScreen>
         status: 'open',
         createdAt: DateTime.now(),
         request: requestType,
+        requestType: _selectedRequestType!,
         timeRequired: timeRequiredString,
         imageUrl: _imageUrl,
       );
@@ -324,7 +326,7 @@ class _CreateRequestScreenState extends State<CreateRequestScreen>
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        _buildLabel('Item Photo (Optional)'),
+        _buildLabel('Foto Barang (Optional)'),
         Container(
           height: 200,
           width: double.infinity,
@@ -431,7 +433,7 @@ class _CreateRequestScreenState extends State<CreateRequestScreen>
               icon: const Icon(Icons.arrow_back, color: Colors.white),
               onPressed: () => Navigator.pop(context),
             ),
-            title: const Text('Create a New Request'),
+            title: const Text('Buat Permintaan Baru'),
             bottom: TabBar(
               controller: _tabController,
               indicatorColor: Colors.white,
@@ -470,27 +472,30 @@ class _CreateRequestScreenState extends State<CreateRequestScreen>
                     // --- Header Dinamis ---
                     _buildDynamicHeader(isResourceRequest, primaryColor),
                     const SizedBox(height: 24),
+                    // --- Selector Dinamis ---
+                    _buildRequestTypeSelector(),
+                    const SizedBox(height: 24),
 
                     // --- Form Field Dinamis ---
                     if (isResourceRequest) ...[
-                      _buildLabel('Required Date'),
+                      _buildLabel('Tanggal Dibutuhkan'),
                       CustomTextField(
-                        labelText: 'Select Date',
+                        labelText: 'Pilih Tanggal',
                         controller: _timeRequiredController,
                         readOnly: true,
                         onTap: _selectDateTime,
                         prefixIcon: Icons.calendar_today,
                         validator: (value) {
                           if (isResourceRequest && (_selectedDate == null)) {
-                            return 'Please find the required date';
+                            return 'Silakan tentukan tanggal dibutuhkan';
                           }
                           return null;
                         },
                       ),
                       const SizedBox(height: 24),
-                      _buildLabel('Required Hours'),
+                      _buildLabel('Jam Dibutuhkan'),
                       _buildTimePicker(
-                        'Select Hour',
+                        'Pilih Jam',
                         _selectedTime,
                         (time) {
                           setState(() {
@@ -514,12 +519,12 @@ class _CreateRequestScreenState extends State<CreateRequestScreen>
                       const SizedBox(height: 24),
                     ],
                     _buildLabel(isResourceRequest
-                        ? 'Description of Needs'
-                        : 'Item Description'),
+                        ? 'Deskripsi Kebutuhan Resource'
+                        : 'Deskripsi Barang yang Dibutuhkan'),
                     CustomTextField(
                       focusNode: _descriptionFocusNode,
                       labelText: _isDescriptionFocused
-                          ? 'Description of Your Needs'
+                          ? 'Deskripsi Kebutuhan Anda'
                           : (isResourceRequest
                               ? 'Jelaskan kebutuhan resource anda...'
                               : 'Jelaskan barang yang anda perlukan...'),
@@ -530,10 +535,10 @@ class _CreateRequestScreenState extends State<CreateRequestScreen>
                           : Icons.inventory_2_outlined,
                       validator: (value) {
                         if (value == null || value.isEmpty) {
-                          return 'Please describe your requirements';
+                          return 'Silahkan isi deskripsi kebutuhan Anda';
                         }
                         if (value.length < 10) {
-                          return 'Please provide a more detailed description';
+                          return 'Silahkan berikan deskripsi yang lebih detail';
                         }
                         return null;
                       },
@@ -544,7 +549,7 @@ class _CreateRequestScreenState extends State<CreateRequestScreen>
                     ],
                     const SizedBox(height: 32),
                     CustomButton(
-                      text: 'Send Request',
+                      text: 'Kirim Permintaan',
                       onPressed: _submitRequest,
                       isLoading: _isLoading,
                       icon: Icons.send,
@@ -693,7 +698,7 @@ class _CreateRequestScreenState extends State<CreateRequestScreen>
       },
       validator: (val) {
         if (val == null) {
-          return 'Please specify the required hours';
+          return 'Harap tentukan jam yang dibutuhkan';
         }
 
         if (selectedDate != null) {
@@ -713,6 +718,88 @@ class _CreateRequestScreenState extends State<CreateRequestScreen>
         }
         return null;
       },
+    );
+  }
+
+  Widget _buildRequestTypeSelector() {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        _buildLabel('Tingkat Urgensi'),
+        // Gunakan FormField untuk validasi custom widget
+        FormField<String>(
+          initialValue: _selectedRequestType,
+          validator: (value) {
+            if (_selectedRequestType == null) {
+              return 'Silakan pilih tingkat urgensi';
+            }
+            return null;
+          },
+          builder: (FormFieldState<String> state) {
+            return Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                SizedBox(
+                  width: double.infinity,
+                  child: SegmentedButton<String>(
+                    segments: const <ButtonSegment<String>>[
+                      ButtonSegment<String>(
+                        value: 'Rendah',
+                        label: Text('Rendah'),
+                        icon: Icon(Icons.keyboard_arrow_down),
+                      ),
+                      ButtonSegment<String>(
+                        value: 'Sedang',
+                        label: Text('Sedang'),
+                        icon: Icon(Icons.remove),
+                      ),
+                      ButtonSegment<String>(
+                        value: 'Tinggi',
+                        label: Text('Tinggi'),
+                        icon: Icon(Icons.keyboard_arrow_up),
+                      ),
+                    ],
+                    selected: _selectedRequestType != null
+                        ? <String>{_selectedRequestType!}
+                        : <String>{},
+                    emptySelectionAllowed: true,
+                    onSelectionChanged: (Set<String> newSelection) {
+                      setState(() {
+                        _selectedRequestType = newSelection.first;
+                        // Beri tahu FormField tentang perubahan nilai
+                        state.didChange(_selectedRequestType);
+                      });
+                    },
+                    style: SegmentedButton.styleFrom(
+                      selectedBackgroundColor:
+                          Theme.of(context).primaryColor.withOpacity(0.2),
+                      selectedForegroundColor: Theme.of(context).primaryColor,
+                      // Tambahkan border error jika tidak valid
+                      side: BorderSide(
+                        color: state.hasError
+                            ? Theme.of(context).colorScheme.error
+                            : Colors.grey[300]!,
+                      ),
+                    ),
+                  ),
+                ),
+                // Tampilkan pesan error jika ada
+                if (state.hasError)
+                  Padding(
+                    padding: const EdgeInsets.only(left: 12, top: 8),
+                    child: Text(
+                      state.errorText!,
+                      style: TextStyle(
+                        color: Theme.of(context).colorScheme.error,
+                        fontSize: 12,
+                      ),
+                    ),
+                  ),
+              ],
+            );
+          },
+        ),
+      ],
     );
   }
 }
