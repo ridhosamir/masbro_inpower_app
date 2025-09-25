@@ -1,8 +1,4 @@
-import 'dart:io';
 import 'package:excel/excel.dart' as excel;
-import 'package:path_provider/path_provider.dart';
-import 'package:open_filex/open_filex.dart';
-import 'package:permission_handler/permission_handler.dart';
 import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
 import 'package:masbro_inpower_app/widgets/custom_text_field.dart';
@@ -15,8 +11,7 @@ import '../../../services/bookingroomApp/firestore_service.dart';
 import '../../../services/user_service.dart';
 import 'booking_detail_screen.dart';
 import 'room_manage_screen.dart';
-import 'package:flutter/foundation.dart' show kIsWeb;
-import 'dart:html' as html;
+import 'package:masbro_inpower_app/utils/download_helper.dart';
 
 enum BookingType { harian, beberapaHari }
 
@@ -2449,7 +2444,15 @@ class _OfficerDashboardBookingRoomState
       List<int>? fileBytes = excelFile.save();
 
       if (fileBytes != null) {
-        await _saveAndOpenFile(fileBytes, fileName);
+        await DownloadHelper.saveAndOpenFile(fileBytes, fileName);
+        if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(
+              content: Text('File $fileName berhasil diunduh'),
+              backgroundColor: Colors.green,
+            ),
+          );
+        }
       } else {
         throw Exception('Gagal menyimpan berkas Excel.');
       }
@@ -2460,43 +2463,6 @@ class _OfficerDashboardBookingRoomState
       );
     } finally {
       setState(() => _isDownloading = false);
-    }
-  }
-
-  /// Helper function untuk menyimpan file berdasarkan platform (Web atau Mobile).
-  Future<void> _saveAndOpenFile(List<int> bytes, String fileName) async {
-    if (kIsWeb) {
-      try {
-        final blob = html.Blob([bytes]);
-        final url = html.Url.createObjectUrlFromBlob(blob);
-        final anchor = html.AnchorElement(href: url)
-          ..setAttribute("download", fileName)
-          ..style.display = "none";
-
-        html.document.body!.children.add(anchor);
-        anchor.click();
-        html.document.body!.children.remove(anchor);
-
-        html.Url.revokeObjectUrl(url);
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text('File $fileName berhasil diunduh'),
-            backgroundColor: Colors.green,
-          ),
-        );
-      } catch (e) {
-        throw Exception('Gagal mengunduh file: $e');
-      }
-    } else {
-      var status = await Permission.storage.request();
-      if (!status.isGranted) {
-        throw Exception('Izin penyimpanan ditolak.');
-      }
-      final directory = await getExternalStorageDirectory();
-      final path = '${directory!.path}/$fileName';
-      final file = File(path);
-      await file.writeAsBytes(bytes, flush: true);
-      await OpenFilex.open(path);
     }
   }
 
